@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "allow": [
+      "Bash(uv run pytest:*)",
+      "Bash(uv pip install:*)",
+      "Bash(cat:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(python:*)",
+      "Bash(set:*)",
+      "Bash(echo:*)",
+      "Bash(pip install:*)",
+      "mcp__zread__search_doc",
+      "mcp__zread__get_repo_structure"
+    ]
+  }
+}

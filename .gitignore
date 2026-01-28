@@ -1,0 +1,70 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+*.err
+
+# Temporary files
+tests-temp/
+nul
+=*.*
+
+# Environment variables
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data directories
+data/
+workspace/
+
+# Coverage
+htmlcov/
+.pytest_cache/
+.coverage
+.coverage.*
+
+# Debug files
+debug_*.log
+ws_debug.log
+websocket_errors.log
+
+# Package manager
+package-lock.json

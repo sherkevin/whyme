@@ -1,0 +1,72 @@
+# AgentOS Alpine Runtime Environment (Lightweight Alternative)
+# Multi-user isolated sandbox with AI-friendly tools
+
+FROM alpine:3.19
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8
+
+# Install system dependencies
+RUN apk add --no-cache \
+    # Python and development tools
+    python3 \
+    py3-pip \
+    python3-dev \
+    # Build essentials
+    gcc \
+    g++ \
+    make \
+    musl-dev \
+    linux-headers \
+    # Version control
+    git \
+    # Editors and utilities
+    vim \
+    nano \
+    curl \
+    wget \
+    bash \
+    # File processing
+    jq \
+    tree \
+    # Node.js
+    nodejs \
+    npm
+
+# Create non-root user for security
+RUN adduser -D -u 1000 agentuser
+
+# Set up Python environment
+RUN python3 -m pip install --upgrade pip setuptools wheel --break-system-packages
+
+# Install common Python packages for AI/ML work
+RUN pip3 install --no-cache-dir --break-system-packages \
+    # Core data science
+    numpy \
+    pandas \
+    # Web frameworks
+    fastapi \
+    flask \
+    requests \
+    # Database
+    sqlalchemy \
+    # Testing
+    pytest \
+    pytest-asyncio \
+    # Utilities
+    python-dotenv \
+    pydantic
+
+# Create workspace directory
+RUN mkdir -p /workspace && chown -R agentuser:agentuser /workspace
+
+# Set workspace as working directory
+WORKDIR /workspace
+
+# Switch to non-root user
+USER agentuser
+
+# Keep container running
+CMD ["sleep", "infinity"]

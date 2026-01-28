@@ -1,0 +1,2901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentOS Studio - Modern IDE</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/highlight.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/vs2015.min.css">
+
+    <!-- Monaco Editor Loader with Multi-CDN Fallback -->
+    <script>
+        (function() {
+            const cdns = [
+                'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js',
+                'https://unpkg.com/monaco-editor@0.45.0/min/vs/loader.js',
+                'https://cdn.bootcdn.net/ajax/libs/monaco-editor/0.45.0/min/vs/loader.js'
+            ];
+
+            function loadScript(index) {
+                if (index >= cdns.length) {
+                    console.error('Failed to load Monaco Editor from all CDNs');
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = cdns[index];
+                script.onload = () => console.log(`✅ Monaco loaded from: ${cdns[index]}`);
+                script.onerror = () => loadScript(index + 1);
+                document.head.appendChild(script);
+            }
+
+            loadScript(0);
+        })();
+    </script>
+
+    <style>
+        /* ===== CSS Variables ===== */
+        :root {
+            /* Dark Theme Colors */
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #252526;
+            --bg-tertiary: #2d2d30;
+            --bg-hover: #37373d;
+            --bg-active: #094771;
+
+            /* Text Colors */
+            --text-primary: #cccccc;
+            --text-secondary: #858585;
+            --text-active: #ffffff;
+            --text-accent: #4fc3f7;
+
+            /* Accent Colors */
+            --accent-primary: #007acc;
+            --accent-hover: #1c97ea;
+            --accent-light: #3794ff;
+
+            /* Status Colors */
+            --status-online: #4ec9b0;
+            --status-offline: #f14c4c;
+            --status-warning: #ffaf38;
+
+            /* Diff Colors */
+            --diff-added-bg: #4ec9b033;
+            --diff-added-text: #4ec9b0;
+            --diff-removed-bg: #f14c4c33;
+            --diff-removed-text: #f14c4c;
+
+            /* Borders */
+            --border-color: #3c3c3c;
+            --border-light: #454545;
+
+            /* Shadows */
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.3);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+
+            /* Spacing */
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 12px;
+            --spacing-lg: 16px;
+            --spacing-xl: 24px;
+
+            /* Transitions */
+            --transition-fast: 150ms ease;
+            --transition-normal: 250ms ease;
+            --transition-slow: 350ms ease;
+        }
+
+        /* ===== Reset & Base ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* ===== Layout ===== */
+        .app-container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* ===== Activity Bar ===== */
+        .activity-bar {
+            width: 48px;
+            background-color: var(--bg-tertiary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: var(--spacing-sm);
+            border-right: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        .activity-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: all var(--transition-fast);
+            position: relative;
+            color: var(--text-primary);
+            font-size: 24px;
+        }
+
+        .activity-icon:hover {
+            opacity: 1;
+        }
+
+        .activity-icon.active {
+            opacity: 1;
+        }
+
+        .activity-icon.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: var(--text-primary);
+        }
+
+        /* ===== Sidebar ===== */
+        .sidebar {
+            width: 300px;
+            background-color: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            transition: transform var(--transition-normal);
+        }
+
+        .sidebar.hidden {
+            display: none;
+        }
+
+        .sidebar-header {
+            padding: var(--spacing-md) var(--spacing-lg);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+
+        .icon-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            padding: var(--spacing-xs);
+            border-radius: 4px;
+            transition: all var(--transition-fast);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            font-size: 16px;
+        }
+
+        .icon-btn:hover {
+            background-color: var(--bg-hover);
+            color: var(--text-active);
+        }
+
+        /* ===== File Tree ===== */
+        .file-tree {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--spacing-sm) 0;
+        }
+
+        .file-tree::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .file-tree::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .file-tree::-webkit-scrollbar-thumb {
+            background: var(--bg-hover);
+            border-radius: 5px;
+        }
+
+        .file-tree::-webkit-scrollbar-thumb:hover {
+            background: var(--border-light);
+        }
+
+        .tree-item {
+            padding: var(--spacing-xs) var(--spacing-lg);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            transition: all var(--transition-fast);
+            position: relative;
+            user-select: none;
+        }
+
+        .tree-item:hover {
+            background-color: var(--bg-hover);
+        }
+
+        .tree-item.active {
+            background-color: var(--bg-active);
+            color: var(--text-active);
+        }
+
+        .tree-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: var(--accent-light);
+        }
+
+        .tree-icon {
+            font-size: 16px;
+            opacity: 0.8;
+            flex-shrink: 0;
+        }
+
+        .tree-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* ===== Toolkit Panel ===== */
+        .toolkit-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .toolkit-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--bg-secondary);
+        }
+
+        .toolkit-tab {
+            padding: var(--spacing-md) var(--spacing-lg);
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-secondary);
+            border-bottom: 2px solid transparent;
+            transition: all var(--transition-fast);
+        }
+
+        .toolkit-tab:hover {
+            color: var(--text-primary);
+            background-color: var(--bg-hover);
+        }
+
+        .toolkit-tab.active {
+            color: var(--text-active);
+            border-bottom-color: var(--accent-primary);
+        }
+
+        .toolkit-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .toolkit-actions {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+
+        .toolkit-actions .icon-btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            width: auto;
+            height: auto;
+            font-size: 13px;
+        }
+
+        .toolkit-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--spacing-sm) 0;
+        }
+
+        .toolkit-list::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .toolkit-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .toolkit-list::-webkit-scrollbar-thumb {
+            background: var(--bg-hover);
+            border-radius: 5px;
+        }
+
+        .toolkit-item {
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .toolkit-item:hover {
+            background-color: var(--bg-hover);
+        }
+
+        .toolkit-item-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .toolkit-item-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-active);
+        }
+
+        .toolkit-item-actions {
+            display: flex;
+            gap: var(--spacing-xs);
+            opacity: 0;
+            transition: opacity var(--transition-fast);
+        }
+
+        .toolkit-item:hover .toolkit-item-actions {
+            opacity: 1;
+        }
+
+        .toolkit-item-actions button {
+            padding: 4px 8px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all var(--transition-fast);
+        }
+
+        .toolkit-item-actions button:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent-primary);
+        }
+
+        .toolkit-item-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: var(--spacing-xs);
+        }
+
+        /* ===== Main Area ===== */
+        .main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ===== Tabs Bar ===== */
+        .tabs-bar {
+            height: 40px;
+            background-color: var(--bg-tertiary);
+            display: flex;
+            align-items: flex-end;
+            padding: 0 var(--spacing-xs);
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        .tab {
+            padding: var(--spacing-sm) var(--spacing-md);
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            cursor: pointer;
+            margin-right: 2px;
+            transition: all var(--transition-fast);
+            position: relative;
+            max-width: 200px;
+        }
+
+        .tab:hover {
+            background-color: var(--bg-hover);
+        }
+
+        .tab.active {
+            background-color: var(--bg-primary);
+            border-top: 2px solid var(--accent-primary);
+        }
+
+        .tab-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .tab.modified .tab-name::after {
+            content: ' •';
+            color: var(--text-accent);
+        }
+
+        .tab-close {
+            opacity: 0;
+            transition: opacity var(--transition-fast);
+            padding: 2px;
+            border-radius: 3px;
+            font-size: 14px;
+            line-height: 1;
+        }
+
+        .tab:hover .tab-close {
+            opacity: 0.6;
+        }
+
+        .tab-close:hover {
+            opacity: 1 !important;
+            background-color: var(--bg-hover);
+        }
+
+        /* ===== Panels Container ===== */
+        .panels-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* ===== Editor Panel ===== */
+        .editor-panel {
+            flex: 1;
+            background-color: var(--bg-primary);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        #monaco-host {
+            flex: 1;
+            width: 100%;
+        }
+
+        /* Welcome Screen */
+        .welcome-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            z-index: 10;
+        }
+
+        .welcome-screen h1 {
+            font-size: 48px;
+            font-weight: 300;
+            margin-bottom: var(--spacing-lg);
+            color: var(--text-accent);
+            animation: fadeInUp 0.6s ease;
+        }
+
+        .welcome-screen p {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-sm);
+            animation: fadeInUp 0.8s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== Chat Panel ===== */
+        .chat-panel {
+            width: 400px;
+            background-color: var(--bg-secondary);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .chat-header {
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--bg-tertiary);
+        }
+
+        .chat-title {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .status-badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-badge.online {
+            background-color: rgba(78, 201, 176, 0.2);
+            color: var(--status-online);
+        }
+
+        .status-badge.offline {
+            background-color: rgba(241, 76, 76, 0.2);
+            color: var(--status-offline);
+        }
+
+        /* Messages Area */
+        .messages-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--spacing-lg);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+
+        .messages-area::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .messages-area::-webkit-scrollbar-thumb {
+            background: var(--bg-hover);
+            border-radius: 4px;
+        }
+
+        .message {
+            animation: slideIn 0.3s ease;
+            position: relative;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            max-width: 85%;
+        }
+
+        .message.assistant,
+        .message.system {
+            align-self: flex-start;
+            max-width: 90%;
+        }
+
+        .message-bubble {
+            padding: var(--spacing-md);
+            border-radius: 8px;
+            position: relative;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-bubble {
+            background-color: var(--accent-primary);
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+
+        .message.assistant .message-bubble {
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 2px;
+        }
+
+        .message.system .message-bubble {
+            background-color: transparent;
+            color: var(--text-secondary);
+            font-size: 12px;
+            padding: var(--spacing-sm);
+            font-style: italic;
+        }
+
+        /* Markdown Styling in Messages */
+        .message-bubble.markdown {
+            line-height: 1.6;
+        }
+
+        .message-bubble.markdown h1,
+        .message-bubble.markdown h2,
+        .message-bubble.markdown h3 {
+            margin-top: var(--spacing-md);
+            margin-bottom: var(--spacing-sm);
+            font-weight: 600;
+        }
+
+        .message-bubble.markdown code {
+            background-color: rgba(0,0,0,0.3);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .message-bubble.markdown pre {
+            background-color: rgba(0,0,0,0.5);
+            padding: var(--spacing-md);
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: var(--spacing-sm) 0;
+        }
+
+        .message-bubble.markdown pre code {
+            background: transparent;
+            padding: 0;
+        }
+
+        .message-bubble.markdown ul,
+        .message-bubble.markdown ol {
+            margin-left: var(--spacing-lg);
+            margin-top: var(--spacing-sm);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        /* Tool Output */
+        .tool-output {
+            background-color: rgba(0,0,0,0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: var(--spacing-md);
+            margin-top: var(--spacing-sm);
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        /* ===== Input Area ===== */
+        .input-area {
+            padding: var(--spacing-md);
+            border-top: 1px solid var(--border-color);
+            background-color: var(--bg-tertiary);
+        }
+
+        .input-container {
+            display: flex;
+            gap: var(--spacing-sm);
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: var(--spacing-sm);
+            transition: border-color var(--transition-fast);
+        }
+
+        .input-container:focus-within {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.2);
+        }
+
+        .chat-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+            resize: none;
+            font-family: inherit;
+            line-height: 1.5;
+        }
+
+        .chat-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .send-button {
+            background: transparent;
+            border: none;
+            color: var(--accent-primary);
+            cursor: pointer;
+            padding: var(--spacing-sm);
+            border-radius: 4px;
+            transition: all var(--transition-fast);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .send-button:hover {
+            background-color: var(--accent-primary);
+            color: white;
+        }
+
+        .send-button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* ===== Typing Indicator ===== */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: var(--spacing-md);
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--text-secondary);
+            border-radius: 50%;
+            animation: typingBounce 1.4s infinite ease-in-out both;
+        }
+
+        .typing-dot:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes typingBounce {
+            0%, 80%, 100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* ===== Diff Panel ===== */
+        .diff-panel {
+            position: fixed;
+            bottom: 0;
+            left: 348px;
+            right: 416px;
+            height: 300px;
+            background-color: var(--bg-secondary);
+            border-top: 2px solid var(--accent-primary);
+            box-shadow: var(--shadow-lg);
+            display: none;
+            flex-direction: column;
+            z-index: 100;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        .diff-panel.visible {
+            display: flex;
+        }
+
+        .diff-header {
+            padding: var(--spacing-md) var(--spacing-lg);
+            background-color: var(--bg-tertiary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .diff-title {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .diff-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+
+        .diff-button {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .diff-button.approve {
+            background-color: var(--status-online);
+            color: white;
+        }
+
+        .diff-button.approve:hover {
+            background-color: #3cb39a;
+        }
+
+        .diff-button.reject {
+            background-color: var(--status-offline);
+            color: white;
+        }
+
+        .diff-button.reject:hover {
+            background-color: #e03d3d;
+        }
+
+        .diff-button.close {
+            background-color: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .diff-button.close:hover {
+            background-color: var(--border-light);
+        }
+
+        .diff-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--spacing-md);
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .diff-line {
+            padding: 2px var(--spacing-sm);
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .diff-line.added {
+            background-color: var(--diff-added-bg);
+            color: var(--diff-added-text);
+        }
+
+        .diff-line.removed {
+            background-color: var(--diff-removed-bg);
+            color: var(--diff-removed-text);
+        }
+
+        .diff-line.system {
+            color: var(--text-accent);
+            font-weight: 600;
+        }
+
+        /* ===== Confirmation Dialog ===== */
+        .confirm-dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .confirm-dialog {
+            background-color: var(--bg-secondary);
+            border-radius: 8px;
+            box-shadow: var(--shadow-lg);
+            min-width: 400px;
+            max-width: 600px;
+            animation: slideUp 0.3s ease;
+        }
+
+        .confirm-header {
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .confirm-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .confirm-body {
+            padding: var(--spacing-lg);
+        }
+
+        .confirm-question {
+            font-size: 15px;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+            line-height: 1.5;
+        }
+
+        .confirm-subject {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .confirm-footer {
+            padding: var(--spacing-lg);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--spacing-sm);
+        }
+
+        .confirm-button {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .confirm-button.yes {
+            background-color: var(--status-online);
+            color: white;
+        }
+
+        .confirm-button.yes:hover {
+            background-color: #3cb39a;
+        }
+
+        .confirm-button.no {
+            background-color: var(--status-offline);
+            color: white;
+        }
+
+        .confirm-button.no:hover {
+            background-color: #e03d3d;
+        }
+
+        /* ===== Responsive Design ===== */
+        @media (max-width: 1200px) {
+            .chat-panel {
+                width: 320px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                position: absolute;
+                left: 48px;
+                top: 0;
+                bottom: 0;
+                z-index: 50;
+                box-shadow: var(--shadow-lg);
+            }
+
+            .chat-panel {
+                position: absolute;
+                right: 0;
+                top: 0;
+                bottom: 0;
+                z-index: 50;
+                box-shadow: var(--shadow-lg);
+                transform: translateX(100%);
+                transition: transform var(--transition-normal);
+            }
+
+            .chat-panel.visible {
+                transform: translateX(0);
+            }
+        }
+
+        /* ===== Utility Classes ===== */
+        .hidden {
+            display: none !important;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Activity Bar -->
+        <div class="activity-bar">
+            <div class="activity-icon active" onclick="showExplorer()" title="Explorer">
+                📁
+            </div>
+            <div class="activity-icon" onclick="showToolkit()" title="Toolkit">
+                🛠️
+            </div>
+            <div class="activity-icon" title="Search">
+                🔍
+            </div>
+            <div class="activity-icon" title="Settings">
+                ⚙️
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <span>Explorer</span>
+                <div class="sidebar-actions">
+                    <button class="icon-btn" onclick="showProjectSwitcher()" title="Switch Project">📂</button>
+                    <button class="icon-btn" onclick="createNewProject()" title="New Project">✨</button>
+                    <button class="icon-btn" onclick="refreshFileTree()" title="Refresh">↻</button>
+                    <button class="icon-btn" onclick="createNewFile()" title="New File">+</button>
+                </div>
+            </div>
+
+            <!-- Project Switcher Panel (hidden by default) -->
+            <div class="project-switcher" id="project-switcher" style="display: none;">
+                <div style="padding: 12px; border-bottom: 1px solid var(--border-color);">
+                    <h4 style="margin: 0 0 8px 0; font-size: 12px; color: var(--text-secondary);">PROJECTS</h4>
+                    <div id="project-list" style="max-height: 300px; overflow-y: auto;">
+                        <!-- Projects will be loaded here -->
+                    </div>
+                    <button onclick="createNewProject()" style="width: 100%; margin-top: 8px; padding: 8px; background: var(--accent-primary); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">
+                        + Create New Project
+                    </button>
+                </div>
+            </div>
+
+            <!-- File Tree Panel -->
+            <div class="file-tree" id="file-tree">
+                <div style="padding: 40px 20px; text-align: center; color: var(--text-secondary);">
+                    📂 Loading files...
+                </div>
+            </div>
+
+            <!-- Toolkit Panel (hidden by default) -->
+            <div class="toolkit-panel" id="toolkit-panel" style="display: none;">
+                <div class="toolkit-tabs">
+                    <div class="toolkit-tab active" onclick="showToolkitTab('skills')">Skills</div>
+                    <div class="toolkit-tab" onclick="showToolkitTab('mcp')">MCP Servers</div>
+                </div>
+
+                <!-- Skills Tab -->
+                <div class="toolkit-content" id="toolkit-skills">
+                    <div style="padding: var(--spacing-md); border-bottom: 1px solid var(--border-color);">
+                        <p style="font-size: 12px; color: var(--text-secondary); margin: 0;">
+                            💡 Skills are Python scripts that extend this project's capabilities.
+                            <br>Each project has its own isolated toolkit.
+                        </p>
+                    </div>
+                    <div class="toolkit-actions">
+                        <button class="icon-btn" onclick="createNewSkill()" title="New Skill">+ New Skill</button>
+                        <button class="icon-btn" onclick="document.getElementById('skill-upload-input').click()" title="Upload Skill (.py)">📤 Upload Skill</button>
+                        <button class="icon-btn" onclick="refreshToolkit()" title="Refresh">↻</button>
+                        <input type="file" id="skill-upload-input" accept=".py" style="display: none;" onchange="uploadSkillFile(this.files)">
+                    </div>
+                    <div class="toolkit-list" id="skills-list">
+                        <div style="padding: 40px 20px; text-align: center; color: var(--text-secondary);">
+                            🛠️ Loading skills...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MCP Servers Tab -->
+                <div class="toolkit-content" id="toolkit-mcp" style="display: none;">
+                    <div style="padding: var(--spacing-md); border-bottom: 1px solid var(--border-color);">
+                        <p style="font-size: 12px; color: var(--text-secondary); margin: 0;">
+                            🌐 MCP (Model Context Protocol) servers provide external tools and capabilities.
+                            <br>Each project has its own isolated MCP server configuration.
+                        </p>
+                    </div>
+                    <div class="toolkit-actions">
+                        <button class="icon-btn" onclick="addMCPServer()" title="Add MCP Server">+ Add Server</button>
+                        <button class="icon-btn" onclick="document.getElementById('mcp-upload-input').click()" title="Upload MCP Config (.json)">📤 Upload Config</button>
+                        <button class="icon-btn" onclick="refreshToolkit()" title="Refresh">↻</button>
+                        <input type="file" id="mcp-upload-input" accept=".json" style="display: none;" onchange="uploadMCPConfig(this.files)">
+                    </div>
+                    <div class="toolkit-list" id="mcp-list">
+                        <div style="padding: 40px 20px; text-align: center; color: var(--text-secondary);">
+                            🌐 Loading MCP servers...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Area -->
+        <div class="main-area">
+            <!-- Tabs Bar -->
+            <div class="tabs-bar">
+                <div class="tab active" id="current-tab">
+                    <span class="tab-icon">📄</span>
+                    <span class="tab-name" id="tab-filename">Welcome</span>
+                    <span class="tab-close" onclick="closeCurrentFile()">✕</span>
+                </div>
+            </div>
+
+            <!-- Panels -->
+            <div class="panels-container">
+                <!-- Editor Panel -->
+                <div class="editor-panel">
+                    <div id="monaco-host"></div>
+
+                    <!-- Welcome Screen (shown when no file is open) -->
+                    <div class="welcome-screen" id="welcome-screen" style="display: none;">
+                        <h1>🚀 AgentOS Studio</h1>
+                        <p>Modern AI-Powered Development Environment</p>
+                        <p>Environment: Local Sandbox</p>
+                        <p style="margin-top: 24px; color: var(--text-secondary);">
+                            💡 Tip: Select a file to edit or ask the AI to create code
+                        </p>
+                        <p style="font-size: 12px; margin-top: 16px;">
+                            Press Ctrl+S to save files
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Chat Panel -->
+                <div class="chat-panel">
+                    <div class="chat-header">
+                        <span class="chat-title">💬 AI Assistant</span>
+                        <span id="connection-status" class="status-badge offline">Offline</span>
+                    </div>
+
+                    <div class="messages-area" id="messages">
+                        <div class="message system">
+                            <div class="message-bubble">
+                                🟢 Connected to AgentOS Studio<br>
+                                Environment: Local Sandbox
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="input-area">
+                        <div class="input-container">
+                            <input
+                                type="text"
+                                class="chat-input"
+                                id="msg-input"
+                                placeholder="Ask AI to edit code (e.g., 'Add error handling to main.py')..."
+                                onkeypress="handleKey(event)"
+                                autocomplete="off"
+                            >
+                            <button class="send-button" id="send-btn" onclick="sendMessage()" title="Send">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Diff Panel -->
+    <div class="diff-panel" id="diff-panel">
+        <div class="diff-header">
+            <span class="diff-title">📝 Proposed Changes</span>
+            <div class="diff-actions">
+                <button class="diff-button approve" onclick="approveDiff()">✓ Apply</button>
+                <button class="diff-button reject" onclick="rejectDiff()">✗ Reject</button>
+                <button class="diff-button close" onclick="closeDiffPanel()">Close</button>
+            </div>
+        </div>
+        <div class="diff-content" id="diff-content"></div>
+    </div>
+
+    <!-- Confirmation Dialog -->
+    <div class="confirm-dialog-overlay" id="confirm-dialog-overlay" style="display: none;">
+        <div class="confirm-dialog" id="confirm-dialog">
+            <div class="confirm-header">
+                <span class="confirm-title">⚠️ Confirmation Required</span>
+            </div>
+            <div class="confirm-body">
+                <p class="confirm-question" id="confirm-question"></p>
+                <p class="confirm-subject" id="confirm-subject"></p>
+            </div>
+            <div class="confirm-footer">
+                <button class="confirm-button yes" onclick="sendConfirmResponse(true)">✓ Yes</button>
+                <button class="confirm-button no" onclick="sendConfirmResponse(false)">✗ No</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== Application State (Global) =====
+        window.state = {
+            sessionId: null,
+            ws: null,
+            currentFile: null,
+            currentFilePath: null,
+            monacoEditor: null,
+            simpleEditor: null,
+            pendingDiff: null,
+            modifiedFiles: new Set(),
+            monacoLoaded: false,
+            connected: false
+        };
+
+        // ===== Initialization =====
+        async function init() {
+            logSystem("🚀 Initializing AgentOS Studio...");
+            await loadSessionList();
+            loadMonacoEditor();
+            setupWebSocket();
+        }
+
+        // ===== Session Management =====
+        async function loadSessionList() {
+            try {
+                const res = await fetch('/api/sessions');
+                const data = await res.json();
+
+                // Get session_id from URL if present
+                const urlParams = new URLSearchParams(window.location.search);
+                const urlSessionId = urlParams.get('session_id');
+
+                if (data && data.length > 0) {
+                    // Check if URL has a specific session_id
+                    if (urlSessionId) {
+                        const urlSession = data.find(s => s.id === urlSessionId);
+                        if (urlSession) {
+                            state.sessionId = urlSession.id;
+                            logSystem(`📂 Loaded session: ${urlSession.name}`);
+                        } else {
+                            // Session not found, fall back to first session
+                            state.sessionId = data[0].id;
+                            logSystem(`⚠️ Session ${urlSessionId} not found, using: ${data[0].name}`);
+                        }
+                    } else {
+                        // Use existing session
+                        state.sessionId = data[0].id;
+                        logSystem(`📂 Loaded session: ${data[0].name}`);
+                    }
+                    await refreshFileTree();
+                    connectWebSocket();
+                } else {
+                    // Try to create new session
+                    try {
+                        const newRes = await fetch('/api/sessions', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: 'My Project' })
+                        });
+                        if (newRes.ok) {
+                            const newData = await newRes.json();
+                            state.sessionId = newData.session_id;
+                            logSystem(`✨ Created new session`);
+                            await refreshFileTree();
+                            connectWebSocket();
+                        } else {
+                            throw new Error(`HTTP ${newRes.status}`);
+                        }
+                    } catch (createError) {
+                        logSystem('⚠️ Could not create session. Please refresh.');
+                        console.error('Session creation failed:', createError);
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load sessions:', e);
+                logSystem('❌ Failed to load sessions');
+            }
+        }
+
+        // ===== Monaco Editor Setup =====
+        function loadMonacoEditor() {
+            if (typeof require !== 'undefined') {
+                initMonaco();
+                return;
+            }
+
+            const checkRequire = setInterval(() => {
+                if (typeof require !== 'undefined') {
+                    clearInterval(checkRequire);
+                    initMonaco();
+                }
+            }, 100);
+
+            setTimeout(() => {
+                if (!state.monacoLoaded && typeof require === 'undefined') {
+                    clearInterval(checkRequire);
+                    console.warn('Monaco Editor unavailable');
+                    initSimpleEditor();
+                }
+            }, 5000);
+        }
+
+        function initMonaco() {
+            require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' }});
+
+            require(['vs/editor/editor.main'], function () {
+                state.monacoEditor = monaco.editor.create(document.getElementById('monaco-host'), {
+                    value: '// Welcome to AgentOS Studio\n// Select a file to edit or ask the AI to create code',
+                    language: 'python',
+                    theme: 'vs-dark',
+                    automaticLayout: true,
+                    fontSize: 14,
+                    lineNumbers: 'on',
+                    minimap: { enabled: true },
+                    scrollBeyondLastLine: false,
+                    smoothScrolling: true,
+                    cursorBlinking: 'smooth',
+                    cursorSmoothCaretAnimation: 'on'
+                });
+
+                state.monacoLoaded = true;
+                logSystem('✅ Monaco Editor loaded');
+            });
+        }
+
+        function initSimpleEditor() {
+            const host = document.getElementById('monaco-host');
+            host.innerHTML = '';
+
+            state.simpleEditor = document.createElement('textarea');
+            state.simpleEditor.style.cssText = `
+                width: 100%;
+                height: 100%;
+                background-color: var(--bg-primary);
+                color: var(--text-primary);
+                border: none;
+                padding: 20px;
+                font-family: 'Consolas', monospace;
+                font-size: 14px;
+                line-height: 1.6;
+                resize: none;
+            `;
+            state.simpleEditor.value = '// Welcome to AgentOS Studio\n// Monaco Editor unavailable - using simple editor';
+
+            host.appendChild(state.simpleEditor);
+            logSystem('⚠️ Using simple editor (Monaco unavailable)');
+        }
+
+        function getEditorValue() {
+            if (state.monacoLoaded && state.monacoEditor) {
+                return state.monacoEditor.getValue();
+            } else if (state.simpleEditor) {
+                return state.simpleEditor.value;
+            }
+            return '';
+        }
+
+        function setEditorValue(value, language = 'python') {
+            if (state.monacoLoaded && state.monacoEditor) {
+                const model = state.monacoEditor.getModel();
+                state.monacoEditor.setValue(value || '');
+                monaco.editor.setModelLanguage(model, language);
+            } else if (state.simpleEditor) {
+                state.simpleEditor.value = value || '';
+            }
+        }
+
+        // ===== WebSocket Communication =====
+        function setupWebSocket() {
+            if (!state.sessionId) return;
+
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/chat/${state.sessionId}`;
+
+            console.log('[DEBUG WS] Creating WebSocket connection to:', wsUrl);
+            state.ws = new WebSocket(wsUrl);
+
+            state.ws.onopen = () => {
+                console.log('[DEBUG WS] WebSocket opened successfully');
+                state.connected = true;
+                updateConnectionStatus(true);
+                logSystem('🟢 Connected to Agent');
+            };
+
+            state.ws.onclose = (event) => {
+                console.log('[DEBUG WS] WebSocket closed:', { code: event.code, reason: event.reason, wasClean: event.wasClean });
+                state.connected = false;
+                updateConnectionStatus(false);
+                logSystem('🔴 Connection lost. Reconnecting...');
+
+                // Auto-reconnect after 3 seconds
+                setTimeout(() => {
+                    if (!state.connected) {
+                        console.log('[DEBUG WS] Attempting to reconnect...');
+                        setupWebSocket();
+                    }
+                }, 3000);
+            };
+
+            state.ws.onerror = (error) => {
+                console.error('[DEBUG WS] WebSocket error:', error);
+            };
+
+            state.ws.onmessage = (event) => {
+                console.log('[DEBUG WS] Message received:', event.data.substring(0, 200));
+                try {
+                    const msg = JSON.parse(event.data);
+                    handleWebSocketMessage(msg);
+                } catch (e) {
+                    console.error('[DEBUG WS] Failed to parse message:', e, 'Raw data:', event.data);
+                }
+            };
+        }
+
+        function connectWebSocket() {
+            if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+                return;
+            }
+            setupWebSocket();
+        }
+
+        function handleWebSocketMessage(msg) {
+            // Handle different message types from server
+            if (msg.type === 'event' || msg.event_type) {
+                const payload = msg.payload || msg.data || {};
+
+                // Status updates
+                if (payload.status === 'thinking') {
+                    showTypingIndicator();
+                } else if (payload.status === 'idle' || payload.status === 'waiting_for_user') {
+                    hideTypingIndicator();
+                }
+
+                // Chat response - display Agent's reply
+                if (payload.action === 'chat_response' && payload.data) {
+                    hideTypingIndicator();
+                    addAssistantMessage(payload.data.content || '');
+                    // Refresh file list after Agent response
+                    refreshFileTree();
+                }
+
+                // Log messages
+                if (payload.action === 'log' && payload.message) {
+                    console.log('[Agent]', payload.message);
+                }
+
+                // Text chunks (streaming response)
+                if (payload.chunk) {
+                    addMessageChunk(payload.chunk);
+                }
+
+                // Diff proposals
+                if (payload.action === 'confirm_diff' && payload.data) {
+                    showDiffPanel(payload.data);
+                }
+
+                // Confirmation requests (from Aider's confirm_ask)
+                if (payload.action === 'confirm_ask' && payload.data) {
+                    showConfirmDialog(payload.data);
+                }
+
+                // File system updates
+                if (payload.fs_update) {
+                    refreshFileTree();
+                }
+            }
+
+            // Legacy format (direct text)
+            else if (typeof msg === 'string' || msg.text) {
+                const text = typeof msg === 'string' ? msg : msg.text;
+                hideTypingIndicator();
+                addAssistantMessage(text);
+            }
+        }
+
+        // ===== File Operations =====
+        async function refreshFileTree() {
+            if (!state.sessionId) return;
+
+            try {
+                const res = await fetch(`/api/sessions/${state.sessionId}/files/tree`);
+                const data = await res.json();
+
+                const treeContainer = document.getElementById('file-tree');
+
+                if (data.children && data.children.length > 0) {
+                    treeContainer.innerHTML = data.children.map(child => `
+                        <div class="tree-item" onclick="openFile('${child.path}')" data-path="${child.path}">
+                            <span class="tree-icon">${getFileIcon(child.type, child.name)}</span>
+                            <span class="tree-name">${child.name}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    treeContainer.innerHTML = `
+                        <div style="padding: 40px 20px; text-align: center; color: var(--text-secondary);">
+                            <p style="font-size: 48px; margin-bottom: 12px;">📭</p>
+                            <p>No files yet</p>
+                            <p style="font-size: 12px;">Ask the AI to create a file</p>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                console.error('Failed to load file tree:', e);
+            }
+        }
+
+        function getFileIcon(type, name) {
+            if (type === 'directory') return '📁';
+
+            const ext = name.split('.').pop().toLowerCase();
+            const icons = {
+                'py': '🐍',
+                'js': '📜',
+                'ts': '📘',
+                'html': '🌐',
+                'css': '🎨',
+                'json': '📋',
+                'md': '📝',
+                'txt': '📄'
+            };
+
+            return icons[ext] || '📄';
+        }
+
+        async function openFile(path) {
+            if (!state.sessionId) return;
+
+            try {
+                const res = await fetch(`/api/sessions/${state.sessionId}/files/content?path=${encodeURIComponent(path)}`);
+                const data = await res.json();
+
+                state.currentFilePath = path;
+                state.currentFile = data.content;
+
+                // Update tab
+                document.getElementById('tab-filename').textContent = path.split('/').pop();
+                document.getElementById('current-tab').classList.add('active');
+
+                // Update editor
+                const ext = path.split('.').pop();
+                const langMap = {
+                    'py': 'python',
+                    'js': 'javascript',
+                    'ts': 'typescript',
+                    'html': 'html',
+                    'css': 'css',
+                    'json': 'json',
+                    'md': 'markdown'
+                };
+                const language = langMap[ext] || 'plaintext';
+
+                setEditorValue(data.content || '', language);
+
+                // Update active state in tree
+                document.querySelectorAll('.tree-item').forEach(item => {
+                    item.classList.remove('active');
+                    if (item.dataset.path === path) {
+                        item.classList.add('active');
+                    }
+                });
+
+                logSystem(`📖 Opened: ${path}`);
+            } catch (e) {
+                logSystem(`❌ Failed to open file: ${e.message}`);
+            }
+        }
+
+        async function createNewFile() {
+            const filename = prompt("Enter filename (e.g., 'script.py'):");
+            if (!filename) return;
+
+            if (!state.sessionId) {
+                alert("Session not ready");
+                return;
+            }
+
+            try {
+                await fetch(`/api/sessions/${state.sessionId}/files/save`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: filename, content: '' })
+                });
+                logSystem(`✅ Created ${filename}`);
+                refreshFileTree();
+            } catch (e) {
+                logSystem(`❌ Failed to create file: ${e.message}`);
+            }
+        }
+
+        async function saveCurrentFile() {
+            if (!state.currentFilePath) {
+                logSystem("⚠️ No file is currently open");
+                return;
+            }
+
+            if (!state.sessionId) return;
+
+            const content = getEditorValue();
+            logSystem(`💾 Saving ${state.currentFilePath}...`);
+
+            try {
+                const res = await fetch(`/api/sessions/${state.sessionId}/files/save`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: state.currentFilePath, content: content })
+                });
+
+                if (res.ok) {
+                    state.modifiedFiles.delete(state.currentFilePath);
+                    updateTabStatus();
+                    logSystem(`✅ Saved ${state.currentFilePath}`);
+                } else {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+            } catch (e) {
+                logSystem(`❌ Failed to save: ${e.message}`);
+            }
+        }
+
+        function closeCurrentFile() {
+            state.currentFilePath = null;
+            state.currentFile = null;
+            document.getElementById('tab-filename').textContent = 'Welcome';
+            setEditorValue('// Select a file to edit\n// or ask the AI to create code for you', 'plaintext');
+            updateTabStatus();
+
+            document.querySelectorAll('.tree-item').forEach(item => {
+                item.classList.remove('active');
+            });
+        }
+
+        function updateTabStatus() {
+            const tab = document.getElementById('current-tab');
+            if (state.currentFilePath && state.modifiedFiles.has(state.currentFilePath)) {
+                tab.classList.add('modified');
+            } else {
+                tab.classList.remove('modified');
+            }
+        }
+
+        // ===== Toolkit Management =====
+        async function refreshToolkit() {
+            if (!state.sessionId) return;
+
+            try {
+                // Load skills
+                const skillsRes = await fetch(`/api/sessions/${state.sessionId}/toolkit/skills`);
+                const skillsData = await skillsRes.json();
+
+                const skillsList = document.getElementById('skills-list');
+                if (skillsData.skills && skillsData.skills.length > 0) {
+                    skillsList.innerHTML = skillsData.skills.map(skill => `
+                        <div class="toolkit-item" style="cursor: pointer;" onclick="editSkill('${skill.name}')">
+                            <div class="toolkit-item-header">
+                                <div class="toolkit-item-name">🔧 ${skill.name}</div>
+                                <div class="toolkit-item-actions">
+                                    <button onclick="event.stopPropagation(); viewSkillDetails('${skill.name}')" title="View details and documentation">👁️ View</button>
+                                    <button onclick="event.stopPropagation(); editSkill('${skill.name}')" title="Edit skill code">✏️ Edit</button>
+                                    <button onclick="event.stopPropagation(); deleteSkill('${skill.name}')" title="Delete skill">🗑️ Delete</button>
+                                </div>
+                            </div>
+                            <div class="toolkit-item-desc">${escapeHtml(skill.description || 'No description')}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    skillsList.innerHTML = `
+                        <div style="padding: 40px 20px; text-align: center; color: var(--text-secondary);">
+                            <p style="font-size: 48px; margin-bottom: 12px;">🛠️</p>
+                            <p>No skills yet</p>
+                            <p style="font-size: 12px;">Click "+ New Skill" to create one</p>
+                        </div>
+                    `;
+                }
+
+                // Load MCP servers
+                const mcpRes = await fetch(`/api/sessions/${state.sessionId}/toolkit/mcp-servers`);
+                const mcpData = await mcpRes.json();
+
+                const mcpList = document.getElementById('mcp-list');
+                if (mcpData.mcp_servers && mcpData.mcp_servers.length > 0) {
+                    mcpList.innerHTML = mcpData.mcp_servers.map(server => `
+                        <div class="toolkit-item" style="cursor: pointer;" onclick="editMCPServer('${server.name}')">
+                            <div class="toolkit-item-header">
+                                <div class="toolkit-item-name">🌐 ${server.name}</div>
+                                <div class="toolkit-item-actions">
+                                    <button onclick="event.stopPropagation(); editMCPServer('${server.name}')">Edit</button>
+                                    <button onclick="event.stopPropagation(); deleteMCPServer('${server.name}')">Delete</button>
+                                </div>
+                            </div>
+                            <div class="toolkit-item-desc">${escapeHtml(server.command)}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    mcpList.innerHTML = `
+                        <div style="padding: 40px 20px; text-align: center; color: var(--text-secondary);">
+                            <p style="font-size: 48px; margin-bottom: 12px;">🌐</p>
+                            <p>No MCP servers yet</p>
+                            <p style="font-size: 12px;">Click "+ Add Server" to add one</p>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                console.error('Failed to load toolkit:', e);
+            }
+        }
+
+        async function createNewSkill() {
+            const name = prompt('Enter skill name (e.g., my_skill):');
+            if (!name) return;
+
+            try {
+                const res = await fetch(`/api/sessions/${state.sessionId}/toolkit/skills`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+
+                if (res.ok) {
+                    await refreshToolkit();
+                    // Open the newly created skill for editing
+                    setTimeout(() => editSkill(name), 100);
+                } else {
+                    const error = await res.json();
+                    alert('Failed to create skill: ' + (error.detail || 'Unknown error'));
+                }
+            } catch (e) {
+                console.error('Failed to create skill:', e);
+                alert('Failed to create skill: ' + e.message);
+            }
+        }
+
+        async function editSkill(name) {
+            try {
+                const res = await fetch(`/api/sessions/${state.sessionId}/toolkit/skills/${name}`);
+                const data = await res.json();
+
+                // Open in Monaco editor
+                state.currentFile = `toolkit/bins/${name}.py`;
+                state.currentContent = data.code;
+                state.isModified = false;
+
+                if (state.editor) {
+                    state.editor.setValue(data.code);
+                    monaco.editor.setModelLanguage(state.editor.getModel(), 'python');
+                }
+
+                // Update tab
+                document.getElementById('tab-filename').textContent = `${name}.py`;
+                document.querySelector('.tab-icon').textContent = '🔧';
+                document.getElementById('welcome-screen').style.display = 'none';
+                document.getElementById('monaco-host').style.display = 'block';
+            } catch (e) {
+                console.error('Failed to load skill:', e);
+                alert('Failed to load skill: ' + e.message);
+            }
+        }
+
+        async function deleteSkill(name) {
+            if (!confirm(`Delete skill "${name}"?`)) return;
+
+            try {
+                const res = await fetch(`/api/sessions/${state.sessionId}/toolkit/skills/${name}`, {
+                    method: 'DELETE'
+                });
+
+                if (res.ok) {
+                    await refreshToolkit();
+                } else {
+                    const error = await res.json();
+                    alert('Failed to delete skill: ' + (error.detail || 'Unknown error'));
+                }
+            } catch (e) {
+                console.error('Failed to delete skill:', e);
+                alert('Failed to delete skill: ' + e.message);
+            }
+        }
+
+        async function addMCPServer() {
+            const name = prompt('Enter MCP server name:');
+            if (!name) return;
+
+            const command = prompt('Enter server command (e.g., npx -y @modelcontextprotocol/server-filesystem /tmp):');
+            if (!command) return;
+
+            try {
+                const res = await fetch(`/api/sessions/${state.sessionId}/toolkit/mcp-servers`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, command })
+                });
+
+                if (res.ok) {
+                    await refreshToolkit();
+                } else {
+                    const error = await res.json();
+                    alert('Failed to add MCP server: ' + (error.detail || 'Unknown error'));
+                }
+            } catch (e) {
+                console.error('Failed to add MCP server:', e);
+                alert('Failed to add MCP server: ' + e.message);
+            }
+        }
+
+        async function deleteMCPServer(name) {
+            if (!confirm(`Delete MCP server "${name}"?`)) return;
+
+            try {
+                const res = await fetch(`/api/sessions/${state.sessionId}/toolkit/mcp-servers/${name}`, {
+                    method: 'DELETE'
+                });
+
+                if (res.ok) {
+                    await refreshToolkit();
+                } else {
+                    const error = await res.json();
+                    alert('Failed to delete MCP server: ' + (error.detail || 'Unknown error'));
+                }
+            } catch (e) {
+                console.error('Failed to delete MCP server:', e);
+                alert('Failed to delete MCP server: ' + e.message);
+            }
+        }
+
+        function showToolkitTab(tab) {
+            // Update tab active state
+            document.querySelectorAll('.toolkit-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Show/hide content
+            if (tab === 'skills') {
+                document.getElementById('toolkit-skills').style.display = 'flex';
+                document.getElementById('toolkit-mcp').style.display = 'none';
+            } else {
+                document.getElementById('toolkit-skills').style.display = 'none';
+                document.getElementById('toolkit-mcp').style.display = 'flex';
+            }
+        }
+
+        function showExplorer() {
+            // Update activity bar
+            document.querySelectorAll('.activity-icon').forEach(icon => icon.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update sidebar header
+            document.querySelector('.sidebar-header span').textContent = 'Explorer';
+
+            // Show/hide panels
+            document.getElementById('file-tree').style.display = 'block';
+            document.getElementById('toolkit-panel').style.display = 'none';
+        }
+
+        function showToolkit() {
+            // Update activity bar
+            document.querySelectorAll('.activity-icon').forEach(icon => icon.classList.remove('active'));
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
+
+            // Get current project name
+            const currentProject = allSessions.find(s => s.id === state.sessionId);
+            const projectName = currentProject ? currentProject.name : 'Current Project';
+
+            // Update sidebar header with project name
+            document.querySelector('.sidebar-header span').textContent = `🛠️ Toolkit (${projectName})`;
+
+            // Show/hide panels
+            document.getElementById('file-tree').style.display = 'none';
+            document.getElementById('toolkit-panel').style.display = 'flex';
+            document.getElementById('project-switcher').style.display = 'none';
+
+            // Load toolkit data
+            refreshToolkit();
+        }
+
+        // ===== File Upload Functions =====
+        async function uploadSkillFile(files) {
+            if (!files || files.length === 0) return;
+
+            const file = files[0];
+            if (!file.name.endsWith('.py')) {
+                alert('Please select a Python file (.py)');
+                return;
+            }
+
+            const skillName = file.name.replace('.py', '');
+            const reader = new FileReader();
+
+            reader.onload = async (e) => {
+                const code = e.target.result;
+
+                try {
+                    // Create the skill with the uploaded code
+                    const res = await fetch(`/api/sessions/${state.sessionId}/toolkit/skills`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: skillName })
+                    });
+
+                    if (res.ok) {
+                        // Now update it with the uploaded code
+                        const updateRes = await fetch(`/api/sessions/${state.sessionId}/toolkit/skills/${skillName}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ code: code })
+                        });
+
+                        if (updateRes.ok) {
+                            await refreshToolkit();
+                            alert(`✅ Skill "${skillName}" uploaded successfully!`);
+                        } else {
+                            const error = await updateRes.json();
+                            alert('Failed to update skill code: ' + (error.detail || 'Unknown error'));
+                        }
+                    } else {
+                        const error = await res.json();
+                        alert('Failed to create skill: ' + (error.detail || 'Unknown error'));
+                    }
+                } catch (err) {
+                    alert('Error uploading skill: ' + err.message);
+                }
+            };
+
+            reader.readAsText(file);
+            // Reset input
+            document.getElementById('skill-upload-input').value = '';
+        }
+
+        async function uploadMCPConfig(files) {
+            if (!files || files.length === 0) return;
+
+            const file = files[0];
+            if (!file.name.endsWith('.json')) {
+                alert('Please select a JSON file (.json)');
+                return;
+            }
+
+            const reader = new FileReader();
+
+            reader.onload = async (e) => {
+                try {
+                    const config = JSON.parse(e.target.result);
+                    const serverName = config.name || file.name.replace('.json', '');
+                    const command = config.command;
+
+                    if (!command) {
+                        alert('Invalid MCP config file. Must contain "command" field.');
+                        return;
+                    }
+
+                    const res = await fetch(`/api/sessions/${state.sessionId}/toolkit/mcp-servers`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: serverName, command: command })
+                    });
+
+                    if (res.ok) {
+                        await refreshToolkit();
+                        alert(`✅ MCP Server "${serverName}" uploaded successfully!`);
+                    } else {
+                        const error = await res.json();
+                        alert('Failed to add MCP server: ' + (error.detail || 'Unknown error'));
+                    }
+                } catch (err) {
+                    alert('Error parsing JSON file: ' + err.message);
+                }
+            };
+
+            reader.readAsText(file);
+            // Reset input
+            document.getElementById('mcp-upload-input').value = '';
+        }
+
+        // MCP Edit Functions
+        let currentMCPName = null;
+
+        async function editMCPServer(name) {
+            currentMCPName = name;
+
+            try {
+                // Fetch the current MCP server configuration
+                const res = await fetch(`/api/sessions/${state.sessionId}/toolkit/mcp-servers`);
+                const data = await res.json();
+
+                const server = data.mcp_servers.find(s => s.name === name);
+                if (!server) {
+                    alert('MCP server not found: ' + name);
+                    return;
+                }
+
+                // Populate modal fields
+                document.getElementById('mcp-edit-name').value = server.name;
+                document.getElementById('mcp-edit-command').value = server.command;
+
+                // Show the full JSON configuration
+                const fullConfig = {
+                    name: server.name,
+                    command: server.command,
+                    description: server.description || `MCP Server: ${server.name}`,
+                    tools: server.tools || []
+                };
+                document.getElementById('mcp-edit-json').value = JSON.stringify(fullConfig, null, 2);
+
+                // Show modal
+                const modal = document.getElementById('mcp-edit-modal');
+                modal.style.display = 'flex';
+
+                // Add event listener for updating JSON when name/command change
+                document.getElementById('mcp-edit-name').oninput = updateMCPJSON;
+                document.getElementById('mcp-edit-command').oninput = updateMCPJSON;
+
+            } catch (err) {
+                console.error('Failed to load MCP server:', err);
+                alert('Failed to load MCP server configuration: ' + err.message);
+            }
+        }
+
+        function updateMCPJSON() {
+            const name = document.getElementById('mcp-edit-name').value;
+            const command = document.getElementById('mcp-edit-command').value;
+
+            try {
+                const currentConfig = JSON.parse(document.getElementById('mcp-edit-json').value);
+                currentConfig.name = name;
+                currentConfig.command = command;
+                document.getElementById('mcp-edit-json').value = JSON.stringify(currentConfig, null, 2);
+            } catch (e) {
+                // If JSON is invalid, create a new config
+                const newConfig = {
+                    name: name,
+                    command: command,
+                    description: `MCP Server: ${name}`,
+                    tools: []
+                };
+                document.getElementById('mcp-edit-json').value = JSON.stringify(newConfig, null, 2);
+            }
+        }
+
+        function closeMCPModal() {
+            const modal = document.getElementById('mcp-edit-modal');
+            modal.style.display = 'none';
+            currentMCPName = null;
+        }
+
+        async function saveMCPConfig() {
+            if (!currentMCPName) return;
+
+            try {
+                // Get configuration from JSON editor
+                const configText = document.getElementById('mcp-edit-json').value;
+                let config;
+
+                try {
+                    config = JSON.parse(configText);
+                } catch (e) {
+                    alert('Invalid JSON configuration. Please fix the JSON syntax.');
+                    return;
+                }
+
+                if (!config.name || !config.command) {
+                    alert('Configuration must contain "name" and "command" fields.');
+                    return;
+                }
+
+                // Update the server using PUT endpoint
+                const res = await fetch(`/api/sessions/${state.sessionId}/toolkit/mcp-servers/${currentMCPName}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: config.name, command: config.command })
+                });
+
+                if (res.ok) {
+                    await refreshToolkit();
+                    closeMCPModal();
+                    alert(`✅ MCP Server "${config.name}" saved successfully!`);
+                } else {
+                    const error = await res.json();
+                    alert('Failed to save MCP server: ' + (error.detail || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error('Failed to save MCP server:', err);
+                alert('Failed to save MCP server: ' + err.message);
+            }
+        }
+
+        // Skill View Functions
+        let currentSkillName = null;
+
+        async function viewSkillDetails(name) {
+            currentSkillName = name;
+
+            try {
+                // Fetch skill code
+                const res = await fetch(`/api/sessions/${state.sessionId}/toolkit/skills/${name}`);
+                if (!res.ok) {
+                    alert('Failed to load skill details');
+                    return;
+                }
+
+                const data = await res.json();
+                const code = data.code || '';
+
+                // Extract description from docstring
+                let description = 'No description available';
+                const docMatch = code.match(/"""([\s\S]*?)"""/);
+                if (docMatch) {
+                    description = docMatch[1].trim();
+                }
+
+                // Populate modal
+                document.getElementById('skill-view-name').textContent = name;
+                document.getElementById('skill-view-description').textContent = description;
+                document.getElementById('skill-view-filename').textContent = `${name}.py`;
+                document.getElementById('skill-view-path').textContent = `toolkit/bins/${name}.py`;
+                document.getElementById('skill-view-lines').textContent = code.split('\n').length;
+
+                // Show code preview (first 50 lines)
+                const lines = code.split('\n');
+                const preview = lines.slice(0, 50).join('\n');
+                document.getElementById('skill-view-code').textContent = preview + (lines.length > 50 ? '\n\n... (truncated)' : '');
+
+                // Show modal
+                const modal = document.getElementById('skill-view-modal');
+                modal.style.display = 'flex';
+
+            } catch (err) {
+                console.error('Failed to load skill details:', err);
+                alert('Failed to load skill details: ' + err.message);
+            }
+        }
+
+        function closeSkillViewModal() {
+            const modal = document.getElementById('skill-view-modal');
+            modal.style.display = 'none';
+            currentSkillName = null;
+        }
+
+        function editSkillFromView() {
+            if (currentSkillName) {
+                closeSkillViewModal();
+                editSkill(currentSkillName);
+            }
+        }
+
+        // ===== Chat Functions =====
+        function sendMessage() {
+            const input = document.getElementById('msg-input');
+            const text = input.value.trim();
+
+            console.log('[DEBUG WS] sendMessage called:', { text, hasWs: !!state.ws, readyState: state.ws?.readyState, connected: state.connected });
+
+            if (!text || !state.ws || !state.connected) {
+                if (!state.connected) {
+                    logSystem('⚠️ Not connected. Please wait...');
+                }
+                console.log('[DEBUG WS] Message not sent - validation failed');
+                return;
+            }
+
+            addUserMessage(text);
+
+            const message = JSON.stringify({
+                type: 'input',
+                payload: { text: text }
+            });
+
+            console.log('[DEBUG WS] Sending message:', message);
+            console.log('[DEBUG WS] WebSocket URL:', state.ws.url);
+            console.log('[DEBUG WS] WebSocket readyState:', state.ws.readyState, '(0=CONNECTING, 1=OPEN, 2=CLOSING, 3=CLOSED)');
+
+            try {
+                state.ws.send(message);
+                console.log('[DEBUG WS] Message sent successfully');
+            } catch (e) {
+                console.error('[DEBUG WS] Send failed:', e);
+                logSystem('❌ Failed to send message: ' + e.message);
+            }
+
+            input.value = '';
+            showTypingIndicator();
+        }
+
+        function handleKey(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function addUserMessage(text) {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = 'message user';
+
+            div.innerHTML = `
+                <div class="message-bubble">
+                    ${escapeHtml(text)}
+                </div>
+            `;
+
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Clean up Agent response to remove technical details
+        function cleanAgentResponse(text) {
+            // First, remove all markdown code blocks with SEARCH/REPLACE
+            let cleaned = text.replace(/```python\s*<<<<<<< SEARCH[\s\S]*?>>>>>>> REPLACE\s*```/g, '');
+
+            // Remove standalone diff markers
+            cleaned = cleaned.replace(/<<<<<<< SEARCH[\s\S]*?>>>>>>> REPLACE/g, '');
+
+            // Remove tokens usage lines
+            cleaned = cleaned.replace(/Tokens:.*?(?=\n|$)/g, '');
+
+            // Remove technical messages
+            cleaned = cleaned.replace(/Applied edit to.*?(?=\n|$)/g, '');
+            cleaned = cleaned.replace(/Running\s+.*?(?=\n|$)/g, '');
+            cleaned = cleaned.replace(/Added\s+\d+\s+lines.*?(?=\n|$)/g, '');
+
+            // Remove command execution blocks like "python test2.py" followed by output
+            cleaned = cleaned.replace(/```[\s\S]*?```/g, '');
+
+            // Split into paragraphs
+            let paragraphs = cleaned.split(/\n\n+/);
+
+            // Remove duplicate paragraphs (aider often repeats entire sections)
+            const uniqueParagraphs = [];
+            const seen = new Set();
+
+            for (const para of paragraphs) {
+                const normalized = para.trim().replace(/\s+/g, ' ');
+                // Skip if we've seen this paragraph before (and it's not very short)
+                if (seen.has(normalized) && normalized.length > 30) {
+                    continue;
+                }
+                seen.add(normalized);
+                uniqueParagraphs.push(para.trim());
+            }
+
+            cleaned = uniqueParagraphs.join('\n\n').trim();
+
+            // Remove duplicate consecutive lines
+            const lines = cleaned.split('\n');
+            const dedupedLines = [];
+            let lastLine = '';
+
+            for (const line of lines) {
+                if (line !== lastLine || line.length < 20) {
+                    dedupedLines.push(line);
+                    lastLine = line;
+                }
+            }
+
+            cleaned = dedupedLines.join('\n').trim();
+
+            // If result is too short, provide a generic success message
+            if (cleaned.length < 20) {
+                cleaned = '✅ 任务完成！已为您处理。';
+            }
+
+            return cleaned;
+        }
+
+        function addAssistantMessage(text) {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = 'message assistant';
+
+            // Clean the response to remove technical details
+            const cleanedText = cleanAgentResponse(text);
+
+            // Parse markdown if marked is available
+            let content = escapeHtml(cleanedText);
+
+            if (typeof marked !== 'undefined') {
+                content = marked.parse(cleanedText);
+            }
+
+            // Highlight code blocks if highlight.js is available
+            if (typeof hljs !== 'undefined') {
+                div.innerHTML = `
+                    <div class="message-bubble markdown">${content}</div>
+                `;
+
+                div.querySelectorAll('pre code').forEach((block) => {
+                    hljs.highlightElement(block);
+                });
+            } else {
+                div.innerHTML = `
+                    <div class="message-bubble markdown">${content}</div>
+                `;
+            }
+
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function addMessageChunk(chunk) {
+            // For streaming responses, append to last assistant message or create new one
+            const container = document.getElementById('messages');
+            let lastMsg = container.querySelector('.message.assistant:last-child');
+
+            if (!lastMsg || lastMsg.classList.contains('complete')) {
+                lastMsg = document.createElement('div');
+                lastMsg.className = 'message assistant';
+                container.appendChild(lastMsg);
+            }
+
+            let content = lastMsg.querySelector('.message-bubble');
+            if (!content) {
+                content = document.createElement('div');
+                content.className = 'message-bubble markdown';
+                lastMsg.appendChild(content);
+            }
+
+            // Parse and append markdown
+            let html = typeof marked !== 'undefined' ? marked.parse(chunk) : escapeHtml(chunk);
+            content.innerHTML = html;
+
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function logSystem(text) {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = 'message system';
+
+            div.innerHTML = `<div class="message-bubble">${text}</div>`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            hideTypingIndicator();
+
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = 'message assistant';
+            div.id = 'typing-indicator';
+
+            div.innerHTML = `
+                <div class="typing-indicator">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            `;
+
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusBadge = document.getElementById('connection-status');
+
+            if (connected) {
+                statusBadge.textContent = 'Online';
+                statusBadge.className = 'status-badge online';
+            } else {
+                statusBadge.textContent = 'Offline';
+                statusBadge.className = 'status-badge offline';
+            }
+        }
+
+        // ===== Diff Panel =====
+        function showDiffPanel(data) {
+            const panel = document.getElementById('diff-panel');
+            const content = document.getElementById('diff-content');
+
+            state.pendingDiff = data;
+
+            let html = '';
+
+            if (data.diff_content) {
+                const lines = data.diff_content.split('\n');
+                lines.forEach(line => {
+                    let className = 'diff-line';
+                    let displayLine = escapeHtml(line);
+
+                    if (line.startsWith('@@')) {
+                        className += ' system';
+                        displayLine = `<strong>${displayLine}</strong>`;
+                    } else if (line.startsWith('+')) {
+                        className += ' added';
+                    } else if (line.startsWith('-')) {
+                        className += ' removed';
+                    }
+
+                    html += `<div class="${className}">${displayLine}</div>`;
+                });
+            } else {
+                html = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            }
+
+            content.innerHTML = html;
+            panel.classList.add('visible');
+
+            logSystem(`📝 Diff proposed for: ${data.file || 'file'}`);
+        }
+
+        function approveDiff() {
+            if (state.pendingDiff && state.ws) {
+                state.ws.send(JSON.stringify({
+                    type: 'input',
+                    payload: {
+                        command: 'yes',
+                        text: 'Yes, apply the changes.'
+                    }
+                }));
+
+                logSystem('✅ Diff approved');
+            }
+            closeDiffPanel();
+        }
+
+        function rejectDiff() {
+            if (state.pendingDiff && state.ws) {
+                state.ws.send(JSON.stringify({
+                    type: 'input',
+                    payload: {
+                        command: 'no',
+                        text: 'No, reject the changes.'
+                    }
+                }));
+
+                logSystem('❌ Diff rejected');
+            }
+            closeDiffPanel();
+        }
+
+        function closeDiffPanel() {
+            document.getElementById('diff-panel').classList.remove('visible');
+            state.pendingDiff = null;
+        }
+
+        // ===== Confirmation Dialog =====
+        function showConfirmDialog(data) {
+            const overlay = document.getElementById('confirm-dialog-overlay');
+            const questionEl = document.getElementById('confirm-question');
+            const subjectEl = document.getElementById('confirm-subject');
+
+            // Store confirm ID for response
+            state.pendingConfirm = data.confirm_id;
+
+            // Set question and subject
+            questionEl.textContent = data.question || 'Do you want to continue?';
+            subjectEl.textContent = data.subject || '';
+
+            // Show dialog
+            overlay.style.display = 'flex';
+
+            logSystem(`⚠️ Awaiting confirmation: ${data.question?.substring(0, 50)}...`);
+        }
+
+        function sendConfirmResponse(approved) {
+            if (!state.pendingConfirm || !state.ws) {
+                return;
+            }
+
+            // Send response
+            state.ws.send(JSON.stringify({
+                type: 'input',
+                payload: {
+                    confirm_id: state.pendingConfirm,
+                    response: approved ? 'yes' : 'no'
+                }
+            }));
+
+            // Hide dialog
+            hideConfirmDialog();
+
+            // Log response
+            logSystem(approved ? '✅ Confirmed' : '❌ Rejected');
+        }
+
+        function hideConfirmDialog() {
+            const overlay = document.getElementById('confirm-dialog-overlay');
+            overlay.style.display = 'none';
+            state.pendingConfirm = null;
+        }
+
+        // Close dialog when clicking outside
+        document.addEventListener('click', (e) => {
+            const overlay = document.getElementById('confirm-dialog-overlay');
+            const dialog = document.getElementById('confirm-dialog');
+            if (overlay.style.display === 'flex' &&
+                e.target === overlay &&
+                !dialog.contains(e.target)) {
+                // Don't close on outside click - user must make a choice
+                // This prevents accidental dismissals
+            }
+        });
+
+        // ===== Utility Functions =====
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ===== Keyboard Shortcuts =====
+        document.addEventListener('keydown', (e) => {
+            // Ctrl+S to save
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                saveCurrentFile();
+            }
+
+            // Ctrl+W to close current file
+            if (e.ctrlKey && e.key === 'w') {
+                e.preventDefault();
+                closeCurrentFile();
+            }
+
+            // Escape to close diff panel
+            if (e.key === 'Escape') {
+                closeDiffPanel();
+            }
+        });
+
+        // ===== Project Management =====
+        let allSessions = [];
+        let currentPanel = 'explorer'; // 'explorer', 'search', 'settings'
+
+        async function showProjectSwitcher() {
+            const switcher = document.getElementById('project-switcher');
+            const isVisible = switcher.style.display !== 'none';
+
+            if (isVisible) {
+                switcher.style.display = 'none';
+            } else {
+                await loadProjectList();
+                switcher.style.display = 'block';
+            }
+        }
+
+        async function loadProjectList() {
+            try {
+                const res = await fetch('/api/sessions');
+                const data = await res.json();
+                allSessions = data || [];
+
+                const projectList = document.getElementById('project-list');
+                if (allSessions.length === 0) {
+                    projectList.innerHTML = '<div style="padding: 12px; color: var(--text-secondary); font-size: 13px;">No projects yet</div>';
+                    return;
+                }
+
+                projectList.innerHTML = allSessions.map(session => {
+                    const isActive = session.id === state.sessionId;
+                    return `
+                        <div class="project-item ${isActive ? 'active' : ''}"
+                             onclick="switchToProject('${session.id}')"
+                             style="padding: 8px 12px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; ${isActive ? 'background: var(--bg-active);' : ''} hover:hover: background: var(--bg-hover);">
+                            <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+                                <span>📁</span>
+                                <div>
+                                    <div style="font-size: 13px; color: ${isActive ? 'var(--text-active)' : 'var(--text-primary)'};">${escapeHtml(session.name || 'Untitled')}</div>
+                                    <div style="font-size: 11px; color: var(--text-secondary);">ID: ${session.id.substring(0, 8)}...</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <button onclick="event.stopPropagation(); switchToProject('${session.id}'); setTimeout(() => showToolkit(), 100);"
+                                        style="padding: 4px 8px; background: var(--accent-primary); color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;"
+                                        title="Manage Skills & MCP Servers for this project">
+                                    🛠️ Toolkit
+                                </button>
+                                ${isActive ? '<span style="font-size: 12px;">✓</span>' : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.error('Failed to load projects:', e);
+            }
+        }
+
+        async function switchToProject(sessionId) {
+            if (sessionId === state.sessionId) return;
+
+            try {
+                // Close and clear WebSocket if open
+                if (state.ws) {
+                    state.ws.onclose = null; // Remove auto-reconnect handler
+                    state.ws.close();
+                    state.ws = null;
+                }
+
+                // Update session
+                state.sessionId = sessionId;
+                const session = allSessions.find(s => s.id === sessionId);
+                logSystem(`📂 Switched to project: ${session ? session.name : 'Unknown'}`);
+
+                // Update URL without reloading
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.set('session_id', sessionId);
+                window.history.pushState({}, '', newUrl);
+
+                // Reload file tree
+                await refreshFileTree();
+
+                // Force reconnect WebSocket with new session
+                state.connected = false;
+                setupWebSocket();
+
+                // Hide switcher
+                const switcher = document.getElementById('project-switcher');
+                if (switcher) switcher.style.display = 'none';
+
+                // Clear editor
+                if (state.monacoEditor) {
+                    state.monacoEditor.setValue('// Switched to ' + (session ? session.name : 'new project'));
+                }
+
+                addAssistantMessage(`✅ Switched to project: **${session ? session.name : 'Unknown'}**`);
+            } catch (e) {
+                console.error('Failed to switch project:', e);
+                addAssistantMessage(`❌ Failed to switch project: ${e.message}`);
+            }
+        }
+
+        function createNewProject() {
+            // Redirect to project wizard
+            window.location.href = '/project-wizard.html';
+        }
+
+        // ===== Activity Bar Panel Switching =====
+        function switchActivityPanel(panel) {
+            currentPanel = panel;
+
+            // Update active icon
+            document.querySelectorAll('.activity-icon').forEach(icon => {
+                icon.classList.remove('active');
+            });
+            event.target.closest('.activity-icon').classList.add('active');
+
+            // Update sidebar content
+            const sidebar = document.getElementById('sidebar');
+
+            if (panel === 'explorer') {
+                sidebar.innerHTML = `
+                    <div class="sidebar-header">
+                        <span>Explorer</span>
+                        <div class="sidebar-actions">
+                            <button class="icon-btn" onclick="showProjectSwitcher()" title="Switch Project">📂</button>
+                            <button class="icon-btn" onclick="createNewProject()" title="New Project">✨</button>
+                            <button class="icon-btn" onclick="refreshFileTree()" title="Refresh">↻</button>
+                            <button class="icon-btn" onclick="createNewFile()" title="New File">+</button>
+                        </div>
+                    </div>
+                    <div class="project-switcher" id="project-switcher" style="display: none;">
+                        <div style="padding: 12px; border-bottom: 1px solid var(--border-color);">
+                            <h4 style="margin: 0 0 8px 0; font-size: 12px; color: var(--text-secondary);">PROJECTS</h4>
+                            <div id="project-list"></div>
+                            <button onclick="createNewProject()" style="width: 100%; margin-top: 8px; padding: 8px; background: var(--accent-primary); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">
+                                + Create New Project
+                            </button>
+                        </div>
+                    </div>
+                    <div class="file-tree" id="file-tree"></div>
+                `;
+                refreshFileTree();
+            } else if (panel === 'search') {
+                sidebar.innerHTML = `
+                    <div class="sidebar-header">
+                        <span>Search</span>
+                    </div>
+                    <div style="padding: 12px;">
+                        <input type="text" id="search-input" placeholder="Search in files..."
+                               style="width: 100%; padding: 8px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary); font-size: 13px;"
+                               onkeypress="if(event.key==='Enter')performSearch()">
+                        <div id="search-results" style="margin-top: 12px; font-size: 13px;"></div>
+                    </div>
+                `;
+                document.getElementById('search-input').focus();
+            } else if (panel === 'settings') {
+                sidebar.innerHTML = `
+                    <div class="sidebar-header">
+                        <span>Settings</span>
+                    </div>
+                    <div style="padding: 12px; font-size: 13px;">
+                        <div style="margin-bottom: 16px;">
+                            <h4 style="margin: 0 0 8px 0; color: var(--text-secondary); font-size: 11px; text-transform: uppercase;">Current Session</h4>
+                            <div style="color: var(--text-primary);">${state.sessionId || 'Not connected'}</div>
+                        </div>
+                        <div style="margin-bottom: 16px;">
+                            <h4 style="margin: 0 0 8px 0; color: var(--text-secondary); font-size: 11px; text-transform: uppercase;">Environment</h4>
+                            <div style="color: var(--text-primary);">Local Sandbox</div>
+                        </div>
+                        <div style="margin-bottom: 16px;">
+                            <h4 style="margin: 0 0 8px 0; color: var(--text-secondary); font-size: 11px; text-transform: uppercase;">User</h4>
+                            <div id="settings-user" style="color: var(--text-primary);">Loading...</div>
+                        </div>
+                        <button onclick="window.location.href='/login.html'" style="width: 100%; padding: 8px; background: var(--bg-hover); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary); cursor: pointer; font-size: 13px; margin-top: 8px;">
+                            Switch User
+                        </button>
+                    </div>
+                `;
+                loadUserInfo();
+            }
+        }
+
+        async function loadUserInfo() {
+            try {
+                const token = localStorage.getItem('token');
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                const userDiv = document.getElementById('settings-user');
+                if (userDiv) {
+                    if (user.username) {
+                        userDiv.innerHTML = `
+                            <div style="color: var(--text-primary);">${escapeHtml(user.username)}</div>
+                            <div style="color: var(--text-secondary); font-size: 11px;">${escapeHtml(user.email || '')}</div>
+                        `;
+                    } else {
+                        userDiv.innerHTML = '<div style="color: var(--text-secondary);">Guest User</div>';
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load user info:', e);
+            }
+        }
+
+        async function performSearch() {
+            const query = document.getElementById('search-input').value.trim();
+            if (!query) return;
+
+            const resultsDiv = document.getElementById('search-results');
+            resultsDiv.innerHTML = '<div style="color: var(--text-secondary);">Searching...</div>';
+
+            try {
+                const res = await fetch(`/api/sessions/${state.sessionId}/search?q=${encodeURIComponent(query)}`);
+                const data = await res.json();
+
+                if (data.results && data.results.length > 0) {
+                    resultsDiv.innerHTML = data.results.map(result => `
+                        <div style="padding: 8px; border-bottom: 1px solid var(--border-color); cursor: pointer; hover:hover: background: var(--bg-hover);"
+                             onclick="openFile('${result.path}')">
+                            <div style="color: var(--text-primary);">${escapeHtml(result.path)}</div>
+                            <div style="color: var(--text-secondary); font-size: 11px; margin-top: 4px;">${escapeHtml(result.preview)}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    resultsDiv.innerHTML = '<div style="color: var(--text-secondary);">No results found</div>';
+                }
+            } catch (e) {
+                console.error('Search failed:', e);
+                resultsDiv.innerHTML = '<div style="color: var(--status-offline);">Search failed</div>';
+            }
+        }
+
+        // Add click handlers to activity bar icons
+        document.addEventListener('DOMContentLoaded', () => {
+            // Don't add event listeners - icons already have onclick handlers
+            const activityIcons = document.querySelectorAll('.activity-icon');
+            activityIcons.forEach(icon => {
+                icon.style.cursor = 'pointer';
+            });
+        });
+
+        // ===== Start Application =====
+        init();
+    </script>
+
+    <!-- MCP Server Edit Modal -->
+    <div id="mcp-edit-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="background: var(--bg-primary); width: 700px; max-height: 80vh; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); display: flex; flex-direction: column;">
+            <div style="padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 18px;">🌐 Edit MCP Server Configuration</h3>
+                <button onclick="closeMCPModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-secondary);">&times;</button>
+            </div>
+            <div style="padding: 20px; flex: 1; overflow-y: auto;">
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; margin-bottom: 8px; font-size: 13px; font-weight: 500; color: var(--text-secondary);">Server Name</label>
+                    <input type="text" id="mcp-edit-name" style="width: 100%; padding: 8px 12px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary); font-size: 14px;" placeholder="e.g., filesystem">
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; margin-bottom: 8px; font-size: 13px; font-weight: 500; color: var(--text-secondary);">Command</label>
+                    <input type="text" id="mcp-edit-command" style="width: 100%; padding: 8px 12px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary); font-size: 14px; font-family: monospace;" placeholder="e.g., npx -y @modelcontextprotocol/server-filesystem /tmp">
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-size: 13px; font-weight: 500; color: var(--text-secondary);">JSON Configuration (Advanced)</label>
+                    <textarea id="mcp-edit-json" style="width: 100%; height: 200px; padding: 12px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary); font-size: 13px; font-family: 'Consolas', 'Monaco', monospace; resize: vertical;" placeholder="Full JSON configuration..."></textarea>
+                    <p style="font-size: 11px; color: var(--text-secondary); margin-top: 6px;">💡 Tip: Editing the JSON directly allows full control over the MCP server configuration.</p>
+                </div>
+            </div>
+            <div style="padding: 16px 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 12px;">
+                <button onclick="closeMCPModal()" style="padding: 8px 16px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; color: var(--text-primary); font-size: 13px;">Cancel</button>
+                <button onclick="saveMCPConfig()" style="padding: 8px 16px; background: var(--accent-primary); border: none; border-radius: 4px; cursor: pointer; color: white; font-size: 13px;">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Skill View Modal -->
+    <div id="skill-view-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="background: var(--bg-primary); width: 800px; max-height: 85vh; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); display: flex; flex-direction: column;">
+            <div style="padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 18px;">🔧 <span id="skill-view-name">Skill Name</span></h3>
+                <button onclick="closeSkillViewModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-secondary);">&times;</button>
+            </div>
+            <div style="padding: 20px; flex: 1; overflow-y: auto;">
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: var(--text-secondary);">📝 Description</h4>
+                    <div id="skill-view-description" style="padding: 12px; background: var(--bg-secondary); border-radius: 4px; font-size: 13px; color: var(--text-primary);"></div>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: var(--text-secondary);">📄 File Info</h4>
+                    <div style="padding: 12px; background: var(--bg-secondary); border-radius: 4px; font-size: 13px; color: var(--text-primary);">
+                        <div style="margin-bottom: 6px;"><strong>Name:</strong> <span id="skill-view-filename"></span></div>
+                        <div style="margin-bottom: 6px;"><strong>Path:</strong> <code id="skill-view-path" style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 3px; font-size: 11px;"></code></div>
+                        <div><strong>Lines:</strong> <span id="skill-view-lines"></span></div>
+                    </div>
+                </div>
+                <div>
+                    <h4 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: var(--text-secondary);">💻 Code Preview</h4>
+                    <pre id="skill-view-code" style="margin: 0; padding: 16px; background: var(--bg-secondary); border-radius: 4px; overflow-x: auto; font-size: 12px; font-family: 'Consolas', 'Monaco', monospace; color: var(--text-primary); max-height: 300px; overflow-y: auto;"></pre>
+                </div>
+            </div>
+            <div style="padding: 16px 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 12px;">
+                <button onclick="closeSkillViewModal()" style="padding: 8px 16px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; color: var(--text-primary); font-size: 13px;">Close</button>
+                <button onclick="editSkillFromView()" style="padding: 8px 16px; background: var(--accent-primary); border: none; border-radius: 4px; cursor: pointer; color: white; font-size: 13px;">✏️ Edit Code</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

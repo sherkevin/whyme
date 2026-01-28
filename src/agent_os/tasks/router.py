@@ -1,0 +1,393 @@
+"""FastAPI router for Task management."""
+
+from datetime import date, datetime
+from typing import Optional, List
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from agent_os.db.base import get_db
+from agent_os.auth.dependencies import get_current_user
+from agent_os.auth.models import User
+from agent_os.tasks import crud
+from agent_os.tasks.models import Task
+from agent_os.tasks.schema import (
+    TaskCreate,
+    TaskUpdate,
+    TaskResponse,
+    TaskList,
+    TaskStatusUpdate,
+    TodayTasksResponse,
+    TaskStats,
+    TaskBatchCreate,
+    TaskBatchUpdate,
+)
+
+
+# =============================================================================
+# Router Setup
+# =============================================================================
+
+router = APIRouter(prefix="/api/v1/tasks", tags=["tasks"])
+
+
+# =============================================================================
+# Today's Tasks Aggregation (must be before /{task_id})
+# =============================================================================
+
+@router.get(
+    "/today",
+    response_model=TodayTasksResponse,
+    summary="Get today's tasks",
+    description="Get all tasks for today along with statistics and knowledge context."
+)
+async def get_today_tasks(
+    *,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    include_knowledge: bool = Query(False, description="Include knowledge context")
+) -> dict:
+    """Get today's tasks with statistics."""
+    today = date.today()
+
+    # Get tasks for today
+    tasks = await crud.get_tasks_for_today(
+        db=db,
+        user_id=current_user.id,
+        today=today
+    )
+
+    # Get statistics
+    stats_dict = await crud.get_task_stats(
+        db=db,
+        user_id=current_user.id,
+        today=today
+    )
+
+    stats = TaskStats(**stats_dict)
+
+    response = {
+        "date": today,
+        "tasks": tasks,
+        "stats": stats,
+        "knowledge_context": None
+    }
+
+    # TODO: Integrate with RAG to provide knowledge context
+    # if include_knowledge:
+    #     from agent_os.knowledge.rag_provider import CardRAGProvider
+    #     rag = CardRAGProvider(db)
+    #     context = await rag.get_context_for_task(
+    #         task_id=None,  # General context for today
+    #         user_id=current_user.id,
+    #         max_cards=5
+    #     )
+    #     response["knowledge_context"] = context
+
+    return response
+
+
+@router.get(
+    "/stats",
+    response_model=TaskStats,
+    summary="Get task statistics",
+    description="Get task statistics for the authenticated user."
+)
+async def get_task_stats(
+    *,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    date_from: Optional[date] = Query(None, description="Filter from date"),
+    date_to: Optional[date] = Query(None, description="Filter to date")
+) -> dict:
+    """Get task statistics."""
+    # Use today as default if no date range specified
+    if not date_from and not date_to:
+        today = date.today()
+        stats_dict = await crud.get_task_stats(
+            db=db,
+            user_id=current_user.id,
+            today=today
+        )
+    else:
+        # Get stats for date range (ignore 'today' parameter)
+        stats_dict = await crud.get_task_stats(
+            db=db,
+            user_id=current_user.id,
+            today=None
+        )
+
+    return stats_dict
+
+
+# =============================================================================
+# Task CRUD Endpoints
+# =============================================================================
+
+@router.post(
+    "",
+    response_model=TaskResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new task",
+    description="Create a new task for the authenticated user."
+)
+async def create_task(
+    *,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    task_in: TaskCreate
+) -> Task:
+    """Create a new task."""
+    task = await crud.create_task(
+        db=db,
+        task_in=task_in,
+        user_id=current_user.id
+    )
+    return task
+
+
+# =============================================================================
+# Batch Operations (must be before /{task_id})
+# =============================================================================
+
+@router.post(
+    "/batch",
+    response_model=TaskList,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create tasks in batch",
+    description="Create multiple tasks at once."
+)
+async def create_tasks_batch(
+    *,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    batch_data: TaskBatchCreate
+) -> dict:
+    """Create multiple tasks in batch."""
+    tasks = await crud.create_tasks_batch(
+        db=db,
+        tasks_data=batch_data.tasks,
+        user_id=current_user.id
+    )
+
+    return {
+        "items": tasks,
+        "total": len(tasks),
+        "page": 1,
+        "page_size": len(tasks)
+    }
+
+
+@router.put(
+    "/batch",
+    summary="Update tasks in batch",
+    description="Update multiple tasks at once."
+)
+async def update_tasks_batch(
+    *,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    batch_data: TaskBatchUpdate
+) -> dict:
+    """Update multiple tasks in batch."""
+    updated_count = await crud.update_tasks_batch(
+        db=db,
+        task_ids=batch_data.task_ids,
+        user_id=current_user.id,
+        updates=batch_data.updates
+    )
+
+    return {
+        "message": f"Updated {updated_count} tasks",
+        "updated_count": updated_count
+    }
+
+
+@router.delete(
+    "/batch",
+    summary="Delete tasks in batch",
+    description="Delete multiple tasks at once."
+)
+async def delete_tasks_batch(
+    *,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    task_ids: List[int] = Query(..., description="List of task IDs to delete")
+) -> dict:
+    """Delete multiple tasks in batch."""
+    deleted_count = await crud.delete_tasks_batch(
+        db=db,
+        task_ids=task_ids,
+        user_id=current_user.id
+    )
+
+    return {
+        "message": f"Deleted {deleted_count} tasks",
+        "deleted_count": deleted_count
+    }
+
+
+@router.get(
+    "/{task_id}",
+    response_model=TaskResponse,
+    summary="Get a task by ID",
+    description="Retrieve a specific task by its ID."
+)
+async def get_task(
+    *,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    task_id: int
+) -> Task:
+    """Get a task by ID."""
+    task = await crud.get_task_by_id(
+        db=db,
+        task_id=task_id,
+        user_id=current_user.id
+    )
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found"
+        )
+    return task
+
+
+@router.get(
+    "",
+    response_model=TaskList,
+    summary="List tasks",
+    description="List all tasks for the authenticated user with filtering and pagination."
+)
+async def list_tasks(
+    *,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    status: Optional[str] = Query(None, description="Filter by status"),
+    type: Optional[str] = Query(None, alias="type", description="Filter by type"),
+    priority_min: Optional[int] = Query(None, ge=1, le=10, description="Minimum priority"),
+    priority_max: Optional[int] = Query(None, ge=1, le=10, description="Maximum priority"),
+    date_from: Optional[date] = Query(None, description="Filter by scheduled date from"),
+    date_to: Optional[date] = Query(None, description="Filter by scheduled date to"),
+    scheduled_date: Optional[date] = Query(None, description="Filter by exact scheduled date"),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
+    sort_by: str = Query("created_at", description="Field to sort by"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order")
+) -> dict:
+    """List tasks with filtering and pagination."""
+    skip = (page - 1) * page_size
+
+    tasks, total = await crud.list_tasks(
+        db=db,
+        user_id=current_user.id,
+        status=status,
+        task_type=type,
+        priority_min=priority_min,
+        priority_max=priority_max,
+        date_from=date_from,
+        date_to=date_to,
+        scheduled_date=scheduled_date,
+        skip=skip,
+        limit=page_size,
+        sort_by=sort_by,
+        sort_order=sort_order
+    )
+
+    return {
+        "items": tasks,
+        "total": total,
+        "page": page,
+        "page_size": page_size
+    }
+
+
+@router.put(
+    "/{task_id}",
+    response_model=TaskResponse,
+    summary="Update a task",
+    description="Update a task's details."
+)
+async def update_task(
+    *,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    task_id: int,
+    task_in: TaskUpdate
+) -> Task:
+    """Update a task."""
+    db_task = await crud.get_task_by_id(
+        db=db,
+        task_id=task_id,
+        user_id=current_user.id
+    )
+    if not db_task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found"
+        )
+
+    updated_task = await crud.update_task(
+        db=db,
+        db_task=db_task,
+        task_in=task_in
+    )
+    return updated_task
+
+
+@router.patch(
+    "/{task_id}/status",
+    response_model=TaskResponse,
+    summary="Update task status",
+    description="Update a task's status. Auto-sets completed_at when status is 'completed'."
+)
+async def update_task_status(
+    *,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    task_id: int,
+    status_update: TaskStatusUpdate
+) -> Task:
+    """Update task status."""
+    db_task = await crud.get_task_by_id(
+        db=db,
+        task_id=task_id,
+        user_id=current_user.id
+    )
+    if not db_task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found"
+        )
+
+    updated_task = await crud.update_task(
+        db=db,
+        db_task=db_task,
+        task_in=status_update
+    )
+    return updated_task
+
+
+@router.delete(
+    "/{task_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a task",
+    description="Delete a task by ID."
+)
+async def delete_task(
+    *,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    task_id: int
+) -> None:
+    """Delete a task."""
+    deleted = await crud.delete_task(
+        db=db,
+        task_id=task_id,
+        user_id=current_user.id
+    )
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found"
+        )
+

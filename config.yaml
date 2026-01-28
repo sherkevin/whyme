@@ -1,0 +1,96 @@
+# AgentOS Configuration
+
+agent:
+  name: "DevBot"
+
+# LLM Configuration (API_KEY and BASE_URL from .env)
+llm:
+  provider: "agent_os.llm.litellm_impl.LiteLLMProvider"
+  config:
+    model: "openai/DeepSeek-V3.1"
+    # api_base and api_key are read from environment variables:
+    # API_KEY and BASE_URL from .env file
+    temperature: 0.7
+    max_tokens: 4096
+
+# Memory Configuration
+# Option 1: Local JSON storage (simple, file-based)
+memory:
+  provider: "agent_os.memory.local_json.LocalJSONProvider"
+  config:
+    storage_path: "./data/memory.json"
+
+# Option 2: Vector database with semantic search (recommended for production)
+# Uncomment to use Mem0 with FAISS:
+# memory:
+#   provider: "agent_os.memory.mem0_impl.Mem0Provider"
+#   config:
+#     # Model for embeddings (default: all-MiniLM-L6-v2)
+#     model_name: "all-MiniLM-L6-v2"
+#     # Storage path for memories and index
+#     storage_path: "./data/vector_memory"
+#     # Embedding dimension (384 for MiniLM-L6)
+#     embedding_dim: 384
+#
+# Benefits of Mem0:
+# - Semantic search using vector embeddings
+# - Better relevance for similar queries
+# - Supports large-scale memory retrieval
+# - Persistent FAISS index for fast searching
+
+# Context Management
+# Option 1: Sliding window (default, simple token-based pruning)
+context:
+  provider: "agent_os.context.sliding_window.SlidingWindowContext"
+  config:
+    max_tokens: 8000
+
+# Option 2: Summarizer (LLM-based summarization of old messages)
+# Uncomment to use summarizer:
+# context:
+#   provider: "agent_os.context.advanced_strategies.SummarizerContext"
+#   config:
+#     max_tokens: 8000
+#     # Trigger summarization at 70% of max_tokens
+#     summary_threshold: 0.7
+#     # Keep recent messages unsummarized
+#     keep_recent: 5
+#
+# Benefits:
+# - Preserves key information from long conversations
+# - Reduces token usage while maintaining context
+# - Better for long-running sessions
+
+# Option 3: Key Information Extractor
+# Uncomment to use key info extraction:
+# context:
+#   provider: "agent_os.context.advanced_strategies.KeyInfoExtractor"
+#   config:
+#     max_tokens: 8000
+#     # Reserve tokens for key information
+#     key_info_tokens: 1000
+#
+# Benefits:
+# - Extracts and preserves important decisions and facts
+# - Focuses on critical information
+# - Good for task-oriented conversations
+
+# Coding Capability (Aider integration)
+coding:
+  provider: "agent_os.capabilities.coding.aider_adapter.AiderAdapter"
+
+# Sandbox Configuration
+sandbox:
+  runtime: "docker"  # Use "docker" for production, "local" for development only
+  image: "agentos-ubuntu:latest"
+  workspace: "/workspace"
+  # Security and resource limits for multi-user isolation
+  memory_limit: "512m"  # Maximum memory per sandbox
+  cpu_quota: 50000  # 50% of one CPU core (100000 = 100%)
+  network_disabled: false  # Set to true to disable network access
+  read_only: false  # Set to true for read-only filesystem (except /tmp and /workspace)
+
+# IO Configuration
+io:
+  websocket_path: "/ws"
+  rest_prefix: "/api"

@@ -1,0 +1,17 @@
+{
+  "skills": [
+    {
+      "name": "calculator",
+      "path": "bins\\calculator.py",
+      "description": "Calculator Skill - 安全的数学计算器",
+      "type": "skill"
+    },
+    {
+      "name": "weather",
+      "path": "bins\\weather.py",
+      "description": "Weather Skill - 获取天气信息",
+      "type": "skill"
+    }
+  ],
+  "mcp_servers": []
+}

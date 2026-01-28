@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentOS Studio - New Project</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <style>
+        :root {
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #252526;
+            --bg-tertiary: #2d2d30;
+            --accent-primary: #007acc;
+            --accent-hover: #1c97ea;
+            --text-primary: #cccccc;
+            --text-secondary: #858585;
+            --text-active: #ffffff;
+            --border-color: #3c3c3c;
+            --success-color: #4ec9b0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo {
+            font-size: 24px;
+        }
+
+        .title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--accent-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .username {
+            font-size: 14px;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 48px;
+        }
+
+        .wizard-container {
+            width: 100%;
+            max-width: 800px;
+        }
+
+        /* Progress Steps */
+        .progress {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 48px;
+            position: relative;
+        }
+
+        .progress::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--border-color);
+            z-index: 0;
+        }
+
+        .progress-bar {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            height: 2px;
+            background: var(--accent-primary);
+            z-index: 0;
+            transition: width 0.3s ease;
+        }
+
+        .step {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .step.active .step-circle {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .step.completed .step-circle {
+            background: var(--success-color);
+            border-color: var(--success-color);
+        }
+
+        .step-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .step.active .step-label {
+            color: var(--text-active);
+            font-weight: 600;
+        }
+
+        /* Step Content */
+        .step-content {
+            display: none;
+        }
+
+        .step-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .step-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .step-description {
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+        }
+
+        /* Templates */
+        .templates-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .template-card {
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .template-card:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-4px);
+        }
+
+        .template-card.selected {
+            border-color: var(--accent-primary);
+            background: rgba(0, 122, 204, 0.1);
+        }
+
+        .template-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .template-name {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .template-description {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Form Groups */
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(0, 122, 204, 0.2);
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-hint {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 6px;
+        }
+
+        /* Navigation Buttons */
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 48px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .btn {
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+
+        .btn-primary {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 122, 204, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* Features List */
+        .features-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .feature-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .feature-item.selected {
+            background: rgba(0, 122, 204, 0.1);
+            border: 1px solid var(--accent-primary);
+        }
+
+        .feature-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .feature-item.selected .feature-checkbox {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .feature-checkbox::after {
+            content: '✓';
+            color: white;
+            font-size: 12px;
+            display: none;
+        }
+
+        .feature-item.selected .feature-checkbox::after {
+            display: block;
+        }
+
+        .feature-text {
+            font-size: 14px;
+        }
+
+        /* Summary */
+        .summary-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .summary-row:last-child {
+            border-bottom: none;
+        }
+
+        .summary-label {
+            color: var(--text-secondary);
+        }
+
+        .summary-value {
+            font-weight: 600;
+        }
+
+        /* Loading */
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 16px 24px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 1000;
+        }
+
+        .toast.success { border-color: var(--success-color); }
+        .toast.error { border-color: #f14c4c; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <span class="logo">🚀</span>
+            <span class="title">Create New Project</span>
+        </div>
+        <div class="user-info">
+            <div class="user-avatar" id="user-avatar">G</div>
+            <span class="username" id="username">Guest</span>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="wizard-container">
+            <!-- Progress -->
+            <div class="progress">
+                <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+                <div class="step active" onclick="goToStep(1)">
+                    <div class="step-circle">1</div>
+                    <div class="step-label">Template</div>
+                </div>
+                <div class="step" onclick="goToStep(2)">
+                    <div class="step-circle">2</div>
+                    <div class="step-label">Details</div>
+                </div>
+                <div class="step" onclick="goToStep(3)">
+                    <div class="step-circle">3</div>
+                    <div class="step-label">Features</div>
+                </div>
+                <div class="step" onclick="goToStep(4)">
+                    <div class="step-circle">4</div>
+                    <div class="step-label">Review</div>
+                </div>
+            </div>
+
+            <!-- Step 1: Template Selection -->
+            <div class="step-content active" id="step-1">
+                <h2 class="step-title">Choose a Template</h2>
+                <p class="step-description">Select a template to get started with your project</p>
+
+                <div class="templates-grid">
+                    <div class="template-card selected" onclick="selectTemplate('blank', this)">
+                        <div class="template-icon">📄</div>
+                        <div class="template-name">Blank Project</div>
+                        <div class="template-description">Start from scratch with an empty project</div>
+                    </div>
+
+                    <div class="template-card" onclick="selectTemplate('python', this)">
+                        <div class="template-icon">🐍</div>
+                        <div class="template-name">Python Project</div>
+                        <div class="template-description">Python project with best practices structure</div>
+                    </div>
+
+                    <div class="template-card" onclick="selectTemplate('webapp', this)">
+                        <div class="template-icon">🌐</div>
+                        <div class="template-name">Web Application</div>
+                        <div class="template-description">Full-stack web app with frontend and backend</div>
+                    </div>
+
+                    <div class="template-card" onclick="selectTemplate('datascience', this)">
+                        <div class="template-icon">📊</div>
+                        <div class="template-name">Data Science</div>
+                        <div class="template-description">Jupyter notebooks and data analysis tools</div>
+                    </div>
+
+                    <div class="template-card" onclick="selectTemplate('api', this)">
+                        <div class="template-icon">🔌</div>
+                        <div class="template-name">REST API</div>
+                        <div class="template-description">FastAPI backend with database integration</div>
+                    </div>
+
+                    <div class="template-card" onclick="selectTemplate('ml', this)">
+                        <div class="template-icon">🤖</div>
+                        <div class="template-name">Machine Learning</div>
+                        <div class="template-description">ML project with training and inference setup</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Project Details -->
+            <div class="step-content" id="step-2">
+                <h2 class="step-title">Project Details</h2>
+                <p class="step-description">Provide basic information about your project</p>
+
+                <div class="form-group">
+                    <label for="project-name">Project Name *</label>
+                    <input
+                        type="text"
+                        id="project-name"
+                        placeholder="my-awesome-project"
+                        required
+                    >
+                    <div class="form-hint">Use lowercase letters, numbers, and hyphens</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="project-description">Description</label>
+                    <textarea
+                        id="project-description"
+                        placeholder="Describe what your project does..."
+                    ></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="project-path">Project Path</label>
+                    <input
+                        type="text"
+                        id="project-path"
+                        placeholder="Default: ./data/workspaces/{project-name}"
+                    >
+                    <div class="form-hint">Leave empty to use default location</div>
+                </div>
+            </div>
+
+            <!-- Step 3: Features -->
+            <div class="step-content" id="step-3">
+                <h2 class="step-title">Configure Features</h2>
+                <p class="step-description">Select additional features and tools for your project</p>
+
+                <div class="features-list">
+                    <div class="feature-item" onclick="toggleFeature(this, 'git')">
+                        <div class="feature-checkbox"></div>
+                        <div class="feature-text">Initialize Git Repository</div>
+                    </div>
+
+                    <div class="feature-item" onclick="toggleFeature(this, 'docker')">
+                        <div class="feature-checkbox"></div>
+                        <div class="feature-text">Add Docker Configuration</div>
+                    </div>
+
+                    <div class="feature-item" onclick="toggleFeature(this, 'env')">
+                        <div class="feature-checkbox"></div>
+                        <div class="feature-text">Environment Variables (.env)</div>
+                    </div>
+
+                    <div class="feature-item" onclick="toggleFeature(this, 'readme')">
+                        <div class="feature-checkbox"></div>
+                        <div class="feature-text">Generate README.md</div>
+                    </div>
+
+                    <div class="feature-item" onclick="toggleFeature(this, 'requirements')">
+                        <div class="feature-checkbox"></div>
+                        <div class="feature-text">requirements.txt</div>
+                    </div>
+
+                    <div class="feature-item" onclick="toggleFeature(this, 'tests')">
+                        <div class="feature-checkbox"></div>
+                        <div class="feature-text">Test Structure (pytest)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Review -->
+            <div class="step-content" id="step-4">
+                <h2 class="step-title">Review & Create</h2>
+                <p class="step-description">Review your project settings before creating</p>
+
+                <div class="summary-card">
+                    <div class="summary-row">
+                        <div class="summary-label">Template</div>
+                        <div class="summary-value" id="summary-template">Blank Project</div>
+                    </div>
+                    <div class="summary-row">
+                        <div class="summary-label">Project Name</div>
+                        <div class="summary-value" id="summary-name">-</div>
+                    </div>
+                    <div class="summary-row">
+                        <div class="summary-label">Description</div>
+                        <div class="summary-value" id="summary-description">-</div>
+                    </div>
+                    <div class="summary-row">
+                        <div class="summary-label">Location</div>
+                        <div class="summary-value" id="summary-path">-</div>
+                    </div>
+                    <div class="summary-row">
+                        <div class="summary-label">Features</div>
+                        <div class="summary-value" id="summary-features">-</div>
+                    </div>
+                </div>
+
+                <div style="background: rgba(78, 201, 176, 0.1); border: 1px solid var(--success-color); border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                    <div style="font-size: 13px; color: var(--success-color);">
+                        ✓ Ready to create your project! Click "Create Project" to proceed.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="nav-buttons">
+                <button class="btn btn-secondary" id="back-btn" onclick="previousStep()" disabled>
+                    ← Back
+                </button>
+                <button class="btn btn-primary" id="next-btn" onclick="nextStep()">
+                    Next →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let currentStep = 1;
+        const totalSteps = 4;
+        const projectData = {
+            template: 'blank',
+            name: '',
+            description: '',
+            path: '',
+            features: []
+        };
+
+        // Load user info
+        window.addEventListener('load', () => {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            if (user.username) {
+                document.getElementById('username').textContent = user.username;
+                document.getElementById('user-avatar').textContent = user.username[0].toUpperCase();
+            }
+        });
+
+        // Template selection
+        function selectTemplate(template, element) {
+            projectData.template = template;
+            document.querySelectorAll('.template-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            element.classList.add('selected');
+        }
+
+        // Feature toggle
+        function toggleFeature(element, feature) {
+            element.classList.toggle('selected');
+
+            if (projectData.features.includes(feature)) {
+                projectData.features = projectData.features.filter(f => f !== feature);
+            } else {
+                projectData.features.push(feature);
+            }
+        }
+
+        // Navigation
+        function goToStep(step) {
+            // Validate before moving forward
+            if (step > currentStep) {
+                if (!validateCurrentStep()) return;
+            }
+
+            // Update project data from form
+            if (currentStep === 2) {
+                projectData.name = document.getElementById('project-name').value.trim();
+                projectData.description = document.getElementById('project-description').value.trim();
+                projectData.path = document.getElementById('project-path').value.trim();
+            }
+
+            // Update step
+            currentStep = step;
+            updateUI();
+        }
+
+        function nextStep() {
+            if (currentStep < totalSteps) {
+                goToStep(currentStep + 1);
+            } else {
+                createProject();
+            }
+        }
+
+        function previousStep() {
+            if (currentStep > 1) {
+                goToStep(currentStep - 1);
+            }
+        }
+
+        function validateCurrentStep() {
+            if (currentStep === 2) {
+                const name = document.getElementById('project-name').value.trim();
+                if (!name) {
+                    showToast('Please enter a project name', 'error');
+                    return false;
+                }
+                if (!/^[a-z0-9-]+$/.test(name)) {
+                    showToast('Project name must contain only lowercase letters, numbers, and hyphens', 'error');
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function updateUI() {
+            // Update progress bar
+            const progress = ((currentStep - 1) / (totalSteps - 1)) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+
+            // Update steps
+            document.querySelectorAll('.step').forEach((step, index) => {
+                step.classList.remove('active', 'completed');
+                if (index + 1 === currentStep) {
+                    step.classList.add('active');
+                } else if (index + 1 < currentStep) {
+                    step.classList.add('completed');
+                }
+            });
+
+            // Update content
+            document.querySelectorAll('.step-content').forEach((content, index) => {
+                content.classList.remove('active');
+                if (index + 1 === currentStep) {
+                    content.classList.add('active');
+                }
+            });
+
+            // Update buttons
+            document.getElementById('back-btn').disabled = currentStep === 1;
+            const nextBtn = document.getElementById('next-btn');
+            if (currentStep === totalSteps) {
+                nextBtn.innerHTML = '<span id="create-btn-text">Create Project</span>';
+            } else {
+                nextBtn.innerHTML = 'Next →';
+            }
+
+            // Update summary on step 4
+            if (currentStep === 4) {
+                updateSummary();
+            }
+        }
+
+        function updateSummary() {
+            const templateNames = {
+                'blank': 'Blank Project',
+                'python': 'Python Project',
+                'webapp': 'Web Application',
+                'datascience': 'Data Science',
+                'api': 'REST API',
+                'ml': 'Machine Learning'
+            };
+
+            const featureNames = {
+                'git': 'Git',
+                'docker': 'Docker',
+                'env': 'Environment Variables',
+                'readme': 'README',
+                'requirements': 'requirements.txt',
+                'tests': 'Tests'
+            };
+
+            document.getElementById('summary-template').textContent = templateNames[projectData.template];
+            document.getElementById('summary-name').textContent = projectData.name || '-';
+            document.getElementById('summary-description').textContent = projectData.description || '-';
+            document.getElementById('summary-path').textContent = projectData.path || `./data/workspaces/${projectData.name}`;
+            document.getElementById('summary-features').textContent =
+                projectData.features.length > 0
+                    ? projectData.features.map(f => featureNames[f]).join(', ')
+                    : 'None';
+        }
+
+        // Create project
+        async function createProject() {
+            const btn = document.getElementById('next-btn');
+            const btnText = document.getElementById('create-btn-text');
+
+            btn.disabled = true;
+            btnText.innerHTML = '<div class="loading"></div>';
+
+            try {
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                const token = localStorage.getItem('token');
+
+                const response = await fetch('/api/projects', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token && { 'Authorization': `Bearer ${token}` })
+                    },
+                    body: JSON.stringify({
+                        name: projectData.name,
+                        description: projectData.description,
+                        template: projectData.template,
+                        features: projectData.features,
+                        user_id: user.id
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showToast('Project created successfully!');
+
+                    setTimeout(() => {
+                        window.location.href = `/?session_id=${data.session_id}`;
+                    }, 1500);
+                } else {
+                    showToast(data.detail || 'Failed to create project', 'error');
+                    btn.disabled = false;
+                    btnText.textContent = 'Create Project';
+                }
+            } catch (error) {
+                console.error('Create project error:', error);
+                showToast('Connection error. Please try again.', 'error');
+                btn.disabled = false;
+                btnText.textContent = 'Create Project';
+            }
+        }
+
+        // Toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <span>${type === 'success' ? '✅' : '❌'}</span>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // Initialize
+        updateUI();
+    </script>
+</body>
+</html>

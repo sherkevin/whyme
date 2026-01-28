@@ -1,0 +1,47 @@
+[project]
+name = "agent-os"
+version = "0.1.0"
+description = "AgentOS Core: modular AI agent kernel"
+authors = [
+    {name = "AgentOS Team", email = "dev@example.com"}
+]
+requires-python = ">=3.11"
+readme = "README.md"
+dependencies = [
+    "langgraph",
+    "litellm",
+    "fastapi",
+    "uvicorn[standard]",
+    "docker",
+    "pydantic>=2",
+    "typer",
+    "rich",
+    "python-dotenv",
+    "httpx",
+    "pyyaml",
+    "aider-chat>=0.60.0",
+    "python-jose[cryptography]",
+    "passlib[bcrypt]",
+    "python-multipart",
+    "email-validator",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=5.0",
+    "ruff>=0.8",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+asyncio_mode = "auto"

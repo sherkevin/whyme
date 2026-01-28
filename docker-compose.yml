@@ -1,0 +1,39 @@
+# Docker Compose for AgentOS Multi-User Sandboxes
+version: '3.8'
+
+services:
+  # Main AgentOS server
+  agentos-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    ports:
+      - "8003:8003"
+    environment:
+      - API_KEY=${API_KEY}
+      - BASE_URL=${BASE_URL}
+      - AGENTOS_SANDBOX=docker
+    volumes:
+      - ./data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock  # Allow server to spawn sandbox containers
+    depends_on:
+      - redis
+    networks:
+      - agentos-network
+
+  # Redis for session management (optional, for scaling)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - agentos-network
+
+volumes:
+  redis-data:
+
+networks:
+  agentos-network:
+    driver: bridge
