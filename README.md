@@ -20,10 +20,12 @@ AgentOS Core 是一个高度模块化的 AI 代理内核，采用**微内核 + �
 ### 核心特点
 
 - **一切皆插件** - 所有核心模块均为接口，通过 `config.yaml` 动态加载实现
+- **Skills System** - Coze风格的开放技能系统，支持动态角色切换 🆕
 - **Server-Side Sandbox** - Docker/本地容器化隔离环境
 - **Virtual IO** - WebSocket 通信，支持 Web/App/小程序多端
 - **多模型支持** - 通过 LiteLLM 支持 OpenAI、Anthropic 等多种 LLM
 - **编码能力** - 集成 Aider 的代码编辑和 Git 工作流
+- **智能上下文** - Summarizer和KeyInfoExtractor策略 🆕
 
 ---
 
@@ -35,15 +37,16 @@ AgentOS Core 是一个高度模块化的 AI 代理内核，采用**微内核 + �
 |------|------|------|
 | **核心架构** | 接口定义、类型系统、动态配置 | ✅ 完成 |
 | **LLM 集成** | LiteLLM 多模型支持 | ✅ 完成 |
+| **Skills System** | 技能管理器、解析器、3个示例技能 | ✅ 完成 🆕 |
+| **上下文管理** | 滑动窗口、Summarizer、KeyInfoExtractor | ✅ 完成 🆕 |
 | **记忆系统** | Mem0 向量数据库、本地 JSON | 🟡 部分 |
-| **上下文管理** | 滑动窗口策略 | 🔴 需增强 |
 | **工具系统** | 统一工具注册表 | ✅ 完成 |
 | **编码能力** | Aider 适配器 | 🟡 部分 |
 | **沙箱系统** | Docker/本地沙箱 | ✅ 完成 |
 | **Web 服务器** | FastAPI + WebSocket | ✅ 完成 |
 | **Web 前端** | Monaco Editor + 文件树 | ✅ 完成 |
 
-### 总体完成度：85%
+### 总体完成度：90% (+5% Skills System)
 
 详见 [开发进度追踪](docs/PROGRESS.md)
 
@@ -107,6 +110,41 @@ uvicorn src.agent_os.server.app:app --reload --port 8003
    - "帮我写一个快速排序算法"
    - "分析当前目录的代码结构"
 3. Agent 将自动执行并显示结果
+
+### Skills System 使用 🆕
+
+AgentOS Core 现在支持动态技能切换，让你可以快速改变AI助手的专业领域：
+
+```python
+from agent_os.agent import Agent
+
+# 初始化Agent
+agent = Agent.from_config_file("config.yaml")
+agent.initialize_skills()
+
+# 列出可用技能
+skills = agent.list_skills()
+for skill in skills:
+    print(f"{skill['name']}: {skill['description']}")
+
+# 应用技能 - 切换为数据分析专家
+agent.apply_skill("data_analyst")
+response = await agent.chat("分析这个CSV文件的数据趋势")
+
+# 切换为Web开发专家
+agent.apply_skill("web_developer")
+response = await agent.chat("创建一个React组件显示用户列表")
+
+# 清除技能，回到默认模式
+agent.clear_skill()
+```
+
+**内置技能**:
+- `default_coder` - 全栈开发专家
+- `data_analyst` - 数据分析专家
+- `web_developer` - Web开发专家
+
+详见 [Skills System Guide](docs/03-toolkit/skills-system-guide.md)
 
 ---
 
@@ -237,6 +275,13 @@ class CodingCapability(ABC):
 
 ## 开发计划
 
+### 最新完成 (2026-01-28) ✅
+
+- ✅ **Skills System** (PRD2) - Coze风格开放技能系统
+- ✅ **SummarizerContext** - LLM驱动的对话摘要
+- ✅ **KeyInfoExtractor** - 关键信息提取策略
+- ✅ **完整测试** - 22个单元测试 + 手动测试
+
 ### 高优先级 🔴
 
 1. **WebSocketIO 线程安全修复**
@@ -247,21 +292,26 @@ class CodingCapability(ABC):
    - 实现后端 Diff 生成和发送
    - 处理用户确认/拒绝操作
 
+3. **RepoMap 集成**
+   - 集成Aider的RepoMap功能
+   - 代码库结构理解
+
 ### 中优先级 🟡
 
-3. **完整 Aider 集成**
+4. **富媒体可视化** (PRD2)
+   - Artifact协议定义
+   - @json-render前端集成
+
+5. **完整 Aider 集成**
    - 实例化 Aider Coder 类
    - Git 工作流支持
+   - Tree-sitter语法解析
 
-4. **上下文策略增强**
-   - SummarizerContext
-   - 关键信息提取
-
-5. **记忆系统增强**
+6. **记忆系统增强**
    - HippoRAG 集成
    - Mem0 云服务支持
 
-详见 [开发进度追踪](docs/PROGRESS.md)
+详见 [开发进度追踪](docs/FINAL_DEVELOPMENT_SUMMARY.md)
 
 ---
 

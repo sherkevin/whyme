@@ -143,10 +143,8 @@ Summary:"""
 
         # Generate summary
         try:
-            response = await self.llm_provider.generate(
+            response = await self.llm_provider.complete(
                 messages=[{"role": "user", "content": summary_prompt}],
-                max_tokens=500,
-                temperature=0.3,
             )
 
             summary = response.get("content", "")
@@ -298,10 +296,8 @@ Conversation:
 List key information as bullet points (max 10 items):"""
 
         try:
-            response = await self.llm_provider.generate(
+            response = await self.llm_provider.complete(
                 messages=[{"role": "user", "content": extraction_prompt}],
-                max_tokens=300,
-                temperature=0.2,
             )
 
             content = response.get("content", "")

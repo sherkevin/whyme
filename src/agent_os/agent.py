@@ -1,20 +1,31 @@
-"""Simple Agent implementation for testing LLM integration."""
+"""Agent implementation with Skills system integration."""
 
 from __future__ import annotations
 
 import asyncio
 import uuid
+from pathlib import Path
 from typing import Any
 
 from agent_os.core.config import Config, load_config
-from agent_os.core.interfaces import LLMProvider, CodingCapability, AgentCallbackHandler, MemoryProvider, ContextManager
+from agent_os.core.interfaces import (
+    LLMProvider,
+    CodingCapability,
+    AgentCallbackHandler,
+    MemoryProvider,
+    ContextManager,
+)
 from agent_os.core.types import RuntimeContext
 from agent_os.llm.litellm_impl import LiteLLMProvider
 from agent_os.tools import ToolRegistryImpl
 
 
 class Agent:
-    """Simple Agent for testing LLM capabilities."""
+    """AI Agent with Skills system support.
+
+    The Agent can dynamically switch roles by applying Skills,
+    which modify the system prompt, available tools, and parameters.
+    """
 
     def __init__(self, config: Config) -> None:
         """Initialize the agent with configuration."""
@@ -25,6 +36,11 @@ class Agent:
         self.context: ContextManager | None = None
         self.tool_registry = ToolRegistryImpl()
         self.conversation_history: list[dict[str, Any]] = []
+
+        # Skills system
+        self.skill_manager: Any = None  # Will be initialized lazily
+        self.active_skill: str | None = None
+        self.agent_state: dict[str, Any] = {}
 
     @classmethod
     def from_config_file(cls, config_path: str = "config.yaml") -> Agent:
@@ -50,7 +66,23 @@ class Agent:
         if self.config.context:
             from agent_os.core.config import instantiate
             self.context = instantiate(self.config.context.provider, **self.config.context.config)
-            
+
+    def initialize_skills(self, skills_directory: str | Path | None = None) -> None:
+        """Initialize the skills manager.
+
+        Args:
+            skills_directory: Optional path to skills directory.
+                            Defaults to src/agent_os/skills/library
+        """
+        from agent_os.skills import SkillManager
+
+        if skills_directory is None:
+            # Default to the built-in skills library
+            skills_directory = Path(__file__).parent / "skills" / "library"
+
+        self.skill_manager = SkillManager(skills_directory)
+        print(f"Initialized {self.skill_manager.skill_count} skills")
+
     async def initialize_coding(self) -> None:
         """Initialize coding capability."""
         if self.config.coding:
@@ -368,6 +400,96 @@ class Agent:
             "content": content,
             "usage": response.get("usage", {}),
         }
+
+    # ===== Skills System Methods =====
+
+    def apply_skill(self, skill_name: str) -> dict[str, Any]:
+        """Apply a skill to change agent behavior.
+
+        Args:
+            skill_name: Name of the skill to apply
+
+        Returns:
+            Result dict with success status and modifications
+        """
+        if self.skill_manager is None:
+            self.initialize_skills()
+
+        if self.skill_manager is None:
+            return {
+                "success": False,
+                "error": "Skill manager not initialized",
+            }
+
+        # Get available tools
+        tool_definitions = asyncio.run(self.tool_registry.get_definitions())
+        available_tools = [t.get("function", {}).get("name", "") for t in tool_definitions]
+
+        # Apply the skill
+        result = self.skill_manager.apply_skill(
+            agent_state=self.agent_state,
+            skill_name=skill_name,
+            available_tools=available_tools,
+        )
+
+        if result.success:
+            self.active_skill = skill_name
+            # Reset conversation when switching skills
+            self.conversation_history = []
+
+        return {
+            "success": result.success,
+            "skill_name": result.skill_name,
+            "modified_prompt": result.modified_prompt,
+            "filtered_tools": result.filtered_tools,
+            "error": result.error_message,
+        }
+
+    def clear_skill(self) -> None:
+        """Clear the active skill and restore default behavior."""
+        if self.skill_manager:
+            self.skill_manager.clear_skill(self.agent_state)
+        self.active_skill = None
+
+    def list_skills(self, category: str | None = None, tag: str | None = None) -> list[dict[str, Any]]:
+        """List available skills.
+
+        Args:
+            category: Optional category filter
+            tag: Optional tag filter
+
+        Returns:
+            List of skill dicts
+        """
+        if self.skill_manager is None:
+            self.initialize_skills()
+
+        if self.skill_manager is None:
+            return []
+
+        from agent_os.skills.models import SkillCategory
+
+        skill_category = SkillCategory(category) if category else None
+        skills = self.skill_manager.list_skills(category=skill_category, tag=tag)
+
+        return [
+            {
+                "name": s.name,
+                "description": s.description,
+                "category": s.category if isinstance(s.category, str) else s.category.value if s.category else None,
+                "tags": s.tags,
+                "version": s.version,
+            }
+            for s in skills
+        ]
+
+    def get_active_skill(self) -> str | None:
+        """Get the currently active skill name.
+
+        Returns:
+            Active skill name or None
+        """
+        return self.active_skill
 
     def reset_conversation(self) -> None:
         """Clear conversation history."""
