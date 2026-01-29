@@ -221,12 +221,14 @@ You are a data analyst.
 
     def test_skill_count(self, temp_skills_dir: tempfile.TemporaryDirectory) -> None:
         """Test skill_count property."""
-        manager = SkillManager(temp_skills_dir.name)
+        manager = SkillManager()  # Don't pass directory to avoid auto-loading
         assert manager.skill_count == 0  # Will load when accessed
 
-    def test_get_skill(self, temp_skills_dir: tempfile.TemporaryDirectory) -> None:
+    def test_get_skill(
+        self, temp_skills_dir: tempfile.TemporaryDirectory, sample_skills: list[str]
+    ) -> None:
         """Test retrieving a skill by name."""
-        manager = SkillManager(temp_skills_dir.name)
+        manager = SkillManager()  # Don't pass directory to avoid auto-loading
         manager.load_skills_from_directory(temp_skills_dir.name)
 
         skill = manager.get_skill("python_expert")
@@ -235,30 +237,30 @@ You are a data analyst.
         assert skill.category == SkillCategory.CODING
 
     def test_get_nonexistent_skill(
-        self, temp_skills_dir: tempfile.TemporaryDirectory
+        self, temp_skills_dir: tempfile.TemporaryDirectory, sample_skills: list[str]
     ) -> None:
         """Test retrieving a non-existent skill."""
-        manager = SkillManager(temp_skills_dir.name)
+        manager = SkillManager()  # Don't pass directory to avoid auto-loading
         manager.load_skills_from_directory(temp_skills_dir.name)
 
         skill = manager.get_skill("nonexistent")
         assert skill is None
 
     def test_list_skills_no_filter(
-        self, temp_skills_dir: tempfile.TemporaryDirectory
+        self, temp_skills_dir: tempfile.TemporaryDirectory, sample_skills: list[str]
     ) -> None:
         """Test listing all skills without filters."""
-        manager = SkillManager(temp_skills_dir.name)
+        manager = SkillManager()  # Don't pass directory to avoid auto-loading
         manager.load_skills_from_directory(temp_skills_dir.name)
 
         skills = manager.list_skills()
         assert len(skills) == 2
 
     def test_list_skills_by_category(
-        self, temp_skills_dir: tempfile.TemporaryDirectory
+        self, temp_skills_dir: tempfile.TemporaryDirectory, sample_skills: list[str]
     ) -> None:
         """Test filtering skills by category."""
-        manager = SkillManager(temp_skills_dir.name)
+        manager = SkillManager()  # Don't pass directory to avoid auto-loading
         manager.load_skills_from_directory(temp_skills_dir.name)
 
         coding_skills = manager.list_skills(category=SkillCategory.CODING)
@@ -270,10 +272,10 @@ You are a data analyst.
         assert data_skills[0].name == "data_analyst"
 
     def test_list_skills_by_tag(
-        self, temp_skills_dir: tempfile.TemporaryDirectory
+        self, temp_skills_dir: tempfile.TemporaryDirectory, sample_skills: list[str]
     ) -> None:
         """Test filtering skills by tag."""
-        manager = SkillManager(temp_skills_dir.name)
+        manager = SkillManager()  # Don't pass directory to avoid auto-loading
         manager.load_skills_from_directory(temp_skills_dir.name)
 
         python_skills = manager.list_skills(tag="python")
@@ -281,10 +283,10 @@ You are a data analyst.
         assert python_skills[0].name == "python_expert"
 
     def test_apply_skill_success(
-        self, temp_skills_dir: tempfile.TemporaryDirectory
+        self, temp_skills_dir: tempfile.TemporaryDirectory, sample_skills: list[str]
     ) -> None:
         """Test successfully applying a skill."""
-        manager = SkillManager(temp_skills_dir.name)
+        manager = SkillManager()  # Don't pass directory to avoid auto-loading
         manager.load_skills_from_directory(temp_skills_dir.name)
 
         agent_state = {}
@@ -304,10 +306,10 @@ You are a data analyst.
         assert "run_python" in result.filtered_tools
 
     def test_apply_skill_not_found(
-        self, temp_skills_dir: tempfile.TemporaryDirectory
+        self, temp_skills_dir: tempfile.TemporaryDirectory, sample_skills: list[str]
     ) -> None:
         """Test applying a non-existent skill."""
-        manager = SkillManager(temp_skills_dir.name)
+        manager = SkillManager()  # Don't pass directory to avoid auto-loading
         manager.load_skills_from_directory(temp_skills_dir.name)
 
         agent_state = {}
@@ -323,10 +325,10 @@ You are a data analyst.
         assert "not found" in result.error_message.lower()
 
     def test_apply_skill_updates_agent_state(
-        self, temp_skills_dir: tempfile.TemporaryDirectory
+        self, temp_skills_dir: tempfile.TemporaryDirectory, sample_skills: list[str]
     ) -> None:
         """Test that applying a skill updates agent state."""
-        manager = SkillManager(temp_skills_dir.name)
+        manager = SkillManager()  # Don't pass directory to avoid auto-loading
         manager.load_skills_from_directory(temp_skills_dir.name)
 
         agent_state = {}
@@ -342,9 +344,9 @@ You are a data analyst.
         assert "active_skill" in agent_state
         assert agent_state["active_skill"] == "python_expert"
 
-    def test_clear_skill(self, temp_skills_dir: tempfile.TemporaryDirectory) -> None:
+    def test_clear_skill(self, temp_skills_dir: tempfile.TemporaryDirectory, sample_skills: list[str]) -> None:
         """Test clearing the active skill."""
-        manager = SkillManager(temp_skills_dir.name)
+        manager = SkillManager()  # Don't pass directory to avoid auto-loading
         manager.load_skills_from_directory(temp_skills_dir.name)
 
         agent_state = {}
@@ -365,10 +367,10 @@ You are a data analyst.
         assert "active_skill" not in agent_state
 
     def test_tool_filtering_with_skill_requirements(
-        self, temp_skills_dir: tempfile.TemporaryDirectory
+        self, temp_skills_dir: tempfile.TemporaryDirectory, sample_skills: list[str]
     ) -> None:
         """Test that tools are filtered based on skill requirements."""
-        manager = SkillManager(temp_skills_dir.name)
+        manager = SkillManager()  # Don't pass directory to avoid auto-loading
         manager.load_skills_from_directory(temp_skills_dir.name)
 
         agent_state = {}
@@ -386,9 +388,9 @@ You are a data analyst.
         assert "run_command" not in result.filtered_tools
         assert "analyze_data" not in result.filtered_tools
 
-    def test_get_context(self, temp_skills_dir: tempfile.TemporaryDirectory) -> None:
+    def test_get_context(self, temp_skills_dir: tempfile.TemporaryDirectory, sample_skills: list[str]) -> None:
         """Test getting the skill context."""
-        manager = SkillManager(temp_skills_dir.name)
+        manager = SkillManager()  # Don't pass directory to avoid auto-loading
         manager.load_skills_from_directory(temp_skills_dir.name)
 
         context = manager.get_context()
