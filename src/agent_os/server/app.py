@@ -19,8 +19,8 @@ from agent_os.server.security import sanitize_path, validate_filename
 from agent_os.auth.router import router as auth_router
 from agent_os.knowledge.router import router as knowledge_router
 from agent_os.tasks.router import router as tasks_router
-from agent_os.aggregation import router as aggregation_router
-from agent_os.conversations import router as conversations_router
+from agent_os.aggregation.router import router as aggregation_router
+from agent_os.conversations.router import router as conversations_router
 
 app = FastAPI(
     title="AgentOS API",
