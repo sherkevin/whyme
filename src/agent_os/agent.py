@@ -7,6 +7,8 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from agent_os.core.config import Config, load_config
 from agent_os.core.interfaces import (
     LLMProvider,
@@ -18,6 +20,7 @@ from agent_os.core.interfaces import (
 from agent_os.core.types import RuntimeContext
 from agent_os.llm.litellm_impl import LiteLLMProvider
 from agent_os.tools import ToolRegistryImpl
+from agent_os.conversations import ConversationRepository
 
 
 class Agent:
@@ -27,8 +30,17 @@ class Agent:
     which modify the system prompt, available tools, and parameters.
     """
 
-    def __init__(self, config: Config) -> None:
-        """Initialize the agent with configuration."""
+    def __init__(
+        self,
+        config: Config,
+        db_session: AsyncSession | None = None,
+    ) -> None:
+        """Initialize the agent with configuration.
+
+        Args:
+            config: Agent configuration
+            db_session: Optional database session for conversation persistence
+        """
         self.config = config
         self.llm: LLMProvider | None = None
         self.coding: CodingCapability | None = None
@@ -36,6 +48,8 @@ class Agent:
         self.context: ContextManager | None = None
         self.tool_registry = ToolRegistryImpl()
         self.conversation_history: list[dict[str, Any]] = []
+        self.db_session = db_session
+        self.conversation_repo = ConversationRepository() if db_session else None
 
         # Skills system
         self.skill_manager: Any = None  # Will be initialized lazily
@@ -43,10 +57,22 @@ class Agent:
         self.agent_state: dict[str, Any] = {}
 
     @classmethod
-    def from_config_file(cls, config_path: str = "config.yaml") -> Agent:
-        """Create an agent from a configuration file."""
+    def from_config_file(
+        cls,
+        config_path: str = "config.yaml",
+        db_session: AsyncSession | None = None,
+    ) -> Agent:
+        """Create an agent from a configuration file.
+
+        Args:
+            config_path: Path to configuration file
+            db_session: Optional database session for conversation persistence
+
+        Returns:
+            Initialized Agent instance
+        """
         config = load_config(config_path)
-        return cls(config)
+        return cls(config, db_session=db_session)
 
     async def initialize(self) -> None:
         """Initialize all components."""
@@ -54,6 +80,42 @@ class Agent:
         await self.initialize_coding()
         await self.initialize_memory()
         await self.initialize_context()
+
+    async def load_conversation_history(
+        self,
+        user_id: str,
+        session_id: str,
+        limit: int = 50,
+    ) -> None:
+        """Load conversation history from database.
+
+        Args:
+            user_id: User identifier
+            session_id: Session identifier
+            limit: Maximum number of messages to load
+        """
+        if not self.db_session or not self.conversation_repo:
+            return
+
+        try:
+            conversations = await self.conversation_repo.get_conversation_history(
+                session=self.db_session,
+                user_id=int(user_id),
+                session_id=session_id,
+                limit=limit,
+            )
+
+            # Clear current history and load from database
+            self.conversation_history = []
+            for conv in conversations:
+                msg = {"role": conv.role, "content": conv.content}
+                if conv.tool_calls:
+                    msg["tool_calls"] = conv.tool_calls
+                self.conversation_history.append(msg)
+
+        except Exception as e:
+            print(f"Failed to load conversation history: {e}")
+            # Continue with empty history
         
     async def initialize_memory(self) -> None:
         """Initialize memory provider."""
@@ -162,11 +224,24 @@ class Agent:
         )
 
         # Add user message to history
-        self.conversation_history.append({
-            "role": "user",
-            "content": message,
-        })
-        
+        user_msg = {"role": "user", "content": message}
+        self.conversation_history.append(user_msg)
+
+        # Persist to database if session available
+        if self.db_session and self.conversation_repo:
+            try:
+                await self.conversation_repo.add_message(
+                    session=self.db_session,
+                    user_id=int(user_id),
+                    session_id=session_id,
+                    role="user",
+                    content=message,
+                )
+                await self.db_session.commit()
+            except Exception as e:
+                print(f"Failed to persist user message: {e}")
+                await self.db_session.rollback()
+
         # Log thinking
         for cb in callbacks:
             await cb.on_log(f"Processing message: {message[:50]}...")
@@ -277,10 +352,25 @@ class Agent:
 
         # Add assistant response to history
         content = response.get("content", "")
-        self.conversation_history.append({
-            "role": "assistant",
-            "content": content,
-        })
+        assistant_msg = {"role": "assistant", "content": content}
+        self.conversation_history.append(assistant_msg)
+
+        # Persist assistant message to database
+        if self.db_session and self.conversation_repo:
+            try:
+                await self.conversation_repo.add_message(
+                    session=self.db_session,
+                    user_id=int(user_id),
+                    session_id=session_id,
+                    role="assistant",
+                    content=content,
+                    tool_calls=response.get("tool_calls"),
+                    model=response.get("model"),
+                )
+                await self.db_session.commit()
+            except Exception as e:
+                print(f"Failed to persist assistant message: {e}")
+                await self.db_session.rollback()
 
         if content:
             for cb in callbacks:
@@ -325,11 +415,28 @@ class Agent:
                     await cb.on_tool_end(function_name, result_str)
 
                 # Add tool result to conversation
-                self.conversation_history.append({
+                tool_msg = {
                     "role": "tool",
                     "tool_call_id": tool_call["id"],
                     "content": result_str,
-                })
+                }
+                self.conversation_history.append(tool_msg)
+
+                # Persist tool message to database
+                if self.db_session and self.conversation_repo:
+                    try:
+                        await self.conversation_repo.add_message(
+                            session=self.db_session,
+                            user_id=int(user_id),
+                            session_id=session_id,
+                            role="tool",
+                            content=result_str,
+                            tool_calls=[{"id": tool_call["id"], "name": function_name, "args": args}],
+                        )
+                        await self.db_session.commit()
+                    except Exception as e:
+                        print(f"Failed to persist tool message: {e}")
+                        await self.db_session.rollback()
         else:
             print(f"[DEBUG] No tool calls in response")
 

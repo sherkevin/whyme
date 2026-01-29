@@ -13,6 +13,14 @@ import os
 import sys
 from pathlib import Path
 
+# Import MCPBridge for MCP integration
+try:
+    from global_toolkit.bridge import MCPBridge
+    MCP_AVAILABLE = True
+except ImportError:
+    MCP_AVAILABLE = False
+    MCPBridge = None
+
 def tool(func: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator to mark a function as a tool."""
     func._is_tool = True  # type: ignore
@@ -90,11 +98,13 @@ class MCPTool:
         command: str,
         args: list[str],
         tool_definition: dict[str, Any],
+        server_name: str | None = None,
     ) -> None:
         self.name = name
         self.command = command
         self.args = args
         self.definition = tool_definition
+        self.server_name = server_name or name  # Track which MCP server
         self.process: asyncio.subprocess.Process | None = None
 
 
@@ -115,18 +125,56 @@ class ToolRegistryImpl(ToolRegistry):
         self._mcp_tools: dict[str, MCPTool] = {}
         self._mcp_processes: dict[str, asyncio.subprocess.Process] = {}
 
+        # Initialize MCPBridge if available
+        self._mcp_bridge: MCPBridge | None = None
+        if MCP_AVAILABLE:
+            self._mcp_bridge = MCPBridge()
+            print("[ToolRegistry] MCPBridge initialized successfully")
+
     async def register_python_tool(self, func: Callable[..., Any]) -> None:
         """Register a Python function as a tool."""
         tool = PythonTool(func)
         self._python_tools[tool.name] = tool
 
     async def register_mcp(self, name: str, command: str, args: list[str]) -> None:
-        """Register an MCP server (lazy loaded)."""
-        # Create a placeholder definition - will be populated when MCP is started
+        """Register an MCP server and discover its tools.
+
+        Uses MCPBridge to list available tools from the MCP server.
+        """
+        # Use MCPBridge to discover tools if available
+        if self._mcp_bridge:
+            try:
+                # Start the MCP server process
+                await self._mcp_bridge.start_server(name, command, args)
+
+                # List available tools from this MCP server
+                tools = await self._mcp_bridge.list_tools(name)
+
+                # Register each tool with its full definition
+                for tool_def in tools:
+                    tool_name = tool_def.get("name", f"{name}_{tool_def.get('name', 'unknown')}")
+                    self._mcp_tools[tool_name] = MCPTool(
+                        name=tool_name,
+                        command=command,
+                        args=args,
+                        server_name=name,  # Track which server this tool belongs to
+                        tool_definition=tool_def
+                    )
+                    print(f"[ToolRegistry] Registered MCP tool: {tool_name} from server {name}")
+
+                print(f"[ToolRegistry] Successfully registered {len(tools)} tools from MCP server {name}")
+                return
+
+            except Exception as e:
+                print(f"[ToolRegistry] Failed to discover MCP tools from {name}: {e}")
+                # Fall back to placeholder registration
+
+        # Fallback: Create a placeholder definition
         self._mcp_tools[name] = MCPTool(
             name=name,
             command=command,
             args=args,
+            server_name=name,
             tool_definition={
                 "type": "function",
                 "function": {
@@ -136,6 +184,7 @@ class ToolRegistryImpl(ToolRegistry):
                 },
             },
         )
+        print(f"[ToolRegistry] Registered MCP server {name} with placeholder tool")
 
     async def get_definitions(self) -> list[dict[str, Any]]:
         """Return all tool definitions in OpenAI format."""
@@ -183,11 +232,25 @@ class ToolRegistryImpl(ToolRegistry):
     async def _execute_mcp_tool(
         self, tool_name: str, arguments: dict[str, Any]
     ) -> Any:
-        """Execute an MCP tool via JSON-RPC."""
+        """Execute an MCP tool via JSON-RPC using MCPBridge."""
         tool = self._mcp_tools[tool_name]
 
-        # Ensure MCP process is running
-        process = await self._ensure_mcp_process(tool)
+        # Use MCPBridge if available
+        if self._mcp_bridge:
+            try:
+                # Call the tool via MCPBridge
+                result = await self._mcp_bridge.call_tool(
+                    server_name=tool.server_name,
+                    tool_name=tool_name,
+                    arguments=arguments
+                )
+                return result
+            except Exception as e:
+                return {"error": f"MCP tool execution failed: {str(e)}", "tool": tool_name}
+        else:
+            # Fallback: Use old method
+            # Ensure MCP process is running
+            process = await self._ensure_mcp_process(tool)
 
         # Send JSON-RPC request
         request = {

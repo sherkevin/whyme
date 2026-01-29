@@ -19,6 +19,8 @@ from agent_os.server.security import sanitize_path, validate_filename
 from agent_os.auth.router import router as auth_router
 from agent_os.knowledge.router import router as knowledge_router
 from agent_os.tasks.router import router as tasks_router
+from agent_os.aggregation import router as aggregation_router
+from agent_os.conversations import router as conversations_router
 
 app = FastAPI(
     title="AgentOS API",
@@ -30,6 +32,8 @@ app = FastAPI(
 app.include_router(auth_router)
 app.include_router(knowledge_router)
 app.include_router(tasks_router)
+app.include_router(aggregation_router)
+app.include_router(conversations_router)
 
 
 class SessionMetadata(BaseModel):

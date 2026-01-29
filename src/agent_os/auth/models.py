@@ -63,6 +63,7 @@ class User(Base):
     inbox_items = relationship("InboxItem", back_populates="user", cascade="all, delete-orphan")
     cards = relationship("Card", back_populates="user", cascade="all, delete-orphan")
     tasks = relationship("Task", back_populates="user", cascade="all, delete-orphan")
+    conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
 
     __table_args__ = (
         # 同一组织内用户名唯一

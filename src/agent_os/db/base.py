@@ -1,5 +1,7 @@
 """Database configuration and session management."""
 
+from __future__ import annotations
+
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 
@@ -68,10 +70,11 @@ async def get_db() -> AsyncSession:
 async def init_db():
     """Initialize database tables."""
     async with get_engine().begin() as conn:
-        # Import all models here to ensure they're registered
+        # Import all models to ensure they're registered
         from agent_os.knowledge.models import InboxItem, Card
         from agent_os.tasks.models import Task
         from agent_os.auth.models import User, UserSettings
+        from agent_os.conversations.models import Conversation, ConversationSummary
 
         # Create all tables
         await conn.run_sync(Base.metadata.create_all)
@@ -80,36 +83,3 @@ async def init_db():
 # Exports
 AsyncSessionLocal = _AsyncSessionLocal
 engine = get_engine
-
-
-class Base(DeclarativeBase):
-    """Base class for all database models."""
-    pass
-
-
-async def get_db() -> AsyncSession:
-    """Dependency for FastAPI to get database session.
-
-    Usage:
-        @app.get("/users")
-        async def get_users(db: AsyncSession = Depends(get_db)):
-            result = await db.execute(select(User))
-            return result.scalars().all()
-    """
-    async with AsyncSessionLocal() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
-
-
-async def init_db():
-    """Initialize database tables."""
-    async with engine.begin() as conn:
-        # Import all models here to ensure they're registered
-        from agent_os.knowledge.models import InboxItem, Card
-        from agent_os.tasks.models import Task
-        from agent_os.auth.models import User, UserSettings
-
-        # Create all tables
-        await conn.run_sync(Base.metadata.create_all)
