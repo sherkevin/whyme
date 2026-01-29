@@ -1,0 +1,78 @@
+# Docker Compose for AgentOS API - Frontend Integration
+# 前端同学一键启动后端服务
+
+version: '3.8'
+
+services:
+  # AgentOS API 服务
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: agentos-api
+    ports:
+      - "8000:8000"  # API端口
+      - "8003:8003"  # WebSocket端口
+    environment:
+      # 数据库配置 (使用SQLite，无需额外配置)
+      - DATABASE_URL=sqlite+aiosqlite:///./data/agentos.db
+
+      # API配置
+      - API_KEY=your-api-key-here
+      - BASE_URL=http://localhost:8000
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+
+      # 环境配置
+      - ENVIRONMENT=development
+      - LOG_LEVEL=info
+
+      # LLM配置 (可选，用于实际AI功能)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+
+    volumes:
+      # 数据持久化
+      - ./data:/app/data
+      - ./logs:/app/logs
+
+      # 代码热重载 (开发模式)
+      - ./src:/app/src:ro
+
+    # 重启策略
+    restart: unless-stopped
+
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    networks:
+      - agentos-network
+
+  # PostgreSQL (可选，生产环境推荐使用)
+  postgres:
+    image: postgres:16-alpine
+    container_name: agentos-db
+    environment:
+      - POSTGRES_USER=agentos
+      - POSTGRES_PASSWORD=agentos123
+      - POSTGRES_DB=agentos_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - agentos-network
+    # 默认不启动，如需使用请取消注释下面的depends_on
+    # profiles:
+    #   - production
+
+volumes:
+  postgres-data:
+
+networks:
+  agentos-network:
+    driver: bridge
