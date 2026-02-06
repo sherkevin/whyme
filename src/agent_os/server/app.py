@@ -17,6 +17,8 @@ from agent_os.agent_aider import AiderAgent
 from agent_os.core.interfaces import AgentCallbackHandler
 from agent_os.server.security import sanitize_path, validate_filename
 from agent_os.auth.router import router as auth_router
+from agent_os.inbox.router import router as inbox_router
+from agent_os.today.router import router as today_router
 from agent_os.knowledge.router import router as knowledge_router
 from agent_os.tasks.router import router as tasks_router
 from agent_os.aggregation.router import router as aggregation_router
@@ -30,6 +32,8 @@ app = FastAPI(
 
 # Include API routers
 app.include_router(auth_router)
+app.include_router(inbox_router)
+app.include_router(today_router)
 app.include_router(knowledge_router)
 app.include_router(tasks_router)
 app.include_router(aggregation_router)
