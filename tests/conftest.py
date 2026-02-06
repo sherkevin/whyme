@@ -14,13 +14,17 @@ from agent_os.items.models import (
     TaskExtension, DecisionPoint, LedgerEvent, GraphEdge
 )
 
+# Import insight models
+from agent_os.insights.models import InsightExtension, InsightCluster
+
 # Import base after models to avoid circular imports
 from agent_os.db.base import Base
 
 # Create a list of PRD4 tables for testing
 PRD4_TABLES = [
     'workspaces', 'areas', 'projects', 'items',
-    'task_extensions', 'decision_points', 'ledger_events', 'graph_edges'
+    'task_extensions', 'decision_points', 'ledger_events', 'graph_edges',
+    'insight_extensions', 'insight_clusters'
 ]
 
 
@@ -64,8 +68,12 @@ async def engine():
             DecisionPoint.__table__.create(connection, checkfirst=True)
             LedgerEvent.__table__.create(connection, checkfirst=True)
             GraphEdge.__table__.create(connection, checkfirst=True)
+            InsightExtension.__table__.create(connection, checkfirst=True)
+            InsightCluster.__table__.create(connection, checkfirst=True)
 
         def drop_prd4_tables(connection):
+            InsightCluster.__table__.drop(connection, checkfirst=True)
+            InsightExtension.__table__.drop(connection, checkfirst=True)
             GraphEdge.__table__.drop(connection, checkfirst=True)
             LedgerEvent.__table__.drop(connection, checkfirst=True)
             DecisionPoint.__table__.drop(connection, checkfirst=True)
