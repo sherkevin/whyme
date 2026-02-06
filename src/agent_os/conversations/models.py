@@ -35,7 +35,8 @@ class Conversation(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships
-    user = relationship("User", back_populates="conversations")
+    # Note: User model doesn't have conversations backref yet
+    # user = relationship("User", back_populates="conversations")
 
     def __repr__(self) -> str:
         return f"<Conversation(id={self.id}, user_id={self.user_id}, role={self.role}, session={self.session_id})>"

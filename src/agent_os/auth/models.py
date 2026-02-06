@@ -7,8 +7,7 @@ import uuid
 import secrets
 from datetime import datetime, timedelta
 from typing import Optional, List
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Text, Index, CheckConstraint, UUID
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Text, Index, CheckConstraint, UUID, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -45,8 +44,8 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     last_login_at = Column(DateTime(timezone=True), nullable=True)
 
-    # Settings (JSONB for flexibility)
-    settings = Column(JSONB, default=dict, nullable=False)
+    # Settings (JSON for flexibility)
+    settings = Column(JSON, default=dict, nullable=False)
 
     # Relationships
     api_keys = relationship("APIKey", back_populates="user", cascade="all, delete-orphan")
@@ -81,7 +80,7 @@ class APIKey(Base):
     prefix = Column(String(10), nullable=False)  # First 8 chars for identification
 
     # Scopes and permissions
-    scopes = Column(JSONB, default=list, nullable=False)  # ["read:items", "write:items"]
+    scopes = Column(JSON, default=list, nullable=False)  # ["read:items", "write:items"]
 
     # Status
     is_active = Column(Boolean, default=True, nullable=False)
@@ -92,7 +91,7 @@ class APIKey(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Metadata
-    meta_data = Column(JSONB, default=dict, nullable=False)  # { "ip_whitelist": [...], "user_agent": "..." }
+    meta_data = Column(JSON, default=dict, nullable=False)  # { "ip_whitelist": [...], "user_agent": "..." }
 
     # Relationship
     user = relationship("User", back_populates="api_keys")
@@ -165,7 +164,7 @@ class Role(Base):
     description = Column(Text, nullable=True)
 
     # Permissions
-    permissions = Column(JSONB, default=list, nullable=False)  # ["create:item", "read:item", ...]
+    permissions = Column(JSON, default=list, nullable=False)  # ["create:item", "read:item", ...]
 
     # Hierarchy (for role inheritance)
     parent_role_id = Column(UUID(as_uuid=True), ForeignKey("roles.id"), nullable=True)
@@ -242,7 +241,7 @@ class AuditLog(Base):
     target_id = Column(UUID(as_uuid=True), nullable=True)
 
     # Details
-    details = Column(JSONB, default=dict, nullable=False)  # Event-specific data
+    details = Column(JSON, default=dict, nullable=False)  # Event-specific data
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(Text, nullable=True)
 

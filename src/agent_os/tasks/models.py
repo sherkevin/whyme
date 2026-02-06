@@ -28,7 +28,8 @@ class Task(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # Relationships
-    user = relationship("User", back_populates="tasks")
+    # Note: User model doesn't have tasks backref yet
+    # user = relationship("User", back_populates="tasks")
 
     __table_args__ = (
         # 复合索引优化多租户查询

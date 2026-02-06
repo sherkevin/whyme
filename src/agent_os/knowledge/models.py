@@ -37,7 +37,8 @@ class InboxItem(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # Relationships
-    user = relationship("User", back_populates="inbox_items")
+    # Note: User model doesn't have inbox_items backref yet
+    # user = relationship("User", back_populates="inbox_items")
     cards = relationship("Card", back_populates="source_item")
 
     __table_args__ = (
@@ -71,7 +72,8 @@ class Card(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # Relationships
-    user = relationship("User", back_populates="cards")
+    # Note: User model doesn't have cards backref yet
+    # user = relationship("User", back_populates="cards")
     source_item = relationship("InboxItem", back_populates="cards")
 
     __table_args__ = (
