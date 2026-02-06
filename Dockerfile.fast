@@ -1,0 +1,53 @@
+# AgentOS Fast Dockerfile
+# 基于当前 UV 环境的快速构建版本
+
+FROM python:3.11-slim
+
+# Set labels
+LABEL maintainer="AgentOS Team" \
+      version="1.0.0" \
+      description="AgentOS Core - Fast Build Version"
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    AGENTOS_SANDBOX=local \
+    HOST=0.0.0.0 \
+    PORT=8003 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd -m -s /bin/bash -u 1000 agentos && \
+    mkdir -p /app/data /app/data/uploads && \
+    chown -R agentos:agentos /app
+
+WORKDIR /app
+
+# Copy requirements first (better caching)
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application files
+COPY --chown=agentos:agentos src/ src/
+COPY --chown=agentos:agentos scripts/ scripts/
+COPY --chown=agentos:agentos pyproject.toml ./
+
+USER agentos
+
+EXPOSE 8003
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8003/health || exit 1
+
+CMD ["python", "scripts/start.py"]
