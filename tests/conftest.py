@@ -17,6 +17,9 @@ from agent_os.items.models import (
 # Import insight models
 from agent_os.insights.models import InsightExtension, InsightCluster
 
+# Import auth models
+from agent_os.auth.models import User, APIKey, Session, Role, UserRole, AuditLog
+
 # Import base after models to avoid circular imports
 from agent_os.db.base import Base
 
@@ -24,7 +27,8 @@ from agent_os.db.base import Base
 PRD4_TABLES = [
     'workspaces', 'areas', 'projects', 'items',
     'task_extensions', 'decision_points', 'ledger_events', 'graph_edges',
-    'insight_extensions', 'insight_clusters'
+    'insight_extensions', 'insight_clusters',
+    'users', 'api_keys', 'sessions', 'roles', 'user_roles', 'audit_logs'
 ]
 
 
@@ -70,8 +74,23 @@ async def engine():
             GraphEdge.__table__.create(connection, checkfirst=True)
             InsightExtension.__table__.create(connection, checkfirst=True)
             InsightCluster.__table__.create(connection, checkfirst=True)
+            # Auth tables
+            User.__table__.create(connection, checkfirst=True)
+            APIKey.__table__.create(connection, checkfirst=True)
+            Session.__table__.create(connection, checkfirst=True)
+            Role.__table__.create(connection, checkfirst=True)
+            UserRole.__table__.create(connection, checkfirst=True)
+            AuditLog.__table__.create(connection, checkfirst=True)
 
         def drop_prd4_tables(connection):
+            # Drop auth tables first (foreign key dependencies)
+            AuditLog.__table__.drop(connection, checkfirst=True)
+            UserRole.__table__.drop(connection, checkfirst=True)
+            Role.__table__.drop(connection, checkfirst=True)
+            Session.__table__.drop(connection, checkfirst=True)
+            APIKey.__table__.drop(connection, checkfirst=True)
+            User.__table__.drop(connection, checkfirst=True)
+            # Drop PRD4 tables
             InsightCluster.__table__.drop(connection, checkfirst=True)
             InsightExtension.__table__.drop(connection, checkfirst=True)
             GraphEdge.__table__.drop(connection, checkfirst=True)

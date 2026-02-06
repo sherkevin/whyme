@@ -1,5 +1,6 @@
 """Authentication API router."""
 
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,9 +13,10 @@ from agent_os.auth.schema import (
     UserInfo,
     UserSettingsUpdate,
     ErrorResponse,
+    RefreshTokenRequest,
 )
 from agent_os.auth.jwt_handler import create_access_token, create_refresh_token, verify_token
-from agent_os.auth.dependencies import get_current_user, get_current_user_id
+from agent_os.auth.dependencies import get_current_user
 from agent_os.auth.models import User
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
@@ -121,22 +123,15 @@ async def login(
     }
 )
 async def refresh_token(
-    token_data: dict,
+    token_request: RefreshTokenRequest,
     db: AsyncSession = Depends(get_db)
 ):
     """Refresh access token using refresh token.
 
     Validates the refresh token and issues a new access token.
     """
-    refresh_token = token_data.get("refresh_token")
-    if not refresh_token:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="refresh_token is required"
-        )
-
     # Verify refresh token
-    token_info = verify_token(refresh_token, token_type="refresh")
+    token_info = verify_token(token_request.refresh_token, token_type="refresh")
     if not token_info:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -164,7 +159,7 @@ async def refresh_token(
 
 
 @router.get(
-    "/users/me",
+    "/me",
     response_model=UserInfo,
     responses={
         401: {"model": ErrorResponse, "description": "Not authenticated"}
@@ -181,15 +176,14 @@ async def get_current_user_info(
         id=current_user.id,
         username=current_user.username,
         email=current_user.email,
-        daily_goal=current_user.settings.daily_goal if current_user.settings else 10,
-        theme=current_user.settings.theme if current_user.settings else "light",
-        language=current_user.settings.language if current_user.settings else "zh",
+        settings=current_user.settings,
+        is_active=current_user.is_active,
         created_at=current_user.created_at
     )
 
 
 @router.put(
-    "/users/settings",
+    "/settings",
     response_model=UserInfo,
     responses={
         401: {"model": ErrorResponse, "description": "Not authenticated"}
@@ -202,30 +196,27 @@ async def update_user_settings(
 ):
     """Update current user settings.
 
-    Updates daily goal, theme, and/or language preferences.
+    Updates user settings (daily_goal, theme, language, etc.).
     """
     # Update settings
-    settings = await crud.update_user_settings(
+    user = await crud.update_user_settings(
         db=db,
         user_id=current_user.id,
-        daily_goal=settings_update.daily_goal,
-        theme=settings_update.theme,
-        language=settings_update.language
+        settings=settings_update.settings
     )
 
-    if not settings:
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Settings not found"
+            detail="User not found"
         )
 
     # Return updated user info
     return UserInfo(
-        id=current_user.id,
-        username=current_user.username,
-        email=current_user.email,
-        daily_goal=settings.daily_goal,
-        theme=settings.theme,
-        language=settings.language,
-        created_at=current_user.created_at
+        id=user.id,
+        username=user.username,
+        email=user.email,
+        settings=user.settings,
+        is_active=user.is_active,
+        created_at=user.created_at
     )

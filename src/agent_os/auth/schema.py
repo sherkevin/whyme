@@ -1,7 +1,8 @@
 """Authentication schemas for API requests and responses."""
 
+import uuid
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
-from typing import Optional
+from typing import Optional, Dict, Any
 from datetime import datetime
 
 
@@ -26,10 +27,12 @@ class RefreshTokenRequest(BaseModel):
 
 
 class UserSettingsUpdate(BaseModel):
-    """User settings update request."""
-    daily_goal: Optional[int] = Field(None, ge=1, le=100, description="Daily card goal")
-    theme: Optional[str] = Field(None, pattern="^(light|dark)$", description="UI theme")
-    language: Optional[str] = Field(None, min_length=2, max_length=10, description="Language code")
+    """User settings update request.
+
+    User settings are stored as JSONB in the User model.
+    This schema allows partial updates to the settings dict.
+    """
+    settings: Dict[str, Any] = Field(..., description="User settings to update")
 
 
 # ============== Response Schemas ==============
@@ -44,35 +47,30 @@ class Token(BaseModel):
 
 class UserBase(BaseModel):
     """Base user information."""
-    id: int
+    id: uuid.UUID
     username: str
     email: EmailStr
+    is_active: bool
     created_at: datetime
     updated_at: datetime
-
-
-class UserSettings(BaseModel):
-    """User settings information."""
-    daily_goal: int = Field(default=10, description="Daily card goal")
-    theme: str = Field(default="light", description="UI theme")
-    language: str = Field(default="zh", description="Language code")
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class UserResponse(UserBase):
     """Complete user response with settings."""
-    settings: Optional[UserSettings] = None
+    settings: Dict[str, Any] = Field(default_factory=dict, description="User settings")
+    full_name: Optional[str] = None
+    avatar_url: Optional[str] = None
 
 
 class UserInfo(BaseModel):
     """Current user info response."""
-    id: int
+    id: uuid.UUID
     username: str
     email: EmailStr
-    daily_goal: int
-    theme: str
-    language: str
+    settings: Dict[str, Any] = Field(default_factory=dict)
+    is_active: bool
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -89,4 +87,4 @@ class ErrorResponse(BaseModel):
 class ValidationErrorResponse(BaseModel):
     """Validation error response."""
     detail: str = Field(default="Validation error", description="Error message")
-    errors: dict[str, list[str]] = Field(default_factory=dict, description="Field errors")
+    errors: Dict[str, list[str]] = Field(default_factory=dict, description="Field errors")

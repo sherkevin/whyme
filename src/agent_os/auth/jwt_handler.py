@@ -1,75 +1,57 @@
-"""JWT token creation and validation."""
+"""JWT token creation and validation using security.py functions.
 
-from datetime import datetime, timedelta, UTC
-from typing import Optional, Dict, Any
+This module provides a compatibility layer for existing code that imports from jwt_handler.
+The actual implementation is in security.py.
+"""
 
-from jose import JWTError, jwt
-from pydantic import BaseModel, ValidationError
+import uuid
+from typing import Optional
+from datetime import timedelta
 
-# JWT Configuration
-SECRET_KEY = "your-secret-key-change-in-production"  # TODO: Move to config
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-REFRESH_TOKEN_EXPIRE_DAYS = 7
-
-
-class TokenPayload(BaseModel):
-    """JWT token payload."""
-    sub: str  # User ID (as string for JWT)
-    exp: Optional[datetime] = None
-    type: str = "access"  # access or refresh
+from agent_os.auth.security import (
+    create_access_token as _create_access_token,
+    create_refresh_token as _create_refresh_token,
+    decode_token
+)
 
 
-class TokenData(BaseModel):
+class TokenData:
     """Data extracted from token."""
-    user_id: int
-    token_type: str
+    def __init__(self, user_id: uuid.UUID, token_type: str):
+        self.user_id = user_id
+        self.token_type = token_type
 
 
-def create_access_token(user_id: int, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(
+    user_id: uuid.UUID,
+    expires_delta: Optional[timedelta] = None
+) -> str:
     """Create an access token for a user.
 
     Args:
-        user_id: User ID
+        user_id: User ID (UUID)
         expires_delta: Optional custom expiration time
 
     Returns:
         JWT access token
     """
-    if expires_delta:
-        expire = datetime.now(UTC) + expires_delta
-    else:
-        expire = datetime.now(UTC) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-
-    payload = {
-        "sub": str(user_id),  # Convert to string for JWT
-        "exp": expire,
-        "type": "access"
-    }
-
-    encoded_jwt = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    # Convert UUID to string for JWT
+    data = {"sub": str(user_id)}
+    return _create_access_token(data, expires_delta)
 
 
-def create_refresh_token(user_id: int) -> str:
+def create_refresh_token(user_id: uuid.UUID) -> str:
     """Create a refresh token for a user.
 
     Args:
-        user_id: User ID
+        user_id: User ID (UUID)
 
     Returns:
         JWT refresh token
     """
-    expire = datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
-
-    payload = {
-        "sub": str(user_id),  # Convert to string for JWT
-        "exp": expire,
-        "type": "refresh"
-    }
-
-    encoded_jwt = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    # Convert UUID to string for JWT
+    data = {"sub": str(user_id)}
+    return _create_refresh_token(data)
 
 
 def verify_token(token: str, token_type: str = "access") -> Optional[TokenData]:
@@ -81,40 +63,19 @@ def verify_token(token: str, token_type: str = "access") -> Optional[TokenData]:
 
     Returns:
         TokenData if valid, None if invalid
-
-    Raises:
-        JWTError: If token is invalid or expired
     """
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    payload = decode_token(token)
 
-        # Validate payload structure
-        token_payload = TokenPayload(**payload)
-
-        # Check token type
-        if token_payload.type != token_type:
-            return None
-
-        # Extract user ID (convert from string to int)
-        user_id: int = int(token_payload.sub)
-
-        return TokenData(user_id=user_id, token_type=token_payload.type)
-
-    except (JWTError, ValidationError):
+    if payload is None:
         return None
 
+    # Check token type
+    if payload.get("type") != token_type:
+        return None
 
-def decode_token(token: str) -> Optional[Dict[str, Any]]:
-    """Decode a token without verification (for debugging).
-
-    Args:
-        token: JWT token string
-
-    Returns:
-        Decoded payload or None
-    """
+    # Extract user ID (convert from string to UUID)
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
-    except JWTError:
+        user_id = uuid.UUID(payload.get("sub", ""))
+        return TokenData(user_id=user_id, token_type=payload.get("type", "access"))
+    except (ValueError, AttributeError):
         return None

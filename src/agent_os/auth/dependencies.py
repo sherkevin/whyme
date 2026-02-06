@@ -1,12 +1,12 @@
 """FastAPI dependencies for authentication."""
 
+import uuid
 from typing import Optional
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 
 from agent_os.db.base import get_db
 from agent_os.auth.jwt_handler import verify_token, TokenData
@@ -52,11 +52,9 @@ async def get_current_user(
     if token_data is None:
         raise credentials_exception
 
-    # Get user from database with settings eagerly loaded
+    # Get user from database
     result = await db.execute(
-        select(User)
-        .options(selectinload(User.settings))
-        .filter(User.id == token_data.user_id)
+        select(User).filter(User.id == token_data.user_id)
     )
     user = result.scalar_one_or_none()
 
@@ -80,14 +78,17 @@ async def get_current_active_user(
     Raises:
         HTTPException: If user is inactive
     """
-    # Future: Add is_active field to User model
-    # For now, all users are active
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Inactive user"
+        )
     return current_user
 
 
 async def get_current_user_id(
     current_user: User = Depends(get_current_user)
-) -> int:
+) -> uuid.UUID:
     """Get current user ID (lightweight version).
 
     Use this when you only need the user ID, not the full user object.
@@ -96,7 +97,7 @@ async def get_current_user_id(
         current_user: Current user from token
 
     Returns:
-        User ID
+        User ID (UUID)
     """
     return current_user.id
 
@@ -123,9 +124,7 @@ async def get_optional_user(
         return None
 
     result = await db.execute(
-        select(User)
-        .options(selectinload(User.settings))
-        .filter(User.id == token_data.user_id)
+        select(User).filter(User.id == token_data.user_id)
     )
     user = result.scalar_one_or_none()
 

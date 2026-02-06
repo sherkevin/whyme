@@ -1,28 +1,26 @@
 """CRUD operations for authentication and user management."""
 
-from typing import Optional
+import uuid
+from typing import Optional, Dict, Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
-from agent_os.auth.models import User, UserSettings
+from agent_os.auth.models import User
 from agent_os.auth.security import get_password_hash, verify_password
 
 
-async def get_user_by_id(db: AsyncSession, user_id: int) -> Optional[User]:
+async def get_user_by_id(db: AsyncSession, user_id: uuid.UUID) -> Optional[User]:
     """Get user by ID.
 
     Args:
         db: Database session
-        user_id: User ID
+        user_id: User ID (UUID)
 
     Returns:
         User object or None
     """
     result = await db.execute(
-        select(User)
-        .options(selectinload(User.settings))
-        .filter(User.id == user_id)
+        select(User).filter(User.id == user_id)
     )
     return result.scalar_one_or_none()
 
@@ -73,28 +71,23 @@ async def create_user(
         Created user object
     """
     # Hash password
-    hashed_password = get_password_hash(password)
+    password_hash = get_password_hash(password)
 
-    # Create user
+    # Create user with default settings
     user = User(
         username=username,
         email=email,
-        hashed_password=hashed_password
+        password_hash=password_hash,
+        settings={
+            "daily_goal": 10,
+            "theme": "light",
+            "language": "zh"
+        }
     )
 
     db.add(user)
     await db.commit()
     await db.refresh(user)
-
-    # Create default settings
-    settings = UserSettings(
-        user_id=user.id,
-        daily_goal=10,
-        theme="light",
-        language="zh"
-    )
-    db.add(settings)
-    await db.commit()
 
     return user
 
@@ -123,51 +116,37 @@ async def authenticate_user(
         return None
 
     # Verify password
-    if not verify_password(password, user.hashed_password):
+    if not verify_password(password, user.password_hash):
         return None
 
-    # Load settings
-    user_with_settings = await get_user_by_id(db, user.id)
-    return user_with_settings
+    return user
 
 
 async def update_user_settings(
     db: AsyncSession,
-    user_id: int,
-    daily_goal: Optional[int] = None,
-    theme: Optional[str] = None,
-    language: Optional[str] = None
-) -> Optional[UserSettings]:
+    user_id: uuid.UUID,
+    settings: Dict[str, Any]
+) -> Optional[User]:
     """Update user settings.
 
     Args:
         db: Database session
-        user_id: User ID
-        daily_goal: Daily card goal
-        theme: UI theme
-        language: Language code
+        user_id: User ID (UUID)
+        settings: Settings dict to merge into existing settings
 
     Returns:
-        Updated settings object or None
+        Updated user object or None
     """
-    # Get settings
-    result = await db.execute(
-        select(UserSettings).filter(UserSettings.user_id == user_id)
-    )
-    settings = result.scalar_one_or_none()
+    # Get user
+    user = await get_user_by_id(db, user_id)
 
-    if settings is None:
+    if user is None:
         return None
 
-    # Update fields
-    if daily_goal is not None:
-        settings.daily_goal = daily_goal
-    if theme is not None:
-        settings.theme = theme
-    if language is not None:
-        settings.language = language
+    # Merge settings
+    user.settings = {**user.settings, **settings}
 
     await db.commit()
-    await db.refresh(settings)
+    await db.refresh(user)
 
-    return settings
+    return user
