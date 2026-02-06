@@ -1,28 +1,53 @@
-"""Authentication module."""
+"""Authentication and Authorization Module - Stage 7.
 
-from agent_os.auth.models import User, UserSettings
-from agent_os.auth.security import verify_password, get_password_hash
-from agent_os.auth.jwt_handler import (
+Exports all authentication models and security utilities.
+"""
+
+from agent_os.auth.models import (
+    User,
+    APIKey,
+    Session,
+    Role,
+    UserRole,
+    AuditLog
+)
+from agent_os.auth.security import (
+    verify_password,
+    get_password_hash,
     create_access_token,
     create_refresh_token,
-    verify_token,
-    TokenData
+    decode_token,
+    hash_token,
+    generate_api_key,
+    get_api_key_prefix,
+    hash_api_key,
+    check_permission,
+    has_workspace_access,
+    DEFAULT_PERMISSIONS
 )
-from agent_os.auth.dependencies import get_current_user, get_current_user_id
 
 __all__ = [
     # Models
     "User",
-    "UserSettings",
-    # Security
+    "APIKey",
+    "Session",
+    "Role",
+    "UserRole",
+    "AuditLog",
+    # Password Utilities
     "verify_password",
     "get_password_hash",
-    # JWT
+    # JWT Utilities
     "create_access_token",
     "create_refresh_token",
-    "verify_token",
-    "TokenData",
-    # Dependencies
-    "get_current_user",
-    "get_current_user_id",
+    "decode_token",
+    "hash_token",
+    # API Key Utilities
+    "generate_api_key",
+    "get_api_key_prefix",
+    "hash_api_key",
+    # Permission Utilities
+    "check_permission",
+    "has_workspace_access",
+    "DEFAULT_PERMISSIONS"
 ]
