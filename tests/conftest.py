@@ -8,11 +8,20 @@ from sqlalchemy.pool import NullPool
 import os
 import uuid
 
-from agent_os.db.base import Base
+# Import only PRD4 models (avoid knowledge models that reference User/Organization)
 from agent_os.items.models import (
     Workspace, Area, Project, Item,
     TaskExtension, DecisionPoint, LedgerEvent, GraphEdge
 )
+
+# Import base after models to avoid circular imports
+from agent_os.db.base import Base
+
+# Create a list of PRD4 tables for testing
+PRD4_TABLES = [
+    'workspaces', 'areas', 'projects', 'items',
+    'task_extensions', 'decision_points', 'ledger_events', 'graph_edges'
+]
 
 
 # ============================================================================
@@ -43,16 +52,38 @@ async def engine():
         future=True
     )
 
-    # 创建所有表
+    # 只创建 PRD4 表 (避免 knowledge models 的依赖问题)
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
+        def create_prd4_tables(connection):
+            # 直接使用 SQLAlchemy Core 创建表
+            Workspace.__table__.create(connection, checkfirst=True)
+            Area.__table__.create(connection, checkfirst=True)
+            Project.__table__.create(connection, checkfirst=True)
+            Item.__table__.create(connection, checkfirst=True)
+            TaskExtension.__table__.create(connection, checkfirst=True)
+            DecisionPoint.__table__.create(connection, checkfirst=True)
+            LedgerEvent.__table__.create(connection, checkfirst=True)
+            GraphEdge.__table__.create(connection, checkfirst=True)
+
+        def drop_prd4_tables(connection):
+            GraphEdge.__table__.drop(connection, checkfirst=True)
+            LedgerEvent.__table__.drop(connection, checkfirst=True)
+            DecisionPoint.__table__.drop(connection, checkfirst=True)
+            TaskExtension.__table__.drop(connection, checkfirst=True)
+            Item.__table__.drop(connection, checkfirst=True)
+            Project.__table__.drop(connection, checkfirst=True)
+            Area.__table__.drop(connection, checkfirst=True)
+            Workspace.__table__.drop(connection, checkfirst=True)
+
+        # 先删除后创建
+        await conn.run_sync(drop_prd4_tables)
+        await conn.run_sync(create_prd4_tables)
 
     yield engine
 
     # 清理
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(drop_prd4_tables)
 
     await engine.dispose()
 

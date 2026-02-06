@@ -131,6 +131,10 @@ class Item(Base):
     else:
         embedding = Column(JSON, nullable=True)  # Fallback to JSON for SQLite
 
+    # 全文搜索支持 (混合检索 - Stage 2)
+    title_tsv = Column(Text, nullable=True)  # 预处理的标题 (小写化)
+    content_tsv = Column(Text, nullable=True)  # 预处理的内容 (小写化)
+
     # 结构化归属 (V1 冻结结构)
     area_id = Column(UUID(as_uuid=True), ForeignKey("areas.id", ondelete="SET NULL"), nullable=True)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
@@ -155,6 +159,9 @@ class Item(Base):
         Index('idx_items_area', 'area_id'),
         Index('idx_items_project', 'project_id'),
         Index('idx_items_status', 'status'),
+        Index('idx_items_title', 'title'),  # 标题搜索索引
+        Index('idx_items_content', 'content'),  # 内容搜索索引
+        Index('idx_items_updated', 'updated_at'),  # 时间排序索引
         # pgvector IVFFlat index (需要单独创建)
     )
 
