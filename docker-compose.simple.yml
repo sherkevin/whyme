@@ -1,0 +1,63 @@
+# AgentOS Simple Docker Compose
+# 一键启动 AgentOS 应用
+
+version: '3.8'
+
+services:
+  # AgentOS 主应用
+  agentos:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    container_name: agentos-app
+    ports:
+      - "8003:8003"
+    environment:
+      # 基础配置
+      - HOST=0.0.0.0
+      - PORT=8003
+      - AGENTOS_SANDBOX=local
+      - LOG_LEVEL=info
+
+      # 数据库配置 (使用 SQLite)
+      - DATABASE_URL=sqlite+aiosqlite:///./data/agentos.db
+
+      # API 密钥 (从环境变量或 .env 文件传入)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - MODEL=${MODEL:-openai/gpt-4o-mini}
+      - TEMPERATURE=${TEMPERATURE:-0.7}
+      - MAX_TOKENS=${MAX_TOKENS:-4096}
+
+      # JWT 配置
+      - SECRET_KEY=${SECRET_KEY:-agentos-secret-key-change-in-production}
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+      # CORS 配置
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000
+
+    volumes:
+      # 持久化数据目录
+      - agentos-data:/app/data
+      # 配置文件挂载
+      - ./src/agent_os/config.yaml:/app/src/agent_os/config.yaml:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - agentos-network
+
+# 数据卷
+volumes:
+  agentos-data:
+    driver: local
+
+# 网络
+networks:
+  agentos-network:
+    driver: bridge

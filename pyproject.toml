@@ -24,6 +24,10 @@ dependencies = [
     "passlib[bcrypt]",
     "python-multipart",
     "email-validator",
+    "sqlalchemy>=2.0",
+    "aiosqlite",
+    "sentence-transformers",
+    "PyJWT",
 ]
 
 [project.optional-dependencies]

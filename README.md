@@ -54,12 +54,44 @@ AgentOS Core 是一个高度模块化的 AI 代理内核，采用**微内核 + �
 
 ## 快速开始
 
-### 环境要求
+### 🐳 方式一: Docker 部署 (推荐,无需安装 Python)
+
+最简单的方式,无需手动安装任何依赖!
+
+```bash
+# 克隆项目
+git clone https://github.com/yourusername/whyme.git
+cd whyme
+
+# 一键启动
+bash docker-deploy.sh
+```
+
+或者手动启动:
+
+```bash
+# 使用 Docker Compose
+docker-compose -f docker-compose.simple.yml up -d
+
+# 或使用 Docker 原生命令
+docker build -f Dockerfile.fast -t agentos:latest .
+docker run -d --name agentos -p 8003:8003 agentos:latest
+```
+
+访问 http://localhost:8003 即可使用!
+
+📖 **详细文档**: [DOCKER_QUICKSTART.md](./DOCKER_QUICKSTART.md) | [DOCKER.md](./DOCKER.md)
+
+---
+
+### 方式二: 本地安装
+
+#### 环境要求
 
 - Python 3.11 或更高版本
 - pip 或 uv
 
-### 安装
+#### 安装
 
 ```bash
 # 克隆项目
