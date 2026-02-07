@@ -23,12 +23,32 @@ from agent_os.auth.models import User, APIKey, Session, Role, UserRole, AuditLog
 # Import base after models to avoid circular imports
 from agent_os.db.base import Base
 
+# Import agent models
+from agent_os.agent.models import AgentProcessEvent
+
+# Import knowledge models
+from agent_os.knowledge.models import Card
+
+# Import stage3 models
+from agent_os.stage3.models import AgentDecision, Skill, TaskExecutionLog
+
+# Import stage4 models
+from agent_os.stage4.models import SearchIndex, IngestionJob, InsightCluster as InsightCluster4
+
 # Create a list of PRD4 tables for testing
 PRD4_TABLES = [
     'workspaces', 'areas', 'projects', 'items',
     'task_extensions', 'decision_points', 'ledger_events', 'graph_edges',
     'insight_extensions', 'insight_clusters',
-    'users', 'api_keys', 'sessions', 'roles', 'user_roles', 'audit_logs'
+    'users', 'api_keys', 'sessions', 'roles', 'user_roles', 'audit_logs',
+    'agent_process_events',
+    'cards',
+    'agent_decisions',  # Stage 3
+    'skills',  # Stage 3
+    'task_execution_logs',  # Stage 3
+    'search_indices',  # Stage 4
+    'ingestion_jobs',  # Stage 4
+    'stage4_insight_clusters'  # Stage 4
 ]
 
 
@@ -81,6 +101,18 @@ async def engine():
             Role.__table__.create(connection, checkfirst=True)
             UserRole.__table__.create(connection, checkfirst=True)
             AuditLog.__table__.create(connection, checkfirst=True)
+            # Agent tables
+            AgentProcessEvent.__table__.create(connection, checkfirst=True)
+            # Knowledge tables
+            Card.__table__.create(connection, checkfirst=True)
+            # Stage 3 tables
+            AgentDecision.__table__.create(connection, checkfirst=True)
+            Skill.__table__.create(connection, checkfirst=True)
+            TaskExecutionLog.__table__.create(connection, checkfirst=True)
+            # Stage 4 tables
+            SearchIndex.__table__.create(connection, checkfirst=True)
+            IngestionJob.__table__.create(connection, checkfirst=True)
+            InsightCluster4.__table__.create(connection, checkfirst=True)
 
         def drop_prd4_tables(connection):
             # Drop auth tables first (foreign key dependencies)
@@ -90,6 +122,14 @@ async def engine():
             Session.__table__.drop(connection, checkfirst=True)
             APIKey.__table__.drop(connection, checkfirst=True)
             User.__table__.drop(connection, checkfirst=True)
+            # Drop Stage 4 tables
+            InsightCluster4.__table__.drop(connection, checkfirst=True)
+            IngestionJob.__table__.drop(connection, checkfirst=True)
+            SearchIndex.__table__.drop(connection, checkfirst=True)
+            # Drop Stage 3 tables
+            TaskExecutionLog.__table__.drop(connection, checkfirst=True)
+            Skill.__table__.drop(connection, checkfirst=True)
+            AgentDecision.__table__.drop(connection, checkfirst=True)
             # Drop PRD4 tables
             InsightCluster.__table__.drop(connection, checkfirst=True)
             InsightExtension.__table__.drop(connection, checkfirst=True)
