@@ -64,3 +64,10 @@ __all__ = [
     "get_raw_items",
     "agent_tick",
 ]
+
+# Legacy Agent import
+try:
+    from agent_os.agent import Agent as _LegacyAgent
+    Agent = _LegacyAgent
+except (ImportError, AttributeError):
+    pass

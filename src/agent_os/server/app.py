@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from agent_os.core.types import RuntimeContext
 from agent_os.sandbox.docker_impl import DockerSandbox
 from agent_os.core.config import instantiate, load_class, Config, load_config
-from agent_os.agent import Agent
+from agent_os.agent_legacy import Agent
 from agent_os.agent_aider import AiderAgent
 from agent_os.core.interfaces import AgentCallbackHandler
 from agent_os.server.security import sanitize_path, validate_filename
@@ -23,6 +23,7 @@ from agent_os.knowledge.router import router as knowledge_router
 from agent_os.tasks.router import router as tasks_router
 from agent_os.aggregation.router import router as aggregation_router
 from agent_os.conversations.router import router as conversations_router
+# Import agent_router later to avoid circular import issues
 
 app = FastAPI(
     title="AgentOS API",
@@ -38,6 +39,16 @@ app.include_router(knowledge_router)
 app.include_router(tasks_router)
 app.include_router(aggregation_router)
 app.include_router(conversations_router)
+
+# Import and include agent router after app creation
+# to avoid circular import issues with the agent package
+try:
+    from agent_os.agent.router import router as agent_router
+    app.include_router(agent_router)
+except Exception as e:
+    # If agent router fails to import, log but don't crash
+    import logging
+    logging.warning(f"Failed to import agent router: {e}")
 
 
 class SessionMetadata(BaseModel):
