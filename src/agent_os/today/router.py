@@ -34,7 +34,7 @@ router = APIRouter(prefix="/api/v1/today", tags=["Today"])
 async def get_today_view(
     workspace_id: uuid.UUID = Query(..., description="Workspace ID"),
     limit: int = Query(50, ge=1, le=200, description="Maximum items to return"),
-    current_user: User = Depends(get_current_user),
+    current_user = Depends(get_current_user),  # type: User
     db: AsyncSession = Depends(get_db)
 ):
     """Get the Today view.

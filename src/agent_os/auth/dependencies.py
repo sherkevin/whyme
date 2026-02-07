@@ -20,7 +20,7 @@ security = HTTPBearer(auto_error=False)
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(get_db)
-) -> User:
+):  # -> User (removed type hint to avoid Pydantic forward ref issue)
     """Get current authenticated user from JWT token.
 
     Args:
@@ -65,8 +65,8 @@ async def get_current_user(
 
 
 async def get_current_active_user(
-    current_user: User = Depends(get_current_user)
-) -> User:
+    current_user = Depends(get_current_user)
+):  # -> User
     """Get current active user.
 
     Args:
@@ -87,8 +87,8 @@ async def get_current_active_user(
 
 
 async def get_current_user_id(
-    current_user: User = Depends(get_current_user)
-) -> uuid.UUID:
+    current_user = Depends(get_current_user)
+):  # -> uuid.UUID
     """Get current user ID (lightweight version).
 
     Use this when you only need the user ID, not the full user object.
@@ -106,7 +106,7 @@ async def get_current_user_id(
 async def get_optional_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(get_db)
-) -> Optional[User]:
+):  # -> Optional[User]
     """Get current user if token provided, otherwise None.
 
     Args:

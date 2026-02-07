@@ -166,7 +166,7 @@ async def refresh_token(
     }
 )
 async def get_current_user_info(
-    current_user: User = Depends(get_current_user)
+    current_user = Depends(get_current_user)  # type: User
 ):
     """Get current authenticated user information.
 
@@ -191,7 +191,7 @@ async def get_current_user_info(
 )
 async def update_user_settings(
     settings_update: UserSettingsUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user = Depends(get_current_user),  # type: User
     db: AsyncSession = Depends(get_db)
 ):
     """Update current user settings.

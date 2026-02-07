@@ -35,7 +35,7 @@ router = APIRouter(prefix="/api/v1/inbox", tags=["Inbox"])
 )
 async def create_inbox_item(
     item_data: InboxItemCreate,
-    current_user: User = Depends(get_current_user),
+    current_user = Depends(get_current_user),  # type: User
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new inbox item.
@@ -108,7 +108,7 @@ async def list_inbox_items(
     search: Optional[str] = Query(None, description="Search in title and content"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
-    current_user: User = Depends(get_current_user),
+    current_user = Depends(get_current_user),  # type: User
     db: AsyncSession = Depends(get_db)
 ):
     """List inbox items with pagination and filters.
@@ -192,7 +192,7 @@ async def list_inbox_items(
 async def get_inbox_item(
     item_id: uuid.UUID,
     workspace_id: uuid.UUID = Query(..., description="Workspace ID"),
-    current_user: User = Depends(get_current_user),
+    current_user = Depends(get_current_user),  # type: User
     db: AsyncSession = Depends(get_db)
 ):
     """Get a specific inbox item by ID.
@@ -256,7 +256,7 @@ async def update_inbox_item_status(
     item_id: uuid.UUID,
     status_update: InboxItemStatusUpdate,
     workspace_id: uuid.UUID = Query(..., description="Workspace ID"),
-    current_user: User = Depends(get_current_user),
+    current_user = Depends(get_current_user),  # type: User
     db: AsyncSession = Depends(get_db)
 ):
     """Update inbox item status.
@@ -325,7 +325,7 @@ async def update_inbox_item(
     item_id: uuid.UUID,
     item_update: InboxItemUpdate,
     workspace_id: uuid.UUID = Query(..., description="Workspace ID"),
-    current_user: User = Depends(get_current_user),
+    current_user = Depends(get_current_user),  # type: User
     db: AsyncSession = Depends(get_db)
 ):
     """Update an inbox item.
@@ -395,7 +395,7 @@ async def update_inbox_item(
 async def delete_inbox_item(
     item_id: uuid.UUID,
     workspace_id: uuid.UUID = Query(..., description="Workspace ID"),
-    current_user: User = Depends(get_current_user),
+    current_user = Depends(get_current_user),  # type: User
     db: AsyncSession = Depends(get_db)
 ):
     """Delete an inbox item.
