@@ -29,10 +29,12 @@ class ItemType(str, Enum):
 
 
 class ItemStatus(str, Enum):
-    """Item 状态枚举"""
-    ACTIVE = "active"
-    ARCHIVED = "archived"
-    DELETED = "deleted"
+    """Item 状态枚举 - PA 阶段二扩展"""
+    RAW = "raw"               # 新增：原始输入，未处理
+    PROCESSED = "processed"     # 新增：已由 Agent 处理
+    ACTIVE = "active"          # 保留：活跃状态
+    ARCHIVED = "archived"      # 保留：已归档
+    DELETED = "deleted"        # 保留：已删除
 
 
 class RelationType(str, Enum):
@@ -152,6 +154,7 @@ class Item(Base):
     workspace = relationship("Workspace", backref="items")
     area = relationship("Area", backref="items")
     project = relationship("Project", backref="items")
+    process_events = relationship("AgentProcessEvent", back_populates="item", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index('idx_items_workspace_user', 'workspace_id', 'creator_id'),

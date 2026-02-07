@@ -45,7 +45,7 @@ class InboxItemStatusUpdate(BaseModel):
     """
     status: str = Field(
         ...,
-        description="New status: active, archived, deleted"
+        description="New status: raw, processed, active, archived, deleted"
     )
 
 
