@@ -643,3 +643,143 @@ $ grep -r "from agent_os.search" . --include="*.py" | grep -v "search_engine"
 **状态**: Phase 2 完成 ✅
 **完成度**: 50% (4周 / 8周)
 
+
+---
+
+## ✅ Phase 3: 测试重组完成
+
+### 任务完成情况 ✅
+
+**Week 7: 测试重组**
+
+#### 1. 创建测试目录结构 ✅
+```bash
+cd tests/
+mkdir -p unit/services unit/repositories unit/models unit/utils
+mkdir -p integration/api integration/workflows
+mkdir -p e2e/scenarios e2e/performance
+mkdir -p legacy
+```
+
+#### 2. 重组测试文件 ✅
+
+**Search Engine 测试** (6个文件):
+- ✅ search_engine_search_unit.py → unit/services/test_search_service.py
+- ✅ search_engine_insight_unit.py → unit/services/test_insight_service.py
+- ✅ embedding_unit.py → unit/services/test_embedding_service.py
+- ✅ ingestion_unit.py → unit/services/test_ingestion_service.py
+- ✅ models_unit.py → unit/models/test_search_models.py
+- ✅ test_search_engine_stage2*.py → integration/api/
+- ✅ e2e_scenarios.py → e2e/scenarios/test_user_workflows.py
+- ✅ integration.py → integration/workflows/test_search_workflow.py
+
+**Auth 测试** (6个文件):
+- ✅ test_auth_jwt.py → unit/services/
+- ✅ test_auth_schema.py → unit/models/
+- ✅ test_auth_api.py → integration/api/
+- ✅ test_auth_crud.py → integration/api/
+- ✅ test_auth_integration.py → integration/api/
+- ✅ test_auth_security.py → integration/api/
+
+**Knowledge 测试** (6个文件):
+- ✅ test_knowledge_schema.py → unit/models/
+- ✅ test_card_generator*.py → unit/services/
+- ✅ test_knowledge_crud.py → integration/api/
+- ✅ test_card_generation_integration.py → integration/workflows/
+- ✅ test_rag_interface.py → integration/workflows/
+
+**Tasks 测试** (2个文件):
+- ✅ test_tasks_schema.py → unit/models/
+- ✅ test_tasks_crud.py → integration/api/
+
+**Agent 测试** (8个文件):
+- ✅ test_agent_models.py → unit/models/
+- ✅ test_processor.py → unit/services/
+- ✅ test_classifier.py → unit/utils/
+- ✅ test_summarizer.py → unit/utils/
+- ✅ test_title_generator.py → unit/utils/
+- ✅ test_agent_api*.py → integration/api/
+
+**Stage 3 测试** (4个文件):
+- ✅ test_stage3_models_unit.py → unit/models/
+- ✅ test_stage3_routes_unit.py → unit/services/
+- ✅ test_stage3_api_integration.py → integration/api/
+- ✅ test_stage3_demo.py → e2e/scenarios/
+
+**其他测试** (7个文件):
+- ✅ test_skill_service_unit.py → unit/services/
+- ✅ test_skills.py → integration/api/
+- ✅ test_app.py → integration/
+- ✅ test_connection_engine.py → integration/
+- ✅ test_observability_integration.py → integration/
+- ✅ test_repo_map.py → integration/
+- ✅ test_websocket_io.py → integration/
+
+**Legacy 测试** (21个文件):
+- ✅ 所有剩余测试 → legacy/
+
+#### 3. 测试文件统计 ✅
+
+| 类别 | 数量 | 说明 |
+|------|------|------|
+| 单元测试 (unit/) | 19 | 服务层、模型、工具 |
+| 集成测试 (integration/) | 16 | API 和工作流 |
+| E2E 测试 (e2e/) | 2 | 场景测试 |
+| Legacy 测试 (legacy/) | 21 | 待重构 |
+| **总计** | **58** | - |
+
+#### 4. 改进效果 ✅
+
+**改进前**:
+- ❌ 所有测试平铺在 tests/ 根目录
+- ❌ 无法区分测试类型
+- ❌ 命名不一致
+- ❌ 难以维护
+
+**改进后**:
+- ✅ 清晰的层级结构 (unit/integration/e2e)
+- ✅ 按功能分类 (services/models/utils/api/workflows)
+- ✅ 统一的命名规范
+- ✅ 易于维护和查找
+
+---
+
+## 📊 更新后的进度统计
+
+### Phase 1-3 完成情况
+
+| 阶段 | 任务 | 状态 | 完成度 |
+|------|------|------|--------|
+| **Phase 1** | 快速改进 | ✅ 完成 | 100% |
+| Week 1 | 模块重命名 | ✅ 完成 | 100% |
+| Week 2 | 文档重组 | ✅ 完成 | 100% |
+| **Phase 2** | 代码优化 | ✅ 完成 | 100% |
+| Week 3 | 移除重复模块 | ✅ 完成 | 100% |
+| Week 4 | 清理遗留引用 | ✅ 完成 | 100% |
+| **Phase 3** | 测试重组 | ✅ 完成 | 100% |
+| Week 7 | 测试结构重组 | ✅ 完成 | 100% |
+
+**Phase 1 进度**: 100% (2/2 周) ✅
+**Phase 2 进度**: 100% (2/2 周) ✅
+**Phase 3 进度**: 100% (1/1 周) ✅
+**总体进度**: 62.5% (5/8 周)
+
+---
+
+## 🚀 下一步计划
+
+### Phase 4: 文档更新 (1周)
+
+**Week 8: 更新所有文档**
+- ⏳ 更新架构文档
+- ⏳ 更新 API 文档
+- ⏳ 更新开发文档
+- ⏳ 更新重构进度报告
+- ⏳ 创建最终重构总结
+
+---
+
+**报告更新**: 2026-02-08
+**状态**: Phase 3 完成 ✅
+**完成度**: 62.5% (5周 / 8周)
+
