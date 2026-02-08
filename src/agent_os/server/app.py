@@ -23,6 +23,8 @@ from agent_os.knowledge.router import router as knowledge_router
 from agent_os.tasks.router import router as tasks_router
 from agent_os.aggregation.router import router as aggregation_router
 from agent_os.conversations.router import router as conversations_router
+from agent_os.stage3.router import router as stage3_router
+from agent_os.search_engine.router import router as stage4_router
 # Import agent_router later to avoid circular import issues
 
 app = FastAPI(
@@ -39,6 +41,8 @@ app.include_router(knowledge_router)
 app.include_router(tasks_router)
 app.include_router(aggregation_router)
 app.include_router(conversations_router)
+app.include_router(stage3_router)
+app.include_router(stage4_router)
 
 # Import and include agent router after app creation
 # to avoid circular import issues with the agent package

@@ -20,6 +20,8 @@ async def get_today_view(
 ) -> tuple[List[Item], Dict[str, Any]]:
     """Get items for the Today view.
 
+    PA 1.0 Stage 2: Returns PROCESSED items from Agent processing.
+
     Args:
         db: Database session
         workspace_id: Workspace ID
@@ -29,20 +31,17 @@ async def get_today_view(
     Returns:
         Tuple of (items list, summary statistics)
     """
-    # Get active items from the workspace
-    # In a simple implementation, we return all active items
-    # In a more advanced version, this could filter by:
-    # - Items created/updated today
-    # - Items with upcoming due dates
-    # - Items marked as high priority
-    # - Items from specific projects/areas
+    from agent_os.items.models import ItemStatus
+    from datetime import datetime, timedelta
 
+    # Get PROCESSED items from the workspace
+    # Stage 2 requirement: Return items that have been processed by the Agent
     query = (
         select(Item)
         .filter(
             and_(
                 Item.workspace_id == workspace_id,
-                Item.status == "active"
+                Item.status == ItemStatus.PROCESSED
             )
         )
         .order_by(desc(Item.updated_at))
@@ -57,21 +56,21 @@ async def get_today_view(
         "total_items": len(items),
         "by_type": {},
         "by_status": {},
-        "recent_items": 0
+        "recent_items": 0,
+        "agent_processed": len(items)  # Track agent-processed items
     }
 
     for item in items:
         # Count by type
-        item_type = item.type or "unknown"
+        item_type = item.item_type.value if item.item_type else "unknown"
         summary["by_type"][item_type] = summary["by_type"].get(item_type, 0) + 1
 
-        # Count by status
-        item_status = item.status or "unknown"
+        # Count by status (all should be PROCESSED)
+        item_status = item.status.value if item.status else "unknown"
         summary["by_status"][item_status] = summary["by_status"].get(item_status, 0) + 1
 
         # Count recent items (updated in last 24 hours)
         if item.updated_at:
-            from datetime import timedelta
             if item.updated_at > (datetime.now() - timedelta(days=1)):
                 summary["recent_items"] += 1
 

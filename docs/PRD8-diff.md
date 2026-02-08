@@ -3,7 +3,7 @@
 **文档类型:** 产品需求文档 (PRD)
 **对应阶段:** PA 1.0 阶段四
 **创建时间:** 2026-02-07
-**基于验收标准:** docs/acceptance/stage4-acceptance-checklist.md
+**基于验收标准:** docs/acceptance/search_engine-acceptance-checklist.md
 
 ---
 
@@ -1386,11 +1386,11 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest tests/test_stage4_*.py -v
+          pytest tests/test_search_engine_*.py -v
 
       - name: Test coverage
         run: |
-          pytest --cov=agent_os.stage4 --cov-report=xml
+          pytest --cov=agent_os.search_engine --cov-report=xml
 ```
 
 ### 7.3 监控与日志
@@ -1440,45 +1440,45 @@ logger.info(
 ### 8.1 新增代码文件
 
 **数据模型:**
-1. `src/agent_os/stage4/models.py` - SearchIndex, IngestionJob, InsightCluster
+1. `src/agent_os/search_engine/models.py` - SearchIndex, IngestionJob, InsightCluster
 
 **服务模块:**
-2. `src/agent_os/stage4/search_service.py` - 搜索服务
-3. `src/agent_os/stage4/ingestion_service.py` - 数据引入服务
-4. `src/agent_os/stage4/insight_service.py` - 洞察服务
-5. `src/agent_os/stage4/search_engine.py` - 搜索引擎
-6. `src/agent_os/stage4/content_fetcher.py` - 内容抓取
-7. `src/agent_os/stage4/text_chunker.py` - 文本切分
+2. `src/agent_os/search_engine/search_service.py` - 搜索服务
+3. `src/agent_os/search_engine/ingestion_service.py` - 数据引入服务
+4. `src/agent_os/search_engine/insight_service.py` - 洞察服务
+5. `src/agent_os/search_engine/search_engine.py` - 搜索引擎
+6. `src/agent_os/search_engine/content_fetcher.py` - 内容抓取
+7. `src/agent_os/search_engine/text_chunker.py` - 文本切分
 
 **API路由:**
-8. `src/agent_os/stage4/schema.py` - Pydantic schemas
-9. `src/agent_os/stage4/router.py` - FastAPI路由
+8. `src/agent_os/search_engine/schema.py` - Pydantic schemas
+9. `src/agent_os/search_engine/router.py` - FastAPI路由
 
 **Demo:**
-10. `src/agent_os/stage4/demo_search.py` - 搜索Demo
-11. `src/agent_os/stage4/demo_ingestion.py` - 抓取Demo
-12. `src/agent_os/stage4/demo_insight.py` - 洞察Demo
+10. `src/agent_os/search_engine/demo_search.py` - 搜索Demo
+11. `src/agent_os/search_engine/demo_ingestion.py` - 抓取Demo
+12. `src/agent_os/search_engine/demo_insight.py` - 洞察Demo
 
 ### 8.2 测试文件
 
-13. `tests/test_stage4_models_unit.py`
+13. `tests/test_search_engine_models_unit.py`
 14. `tests/test_search_service_unit.py`
 15. `tests/test_ingestion_service_unit.py`
 16. `tests/test_insight_service_unit.py`
-17. `tests/test_stage4_integration.py`
+17. `tests/test_search_engine_integration.py`
 
 ### 8.3 文档文件
 
-18. `docs/stage4-architecture.md` - 架构设计
-19. `docs/stage4-api-guide.md` - API使用指南
-20. `docs/stage4-deployment.md` - 部署文档
-21. `docs/stage4-progress-report.md` - 进度报告
+18. `docs/search_engine-architecture.md` - 架构设计
+19. `docs/search_engine-api-guide.md` - API使用指南
+20. `docs/search_engine-deployment.md` - 部署文档
+21. `docs/search_engine-progress-report.md` - 进度报告
 
 ### 8.4 配置文件
 
-22. `.github/workflows/stage4-ci.yml` - CI配置
-23. `docker-compose.stage4.yml` - Docker Compose配置
-24. `requirements-stage4.txt` - 新增依赖
+22. `.github/workflows/search_engine-ci.yml` - CI配置
+23. `docker-compose.search_engine.yml` - Docker Compose配置
+24. `requirements-search_engine.txt` - 新增依赖
 
 ---
 
@@ -1569,4 +1569,4 @@ logger.info(
 **文档版本:** v1.0
 **创建时间:** 2026-02-07
 **维护者:** Claude Sonnet 4.5
-**基于:** docs/acceptance/stage4-acceptance-checklist.md
+**基于:** docs/acceptance/search_engine-acceptance-checklist.md

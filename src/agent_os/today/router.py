@@ -71,13 +71,13 @@ async def get_today_view(
     today_items = [
         TodayItem(
             id=item.id,
-            type=item.type,
+            type=item.item_type.value if item.item_type else "unknown",  # Use item_type instead of type
             title=item.title,
             content=item.content,
-            status=item.status,
+            status=item.status.value if item.status else "unknown",  # Convert enum to string
             created_at=item.created_at,
             updated_at=item.updated_at,
-            source_type=item.source_type
+            source_type="inbox"  # Items come from the inbox after agent processing
         )
         for item in items
     ]

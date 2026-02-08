@@ -1,0 +1,140 @@
+# Docker Compose configuration for Stage 4
+# Includes AgentOS API, PostgreSQL, and optional services
+
+version: '3.8'
+
+services:
+  # AgentOS FastAPI Application
+  agentos-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.stage4
+    container_name: agentos-stage4-api
+    ports:
+      - "8000:8000"
+      - "8080:8080"
+    environment:
+      # Database configuration
+      - DATABASE_URL=postgresql+asyncpg://agentos:agentos_password@postgres:5432/agentos_db
+      - SYNC_DATABASE_URL=postgresql://agentos:agentos_password@postgres:5432/agentos_db
+
+      # Application settings
+      - ENVIRONMENT=production
+      - LOG_LEVEL=info
+      - SECRET_KEY=${SECRET_KEY:-change-this-secret-key-in-production}
+
+      # Stage 4 settings
+      - ENABLE_VECTOR_SEARCH=${ENABLE_VECTOR_SEARCH:-false}
+      - AUTO_EMBED_INDEXING=${AUTO_EMBED_INDEXING:-true}
+
+      # CORS settings
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:8000}
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./data:/workspace/data
+      - ./logs:/workspace/logs
+    restart: unless-stopped
+    networks:
+      - agentos-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: agentos-stage4-postgres
+    environment:
+      - POSTGRES_DB=agentos_db
+      - POSTGRES_USER=agentos
+      - POSTGRES_PASSWORD=agentos_password
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    restart: unless-stopped
+    networks:
+      - agentos-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentos"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Optional: pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: agentos-stage4-pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@agentos.local
+      - PGADMIN_DEFAULT_PASSWORD=admin
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    restart: unless-stopped
+    networks:
+      - agentos-network
+    profiles:
+      - admin
+
+  # Optional: Redis for caching (future use)
+  redis:
+    image: redis:7-alpine
+    container_name: agentos-stage4-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - agentos-network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    profiles:
+      - cache
+
+  # Optional: Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: agentos-stage4-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - agentos-api
+    restart: unless-stopped
+    networks:
+      - agentos-network
+    profiles:
+      - proxy
+
+volumes:
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  agentos-network:
+    driver: bridge

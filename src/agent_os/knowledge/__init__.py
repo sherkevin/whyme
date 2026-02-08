@@ -1,5 +1,5 @@
 """Knowledge management module."""
 
-from agent_os.knowledge.models import InboxItem, Card
+from agent_os.knowledge.models import Card
 
-__all__ = ["InboxItem", "Card"]
+__all__ = ["Card"]

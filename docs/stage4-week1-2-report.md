@@ -12,7 +12,7 @@
 
 创建了3个核心数据模型:
 
-#### SearchIndex (src/agent_os/stage4/models.py)
+#### SearchIndex (src/agent_os/search_engine/models.py)
 - **功能**: 统一搜索索引,支持多类型数据检索
 - **字段**:
   - item_type, item_id - 索引对象引用
@@ -23,7 +23,7 @@
 - **索引**: item_type+item_id, created_at
 - **约束**: item_type检查
 
-#### IngestionJob (src/agent_os/stage4/models.py)
+#### IngestionJob (src/agent_os/search_engine/models.py)
 - **功能**: 数据引入任务,记录外部内容抓取
 - **字段**:
   - source_url, source_type, source_file_path - 来源信息
@@ -34,9 +34,9 @@
   - created_by - 创建者
 - **约束**: status和source_type检查
 
-#### InsightCluster (src/agent_os/stage4/models.py)
+#### InsightCluster (src/agent_os/search_engine/models.py)
 - **功能**: 洞察聚类,存储聚合分析结果
-- **表名**: stage4_insight_clusters (避免与insights.models冲突)
+- **表名**: search_engine_insight_clusters (避免与insights.models冲突)
 - **字段**:
   - cluster_type - 类型(summary/trend/topic/pattern)
   - source_item_type, source_item_ids - 来源数据
@@ -53,7 +53,7 @@
 
 ### ✅ 2. 单元测试 (100%)
 
-创建了全面的单元测试 (`tests/test_stage4_models_unit.py`):
+创建了全面的单元测试 (`tests/test_search_engine_models_unit.py`):
 
 **测试覆盖:**
 - ✅ SearchIndex模型: 3个测试
@@ -80,7 +80,7 @@
 
 ### ✅ 3. PostgreSQL全文搜索配置
 
-创建了全文搜索配置 (`src/agent_os/stage4/search_config.py`):
+创建了全文搜索配置 (`src/agent_os/search_engine/search_config.py`):
 
 **主要组件:**
 - SearchConfig类 - 查询生成工具
@@ -100,10 +100,10 @@
 
 ### 新增文件 (4个)
 
-1. `src/agent_os/stage4/__init__.py` - 模块初始化
-2. `src/agent_os/stage4/models.py` - 数据模型
-3. `src/agent_os/stage4/search_config.py` - 搜索配置
-4. `tests/test_stage4_models_unit.py` - 单元测试
+1. `src/agent_os/search_engine/__init__.py` - 模块初始化
+2. `src/agent_os/search_engine/models.py` - 数据模型
+3. `src/agent_os/search_engine/search_config.py` - 搜索配置
+4. `tests/test_search_engine_models_unit.py` - 单元测试
 
 ### 修改文件 (1个)
 
@@ -190,7 +190,7 @@
 
 **错误:** `Table 'insight_clusters' is already defined for this MetaData instance`
 
-**解决:** 重命名为 `stage4_insight_clusters`
+**解决:** 重命名为 `search_engine_insight_clusters`
 
 ---
 
@@ -205,7 +205,7 @@ IngestionJob
 ├─ items_created ──────────> Card (创建的内容)
 └─ created_by ───────────────> User (已有)
 
-InsightCluster (stage4_insight_clusters)
+InsightCluster (search_engine_insight_clusters)
 ├─ source_item_ids ─────────> Card/Task (已有)
 └─ generated_by ─────────────> User (已有)
 ```

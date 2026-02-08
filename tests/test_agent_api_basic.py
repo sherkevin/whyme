@@ -1,6 +1,6 @@
-"""Simple tests for Agent API endpoints (Stage 2).
+"""Basic tests for Agent API endpoints (Stage 2).
 
-Basic tests to verify API endpoints are accessible.
+Simplified tests that verify the API structure without database dependencies.
 """
 
 import pytest
@@ -11,6 +11,10 @@ from agent_os.db.base import Base
 from agent_os.db.session import get_db
 from tests.test_app import test_app as app
 
+
+# =============================================================================
+# Test Fixtures
+# =============================================================================
 
 @pytest.fixture
 async def in_memory_db():
@@ -64,16 +68,18 @@ class TestAgentAPIEndpoints:
         response = test_client.post("/api/v1/agent/tick", json={"max_items": 10})
 
         # 应该返回 401 (需要认证)，而不是 404
-        assert response.status_code in [401, 422]
-        print("✅ /api/v1/agent/tick endpoint exists")
+        assert response.status_code == 401
+
+        print("✅ /api/v1/agent/tick endpoint exists and requires auth")
 
     def test_process_item_endpoint_exists(self, test_client):
         """验证 /api/v1/agent/process/{item_id} 端点存在"""
         response = test_client.post("/api/v1/agent/process/test-id", json={"force_reprocess": False})
 
         # 应该返回 401 (需要认证)，而不是 404
-        assert response.status_code in [401, 422]
-        print("✅ /api/v1/agent/process/{item_id} endpoint exists")
+        assert response.status_code == 401
+
+        print("✅ /api/v1/agent/process/{item_id} endpoint exists and requires auth")
 
     def test_agent_status_endpoint_exists(self, test_client):
         """验证 /api/v1/agent/status 端点存在"""
@@ -81,8 +87,15 @@ class TestAgentAPIEndpoints:
 
         # 应该返回 401 (需要认证)，而不是 404
         assert response.status_code == 401
-        print("✅ /api/v1/agent/status endpoint exists")
+
+        print("✅ /api/v1/agent/status endpoint exists and requires auth")
 
 
 if __name__ == "__main__":
+    print("=" * 60)
+    print("Testing Agent API Basic Structure for Stage 2")
+    print("=" * 60)
+    print()
+
+    # Run tests
     pytest.main([__file__, "-v"])

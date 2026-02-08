@@ -1,0 +1,125 @@
+# Stage 4 Dockerfile - AgentOS with Search, Ingestion, and Insight capabilities
+# Based on Ubuntu 22.04 with Python 3.11
+
+FROM docker.1ms.run/library/ubuntu:22.04
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Python and development tools
+    python3.11 \
+    python3.11-dev \
+    python3-pip \
+    python3-venv \
+    # Build essentials
+    build-essential \
+    gcc \
+    g++ \
+    make \
+    cmake \
+    # Version control
+    git \
+    git-lfs \
+    # Editors and utilities
+    vim \
+    nano \
+    curl \
+    wget \
+    unzip \
+    zip \
+    ca-certificates \
+    # Network tools
+    netcat-openbsd \
+    iputils-ping \
+    # File processing
+    jq \
+    tree \
+    # Node.js (for web development)
+    nodejs \
+    npm \
+    # Database clients
+    postgresql-client \
+    # PDF processing dependencies
+    libssl-dev \
+    libffi-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for security
+RUN useradd -m -s /bin/bash -u 1000 agentuser
+
+# Set up Python environment
+RUN python3.11 -m pip install --upgrade pip setuptools wheel
+
+# Install Python dependencies from requirements.txt
+COPY requirements.txt /tmp/requirements.txt
+RUN pip3 install --no-cache-dir -r /tmp/requirements.txt
+
+# Install additional Stage 4 dependencies
+RUN pip3 install --no-cache-dir \
+    # Web framework
+    "fastapi>=0.104.0" \
+    "uvicorn[standard]>=0.24.0" \
+    # Database
+    "sqlalchemy>=2.0" \
+    "aiosqlite>=0.19.0" \
+    "psycopg2-binary>=2.9.0" \
+    # Async support
+    "httpx>=0.25.0" \
+    # Authentication
+    "python-jose[cryptography]>=3.3.0" \
+    "passlib[bcrypt]>=1.7.4" \
+    "python-multipart>=0.0.6" \
+    # PDF processing
+    "PyPDF2>=3.0.0" \
+    # HTML parsing
+    "beautifulsoup4>=4.12.0" \
+    "lxml>=4.9.0" \
+    # Data processing
+    "numpy>=1.24.0" \
+    "pandas>=2.0.0" \
+    # ML/AI (optional, for future enhancements)
+    "sentence-transformers>=2.2.0" \
+    # Testing
+    "pytest>=8.0.0" \
+    "pytest-asyncio>=0.24.0" \
+    "pytest-cov>=5.0.0" \
+    # Code quality
+    "black>=23.0.0" \
+    "ruff>=0.8.0" \
+    mypy>=1.7.0
+
+# Create workspace directory
+RUN mkdir -p /workspace && chown -R agentuser:agentuser /workspace
+
+# Set workspace as working directory
+WORKDIR /workspace
+
+# Copy application code
+COPY . /workspace/
+
+# Install application in editable mode
+RUN pip3 install --no-cache-dir -e .
+
+# Switch to non-root user
+USER agentuser
+
+# Expose ports
+# 8000: FastAPI application
+# 8080: Alternative API port
+EXPOSE 8000 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Default command - run the FastAPI application
+CMD ["uvicorn", "agent_os.server.app:app", "--host", "0.0.0.0", "--port", "8000"]

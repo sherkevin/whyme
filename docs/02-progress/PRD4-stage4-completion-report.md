@@ -269,10 +269,10 @@ tests/
 ### 文档
 ```
 docs/06-status/
-└── PRD4-2026-02-06-stage4.md          # 状态文档
+└── PRD4-2026-02-06-search_engine.md          # 状态文档
 
 docs/02-progress/
-└── PRD4-stage4-completion-report.md   # 本文档
+└── PRD4-search_engine-completion-report.md   # 本文档
 ```
 
 ---

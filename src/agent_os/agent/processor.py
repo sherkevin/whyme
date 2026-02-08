@@ -46,11 +46,15 @@ class ProcessingResult:
 
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典."""
+        # 处理 from_status 和 to_status - 可能是枚举或字符串
+        from_status_val = self.from_status.value if hasattr(self.from_status, 'value') else str(self.from_status) if self.from_status else None
+        to_status_val = self.to_status.value if hasattr(self.to_status, 'value') else str(self.to_status) if self.to_status else None
+
         return {
             "success": self.success,
             "item_id": str(self.item_id) if self.item_id else None,
-            "from_status": self.from_status.value if self.from_status else None,
-            "to_status": self.to_status.value if self.to_status else None,
+            "from_status": from_status_val,
+            "to_status": to_status_val,
             "title": self.title,
             "summary": self.summary,
             "item_type": self.item_type.value if self.item_type else None,
@@ -78,14 +82,28 @@ async def process_inbox_item(
         ProcessingResult 对象
     """
     try:
-        # 1. 获取 Item
-        from agent_os.items.crud import item_crud
+        # 1. 获取 Item - 直接查询而不是使用 CRUD
+        import uuid
+        from sqlalchemy import select
 
-        item = await item_crud.get(db, item_id)
+        # 将字符串转换为 UUID
+        try:
+            item_uuid = uuid.UUID(item_id) if isinstance(item_id, str) else item_id
+        except ValueError:
+            return ProcessingResult(
+                success=False,
+                item_id=str(item_id),
+                error=f"Invalid item ID format: {item_id}"
+            )
+
+        stmt = select(Item).where(Item.id == item_uuid)
+        result = await db.execute(stmt)
+        item = result.scalar_one_or_none()
+
         if not item:
             return ProcessingResult(
                 success=False,
-                item_id=item_id,
+                item_id=str(item_id),
                 error=f"Item not found: {item_id}"
             )
 
@@ -108,7 +126,7 @@ async def process_inbox_item(
 
         # 3. 生成标题
         content = item.content or ""
-        metadata = item.source_metadata or {}
+        metadata = item.source_meta or {}  # 使用 source_meta 而不是 source_metadata
 
         if item.title:
             # 已有标题，使用已有标题
@@ -133,16 +151,17 @@ async def process_inbox_item(
         if subtype:
             metadata["item_subtype"] = subtype
 
-        # 6. 更新 Item
-        update_data = {
-            "title": title,
-            "summary": summary,
-            "item_type": item_type.value,
-            "status": ItemStatus.PROCESSED,
-            "source_metadata": metadata
-        }
+        # 6. 更新 Item - 直接修改对象属性
+        item.title = title
+        item.summary = summary
+        item.type = item_type.value  # Update the type column
+        item.item_type = item_type  # Also store enum for Card generator
+        item.status = ItemStatus.PROCESSED
+        item.source_meta = metadata  # 使用 source_meta
 
-        updated_item = await item_crud.update(db, item_id, update_data)
+        # 提交更改
+        await db.commit()
+        await db.refresh(item)
 
         # 7. 记录处理事件（创建 AgentProcessEvent）
         await _record_processing_event(
@@ -157,6 +176,23 @@ async def process_inbox_item(
                 "confidence": confidence.value
             }
         )
+
+        # 8. 生成 Card (InboxItem → Card 转换)
+        try:
+            from agent_os.knowledge.card_generator import generate_card_from_item
+            card = await generate_card_from_item(db, item)  # 传递 Item 对象而不是 ID
+            metadata["card_id"] = str(card.id)
+            metadata["card_generation"] = "success"
+            logger.info(f"Generated card {card.id} from item {item_id}")
+        except Exception as e:
+            # Card 生成失败不应导致整个处理失败
+            logger.warning(f"Failed to generate card for item {item_id}: {str(e)}")
+            metadata["card_generation_error"] = str(e)
+
+        # 更新 metadata 到数据库
+        item.source_meta = metadata
+        await db.commit()
+        await db.refresh(item)
 
         logger.info(f"Processed item {item_id}: {item_type.value} with {confidence.value} confidence")
 
@@ -202,10 +238,14 @@ async def _record_processing_event(
         # 如果模型不存在，暂时跳过（后续会创建）
         from agent_os.agent.models import AgentProcessEvent
 
+        # 处理 from_status 和 to_status - 可能是枚举或字符串
+        from_status_val = from_status.value if hasattr(from_status, 'value') else str(from_status)
+        to_status_val = to_status.value if hasattr(to_status, 'value') else str(to_status)
+
         event = AgentProcessEvent(
             item_id=item_id,
-            from_status=from_status.value,
-            to_status=to_status.value,
+            from_status=from_status_val,
+            to_status=to_status_val,
             result_summary=result,
             processed_at=datetime.utcnow()
         )
@@ -272,7 +312,6 @@ async def get_raw_items(db: AsyncSession, limit: int = 10) -> list[Item]:
     Returns:
         Item 列表
     """
-    from agent_os.items.crud import item_crud
     from sqlalchemy import select
 
     # 查询 status='raw' 的 items

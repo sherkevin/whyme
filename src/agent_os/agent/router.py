@@ -164,7 +164,7 @@ async def get_agent_status(
 
     # 获取当前用户的 raw items 数量
     stmt = select(func.count(Item.id)).where(
-        Item.user_id == current_user.id,
+        Item.creator_id == current_user.id,  # 使用 creator_id 而不是 user_id
         Item.status == ItemStatus.RAW
     )
     result = await db.execute(stmt)
@@ -172,7 +172,7 @@ async def get_agent_status(
 
     # 获取已处理的 items 数量
     stmt = select(func.count(Item.id)).where(
-        Item.user_id == current_user.id,
+        Item.creator_id == current_user.id,  # 使用 creator_id 而不是 user_id
         Item.status == ItemStatus.PROCESSED
     )
     result = await db.execute(stmt)
