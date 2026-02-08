@@ -1,22 +1,54 @@
-# AgentOS Makefile - 快速启动命令
+# AgentOS Makefile - 开发和部署命令
+# 支持 uv 包管理器的现代化 Python 项目
 
 .PHONY: help start stop restart logs test build clean install
+.PHONY: lint format type-check security-check
+.PHONY: dev-install dev-server db-upgrade db-downgrade
+.PHONY: docker-build docker-deploy docker-clean
 
 # 默认目标
 help:
-	@echo "AgentOS 快速启动命令:"
+	@echo "AgentOS 开发和部署命令:"
 	@echo ""
-	@echo "  make start     - 启动服务 (Docker)"
-	@echo "  make stop      - 停止服务"
-	@echo "  make restart   - 重启服务"
-	@echo "  make logs      - 查看日志"
-	@echo "  make test      - 运行测试"
-	@echo "  make build     - 构建镜像"
-	@echo "  make clean     - 清理容器和镜像"
-	@echo "  make install   - 安装依赖 (本地开发)"
+	@echo "🚀 快速启动:"
+	@echo "  make start           - 启动服务 (Docker)"
+	@echo "  make stop            - 停止服务"
+	@echo "  make restart         - 重启服务"
+	@echo "  make logs            - 查看日志"
+	@echo "  make dev-server      - 本地开发服务器"
+	@echo ""
+	@echo "📦 依赖管理:"
+	@echo "  make install         - 安装依赖 (本地)"
+	@echo "  make dev-install     - 安装开发依赖 (uv)"
+	@echo ""
+	@echo "🧪 测试:"
+	@echo "  make test            - 运行测试 (Docker)"
+	@echo "  make test-local      - 本地运行测试"
+	@echo "  make test-cov        - 测试覆盖率报告"
+	@echo "  make test-unit       - 单元测试"
+	@echo "  make test-integration - 集成测试"
+	@echo ""
+	@echo "🔍 代码质量:"
+	@echo "  make lint            - 代码检查"
+	@echo "  make lint-fix        - 自动修复"
+	@echo "  make format          - 格式化代码"
+	@echo "  make type-check      - 类型检查"
+	@echo "  make security-check  - 安全检查"
+	@echo "  make check           - 运行所有检查"
+	@echo ""
+	@echo "🗄️ 数据库:"
+	@echo "  make db-upgrade      - 升级数据库"
+	@echo "  make db-downgrade    - 降级数据库"
+	@echo "  make db-migrate      - 创建迁移"
+	@echo ""
+	@echo "🐳 Docker:"
+	@echo "  make build           - 构建镜像"
+	@echo "  make clean           - 清理容器和镜像"
+	@echo "  make docker-deploy   - Docker 快速部署"
+	@echo "  make docker-help     - Docker 命令帮助"
 	@echo ""
 	@echo "前端同学推荐:"
-	@echo "  make start     - 一键启动后端API"
+	@echo "  make start           - 一键启动后端API"
 	@echo "  然后访问 http://localhost:8000/docs"
 
 # 启动服务
@@ -57,7 +89,7 @@ test:
 # 快速测试 (本地)
 test-local:
 	@echo "🧪 本地运行测试..."
-	@python -m pytest tests/test_websocket_io.py \
+	@uv run pytest tests/test_websocket_io.py \
 	                tests/test_diff_confirmation.py \
 	                tests/test_repo_map.py \
 	                tests/test_json_render.py \
@@ -83,13 +115,13 @@ clean:
 
 # 安装依赖 (本地开发)
 install:
-	@echo "📦 安装Python依赖..."
-	@pip install -e .[dev]
-	@pip install aiosqlite alembic
+	@echo "📦 安装Python依赖 (uv)..."
+	@uv sync --dev
 	@echo "✅ 依赖安装完成"
 	@echo ""
 	@echo "启动开发服务器:"
-	@echo "  uvicorn agent_os.server.app:app --reload --host 0.0.0.0 --port 8000"
+	@echo "  make dev-server"
+	@echo "  或: uv run uvicorn agent_os.server.app:app --reload --host 0.0.0.0 --port 8000"
 
 # 数据库迁移
 migrate:
@@ -139,7 +171,96 @@ init: | stop ports install build start
 	@echo "查看完整文档: docs/FRONTEND_INTEGRATION_GUIDE.md"
 
 # ========================================
-# Docker 简化部署命令 (新增)
+# 开发工具命令 (uv)
+# ========================================
+
+# 安装开发依赖
+dev-install:
+	@echo "📦 安装开发依赖 (uv)..."
+	@uv sync --dev
+	@echo "✅ 开发依赖安装完成"
+	@uv run pre-commit install
+	@echo "✅ Pre-commit hooks 已安装"
+
+# 本地开发服务器
+dev-server:
+	@echo "🚀 启动开发服务器..."
+	@uv run uvicorn agent_os.server.app:app --reload --host 0.0.0.0 --port 8000
+
+# 代码检查
+lint:
+	@echo "🔍 运行代码检查 (ruff)..."
+	@uv run ruff check src/ tests/
+
+# 自动修复代码问题
+lint-fix:
+	@echo "🔧 自动修复代码问题..."
+	@uv run ruff check --fix src/ tests/
+
+# 代码格式化
+format:
+	@echo "✨ 格式化代码 (ruff format)..."
+	@uv run ruff format src/ tests/
+
+# 检查格式
+format-check:
+	@echo "✨ 检查代码格式..."
+	@uv run ruff format --check src/ tests/
+
+# 类型检查
+type-check:
+	@echo "🔬 运行类型检查 (mypy)..."
+	@uv run mypy src/agent_os --ignore-missing-imports
+
+# 安全检查
+security-check:
+	@echo "🔒 运行安全检查 (bandit)..."
+	@uv run bandit -r src/agent_os -f screen -ll
+	@echo "✅ 安全检查完成"
+
+# 运行所有检查 (CI前检查)
+check: lint format-check type-check
+	@echo "✅ 所有检查通过!"
+
+# 测试覆盖率
+test-cov:
+	@echo "🧪 运行测试并生成覆盖率报告..."
+	@uv run pytest --cov=src/agent_os --cov-report=html --cov-report=term-missing
+	@echo "✅ 覆盖率报告已生成: htmlcov/index.html"
+
+# 快速测试 (仅单元测试)
+test-unit:
+	@echo "🧪 运行单元测试..."
+	@uv run pytest -m unit -v
+
+# 集成测试
+test-integration:
+	@echo "🧪 运行集成测试..."
+	@uv run pytest -m integration -v
+
+# 数据库升级
+db-upgrade:
+	@echo "🗄️ 升级数据库..."
+	@uv run alembic upgrade head
+
+# 数据库降级
+db-downgrade:
+	@echo "🗄️ 降级数据库..."
+	@uv run alembic downgrade -1
+
+# 创建迁移
+db-migrate:
+	@echo "📝 创建数据库迁移..."
+	@read -p "迁移名称: " name; \
+	uv run alembic revision --autogenerate -m "$$name"
+
+# 数据库回滚
+db-rollback:
+	@echo "🔙 回滚数据库..."
+	@uv run alembic downgrade base
+
+# ========================================
+# Docker 简化部署命令
 # ========================================
 
 # Docker 快速部署
