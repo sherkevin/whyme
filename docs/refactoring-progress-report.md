@@ -1,8 +1,8 @@
 # 项目重构进度报告
 
 **日期**: 2026-02-08
-**阶段**: Phase 1 - 紧急改进
-**状态**: ✅ Week 2 任务完成
+**阶段**: Phase 2 - 代码优化
+**状态**: ✅ Week 3 任务完成
 
 ---
 
@@ -406,3 +406,100 @@ git reset --hard <commit-before-refactor>
 **报告生成**: 2026-02-08
 **状态**: Phase 1 完成 ✅
 **完成度**: 25% (2周 / 8周)
+
+---
+
+## ✅ Phase 2: Week 3 任务完成
+
+### 7. 模块分析和移除 ✅
+
+**任务**: 分析并移除重复的 search 和 insights 模块
+
+**分析结果**:
+- **search_engine/**: 5,580 行代码 ✅ 活跃、已集成、完整测试
+- **search/**: 792 行代码 ❌ 旧模块、未使用、无测试
+- **insights/**: 1,715 行代码 ❌ 旧模块、未使用、无测试
+
+**执行操作**:
+```bash
+# 移除旧模块
+rm -rf src/agent_os/search/
+rm -rf src/agent_os/insights/
+
+# 重命名测试文件以匹配实际模块
+mv tests/search_unit.py tests/search_engine_search_unit.py
+mv tests/insight_unit.py tests/search_engine_insight_unit.py
+mv tests/test_stage2_search.py tests/test_search_engine_stage2.py
+mv tests/test_stage2_search_simple.py tests/test_search_engine_stage2_simple.py
+mv tests/test_vector_search.py tests/test_search_engine_vector.py
+mv tests/test_insights_integration.py tests/test_search_engine_insights_integration.py
+```
+
+**结果**: ✅ 成功
+
+**影响文件**: 17 个文件
+- 删除: 10 个旧模块文件 (search/, insights/)
+- 重命名: 6 个测试文件
+- 新增: 1 个分析报告
+
+**代码减少**: 2,507 行 (31% 减少)
+
+**验证**:
+```bash
+$ grep -r "from agent_os.search" src/agent_os --include="*.py" | grep -v "search_engine"
+# 结果: 无引用 ✅
+
+$ grep -r "from agent_os.insights" src/agent_os --include="*.py"
+# 结果: 无引用 ✅
+```
+
+---
+
+## 📊 更新后的进度统计
+
+### Phase 1 & 2 完成情况
+
+| 阶段 | 任务 | 状态 | 完成度 |
+|------|------|------|--------|
+| **Phase 1** | 快速改进 | ✅ 完成 | 100% |
+| Week 1 | 模块重命名 | ✅ 完成 | 100% |
+| Week 2 | 文档重组 | ✅ 完成 | 100% |
+| **Phase 2** | 代码优化 | 🔄 进行中 | 50% |
+| Week 3 | 移除重复模块 | ✅ 完成 | 100% |
+| Week 4 | 测试验证 | ⏳ 待执行 | 0% |
+| Week 5-6 | 引入分层架构 | ⏳ 待开始 | 0% |
+
+**Phase 1 进度**: 100% (2/2 周) ✅
+**Phase 2 进度**: 50% (1/2 主要任务完成)
+**总体进度**: 37.5% (3/8 周)
+
+---
+
+## 📋 待办事项更新
+
+### Phase 2 剩余任务
+
+- [x] 分析 search 和 insights 模块
+- [x] 移除 search/ 旧模块
+- [x] 移除 insights/ 旧模块
+- [x] 重命名测试文件
+- [x] 创建 Git 提交
+- [ ] 运行完整测试套件验证
+- [ ] 检查是否有遗漏的引用
+
+### Phase 2 Week 4 任务
+
+- [ ] 运行完整测试套件
+- [ ] 验证应用启动
+- [ ] 检查所有端点功能
+- [ ] 更新相关文档
+
+### Phase 2 Week 5-6 任务（即将开始）
+
+- [ ] 设计分层架构
+- [ ] 创建新目录结构
+- [ ] 迁移 API 层
+- [ ] 迁移 Service 层
+- [ ] 创建 Repository 层
+- [ ] 更新所有导入路径
+
