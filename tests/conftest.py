@@ -14,9 +14,6 @@ from agent_os.items.models import (
     TaskExtension, DecisionPoint, LedgerEvent, GraphEdge
 )
 
-# Import insight models
-from agent_os.insights.models import InsightExtension, InsightCluster
-
 # Import auth models
 from agent_os.auth.models import User, APIKey, Session, Role, UserRole, AuditLog
 
@@ -32,23 +29,23 @@ from agent_os.knowledge.models import Card
 # Import stage3 models
 from agent_os.stage3.models import AgentDecision, Skill, TaskExecutionLog
 
-# Import stage4 models
-from agent_os.stage4.models import SearchIndex, IngestionJob, InsightCluster as InsightCluster4
+# Import search_engine (stage4) models
+from agent_os.search_engine.models import SearchIndex, IngestionJob, InsightCluster
 
 # Create a list of PRD4 tables for testing
 PRD4_TABLES = [
     'workspaces', 'areas', 'projects', 'items',
     'task_extensions', 'decision_points', 'ledger_events', 'graph_edges',
-    'insight_extensions', 'insight_clusters',
+    # Note: 'insight_extensions', 'insight_clusters' removed - old insights module deprecated
     'users', 'api_keys', 'sessions', 'roles', 'user_roles', 'audit_logs',
     'agent_process_events',
     'cards',
     'agent_decisions',  # Stage 3
     'skills',  # Stage 3
     'task_execution_logs',  # Stage 3
-    'search_indices',  # Stage 4
-    'ingestion_jobs',  # Stage 4
-    'stage4_insight_clusters'  # Stage 4
+    'search_indices',  # Stage 4 / search_engine
+    'ingestion_jobs',  # Stage 4 / search_engine
+    'stage4_insight_clusters'  # Stage 4 / search_engine
 ]
 
 
