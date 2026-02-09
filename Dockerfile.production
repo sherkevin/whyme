@@ -1,0 +1,113 @@
+# AgentOS Production Dockerfile
+# 优化的多阶段构建，用于生产环境
+
+# ============================================
+# Stage 1: Builder - 构建阶段
+# ============================================
+FROM python:3.11-slim AS builder
+
+# 构建参数
+ARG ENVIRONMENT=production
+
+# 设置环境变量
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# 安装构建依赖
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# 创建虚拟环境
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# 升级 pip 和安装构建工具
+RUN pip install --upgrade pip setuptools wheel uv
+
+# 复制依赖文件
+COPY pyproject.toml ./
+
+# 使用 uv 快速安装依赖（如果可用）或回退到 pip
+RUN if command -v uv &> /dev/null; then \
+        uv pip install -e .; \
+    else \
+        pip install --no-cache-dir -e .; \
+    fi
+
+# ============================================
+# Stage 2: Runtime - 运行时镜像
+# ============================================
+FROM python:3.11-slim AS runtime
+
+# 元数据
+LABEL maintainer="AgentOS Team <team@agentos.example.com>" \
+      description="AgentOS - AI Agent Operating System" \
+      version="0.1.0" \
+      org.opencontainers.image.title="AgentOS" \
+      org.opencontainers.image.description="AI Agent Operating System" \
+      org.opencontainers.image.version="0.1.0" \
+      org.opencontainers.image.source="https://github.com/your-org/agentos"
+
+# 设置环境变量
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/opt/venv/bin:$PATH" \
+    AGENTOS_VERSION="0.1.0" \
+    AGENTOS_ENVIRONMENT="production" \
+    PYTHONPATH="/app/src:$PYTHONPATH"
+
+# 安装运行时依赖
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # 运行时依赖
+    curl \
+    ca-certificates \
+    postgresql-client \
+    # 清理缓存
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    # 清理 apt 缓存
+    && rm -rf /var/cache/apt/archives/*
+
+# 从 builder 复制虚拟环境
+COPY --from=builder /opt/venv /opt/venv
+
+# 设置工作目录
+WORKDIR /app
+
+# 复制应用代码
+COPY src/ ./src/
+COPY config/ ./config/
+COPY alembic/ ./alembic/
+COPY alembic.ini ./
+
+# 创建数据和日志目录
+RUN mkdir -p /app/data /app/logs
+
+# 创建非 root 用户
+RUN groupadd -r agentos && \
+    useradd -r -g agentos -u 1000 -d /app -s /sbin/nologin -c "AgentOS User" agentos && \
+    chown -R agentos:agentos /app
+
+# 切换到非 root 用户
+USER agentos
+
+# 暴露端口
+EXPOSE 8000 8003
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# 默认命令（生产环境）
+CMD ["uvicorn", "agent_os.server.app:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8000", \
+     "--workers", "4", \
+     "--worker-class", "uvicorn.workers.UvicornWorker", \
+     "--log-level", "info", \
+     "--access-log"]
