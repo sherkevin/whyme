@@ -1,6 +1,6 @@
-# 🚀 快速启动指南
+# 🚀 AgentOS 快速启动指南
 
-> **前端同学**: 按照以下步骤3分钟内启动后端服务
+> **3分钟内启动后端服务**
 
 ---
 
@@ -42,8 +42,6 @@ docker-compose -f docker-compose.api.yml up -d
 
 # 查看日志
 make logs
-# 或
-docker-compose -f docker-compose.api.yml logs -f api
 ```
 
 ### 停止服务
@@ -56,33 +54,41 @@ docker-compose -f docker-compose.api.yml down
 
 ---
 
-## 方式三: 手动启动
+## 方式三: 开发模式
 
-### 1. 检查Docker
+### 1. 安装依赖
 
 ```bash
-docker --version
-docker info
+# 使用 uv (推荐)
+uv pip install -e .[dev]
+
+# 或使用 pip
+pip install -e .[dev]
 ```
 
-### 2. 启动服务
+### 2. 启动开发服务器
 
 ```bash
-# 创建数据目录
-mkdir -p data logs
+# 启动 API 服务
+uvicorn agent_os.server.app:app --reload --host 0.0.0.0 --port 8000
 
-# 启动
-docker-compose -f docker-compose.api.yml up -d
+# 启动 WebSocket 服务
+uvicorn agent_os.server.ws_app:app --reload --host 0.0.0.0 --port 8003
 ```
 
-### 3. 验证服务
+### 3. 运行测试
 
 ```bash
-# 检查容器状态
-docker ps
+# 运行所有测试
+pytest tests/ -v
 
-# 测试API
-curl http://localhost:8000/docs
+# 运行核心测试
+pytest tests/test_websocket_io.py \
+        tests/test_diff_confirmation.py \
+        tests/test_conversation_persistence.py -v
+
+# 测试覆盖率
+pytest tests/ --cov=src/agent_os --cov-report=html
 ```
 
 ---
@@ -153,11 +159,41 @@ docker-compose -f docker-compose.api.yml restart api
 
 ---
 
-## 📚 更多文档
+## 📊 主要API端点
 
-- [完整前端集成指南](docs/FRONTEND_INTEGRATION_GUIDE.md)
-- [API端点总览](docs/API_ENDPOINTS_COMPLETE.md)
-- [数据库架构](docs/DATABASE_ARCHITECTURE.md)
+### 认证
+```
+POST /api/v1/auth/register  # 用户注册
+POST /api/v1/auth/login     # 用户登录
+GET  /api/v1/auth/users/me  # 获取当前用户
+```
+
+### 对话
+```
+GET  /api/v1/conversations/{session_id}/history  # 获取对话历史
+GET  /api/v1/conversations/{session_id}/tokens   # Token统计
+GET  /api/v1/conversations/sessions/recent       # 最近会话
+DELETE /api/v1/conversations/{conversation_id}   # 删除消息
+```
+
+### 聚合
+```
+GET /api/v1/today  # 今日统一视图
+```
+
+### 知识库
+```
+POST /api/v1/knowledge/inbox  # 添加到收件箱
+GET  /api/v1/knowledge/cards  # 获取卡片列表
+```
+
+### 任务
+```
+POST /api/v1/tasks  # 创建任务
+GET  /api/v1/tasks  # 获取任务列表
+```
+
+完整API文档: http://localhost:8000/docs
 
 ---
 
@@ -182,6 +218,19 @@ docker-compose -f docker-compose.api.yml logs api
 
 A: SQLite数据在 `./data/agentos.db`
 
+### Q: 如何使用PostgreSQL?
+
+A: 取消注释 `docker-compose.api.yml` 中的postgres服务
+
+---
+
+## 📚 更多文档
+
+- [完整文档](docs/README.md)
+- [API端点总览](docs/09-api/API_ENDPOINTS_COMPLETE.md)
+- [数据库架构](docs/10-architecture/DATABASE_ARCHITECTURE.md)
+- [前端集成指南](docs/11-deployment/FRONTEND_INTEGRATION_GUIDE.md)
+
 ---
 
 ## 🎯 下一步
@@ -189,10 +238,8 @@ A: SQLite数据在 `./data/agentos.db`
 1. ✅ 服务已启动
 2. 📖 访问 http://localhost:8000/docs
 3. 🧪 测试API接口
-4. 🔌 集成到你的前端应用
-
-**需要帮助?** 查看 [前端集成指南](docs/FRONTEND_INTEGRATION_GUIDE.md)
+4. 🔌 集成到你的应用
 
 ---
 
-**最后更新**: 2026-01-29
+**最后更新**: 2026-02-09
