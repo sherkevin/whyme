@@ -2,9 +2,9 @@
 
 import pytest
 from datetime import datetime, timedelta
-from agent_os.stage4.insight_service import InsightService
-from agent_os.stage4.models import SearchIndex, InsightCluster
-from agent_os.stage4.search_service import SearchService
+from agent_os.search_engine.insight_service import InsightService
+from agent_os.search_engine.models import SearchIndex, InsightCluster
+from agent_os.search_engine.search_service import SearchService
 import uuid
 
 

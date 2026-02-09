@@ -76,6 +76,17 @@ class UserInfo(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UserSettings(BaseModel):
+    """User settings schema."""
+    theme: str = Field(default="light", description="UI theme preference")
+    language: str = Field(default="en", description="Language preference")
+    timezone: str = Field(default="UTC", description="Timezone setting")
+    email_notifications: bool = Field(default=True, description="Email notification preference")
+    desktop_notifications: bool = Field(default=True, description="Desktop notification preference")
+
+    model_config = ConfigDict(from_attributes=True, extra="allow")
+
+
 # ============== Error Schemas ==============
 
 class ErrorResponse(BaseModel):

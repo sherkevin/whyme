@@ -11,11 +11,11 @@ import uuid
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_os.stage4.search_service import SearchService
-from agent_os.stage4.search_engine import SearchEngine, SearchQuery
-from agent_os.stage4.ingestion_pipeline import IngestionService
-from agent_os.stage4.insight_service import InsightService
-from agent_os.stage4.models import SearchIndex, IngestionJob, InsightCluster
+from agent_os.search_engine.search_service import SearchService
+from agent_os.search_engine.search_engine import SearchEngine, SearchQuery
+from agent_os.search_engine.ingestion_pipeline import IngestionService
+from agent_os.search_engine.insight_service import InsightService
+from agent_os.search_engine.models import SearchIndex, IngestionJob, InsightCluster
 
 
 @pytest.mark.asyncio

@@ -225,8 +225,21 @@ class SearchEngine:
             text_score = text_scores.get(key, 0.0)
             vector_score = vector_item['similarity']
 
-            # Hybrid score: weighted combination
-            combined_score = 0.6 * text_score + 0.4 * vector_score
+            # Freshness boost: newer content gets slight advantage (PRD4 requirement)
+            # Calculate days since creation/updated
+            from datetime import datetime, timezone
+            now = datetime.now(timezone.utc)
+            item_time = row.updated_at if row.updated_at else row.created_at
+            if item_time:
+                days_old = (now - item_time).days
+                # Decay: 1.0 for new content, 0.95 for 7 days, 0.9 for 30 days
+                freshness_boost = max(0.8, 1.0 - (days_old / 365) * 0.2)  # Max 20% decay over a year
+            else:
+                freshness_boost = 1.0
+
+            # Hybrid score: weighted combination (PRD4: 0.7 * semantic + 0.3 * keyword + freshness)
+            # Note: vector_score = semantic similarity, text_score = keyword (BM25/LIKE)
+            combined_score = (0.7 * vector_score + 0.3 * text_score) * freshness_boost
 
             # Generate snippet
             snippet = self._generate_snippet(row.content, query.query)

@@ -6,7 +6,7 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from agent_os.stage4.models import SearchIndex, IngestionJob, InsightCluster
+from agent_os.search_engine.models import SearchIndex, IngestionJob, InsightCluster
 
 
 @pytest.mark.asyncio

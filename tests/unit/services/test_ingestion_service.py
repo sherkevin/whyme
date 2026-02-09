@@ -6,10 +6,10 @@ from datetime import datetime
 from pathlib import Path
 from sqlalchemy import select
 
-from agent_os.stage4.content_fetcher import ContentFetcher
-from agent_os.stage4.text_chunker import TextChunker, ChunkResult
-from agent_os.stage4.ingestion_pipeline import IngestionService
-from agent_os.stage4.models import IngestionJob
+from agent_os.search_engine.content_fetcher import ContentFetcher
+from agent_os.search_engine.text_chunker import TextChunker, ChunkResult
+from agent_os.search_engine.ingestion_pipeline import IngestionService
+from agent_os.search_engine.models import IngestionJob
 
 
 # =============================================================================

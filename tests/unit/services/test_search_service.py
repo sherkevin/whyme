@@ -5,9 +5,9 @@ import uuid
 from datetime import datetime
 from sqlalchemy import select
 
-from agent_os.stage4.search_service import SearchService
-from agent_os.stage4.search_engine import SearchEngine, SearchQuery, SearchResult
-from agent_os.stage4.models import SearchIndex
+from agent_os.search_engine.search_service import SearchService
+from agent_os.search_engine.search_engine import SearchEngine, SearchQuery, SearchResult
+from agent_os.search_engine.models import SearchIndex
 
 
 @pytest.mark.asyncio

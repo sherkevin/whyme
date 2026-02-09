@@ -2,8 +2,8 @@
 
 import pytest
 import asyncio
-from agent_os.stage4.embedding_service import SimpleEmbedding, EmbeddingService
-from agent_os.stage4.models import SearchIndex
+from agent_os.search_engine.embedding_service import SimpleEmbedding, EmbeddingService
+from agent_os.search_engine.models import SearchIndex
 
 
 @pytest.mark.asyncio
@@ -185,8 +185,8 @@ class TestEmbeddingIntegration:
 
     async def test_search_with_embeddings(self, db_session):
         """Test that embeddings work with search."""
-        from agent_os.stage4.search_service import SearchService
-        from agent_os.stage4.search_engine import SearchEngine, SearchQuery
+        from agent_os.search_engine.search_service import SearchService
+        from agent_os.search_engine.search_engine import SearchEngine, SearchQuery
         import uuid
 
         # Enable auto-embedding
