@@ -1,41 +1,65 @@
-# Scripts Directory
+# Scripts 目录
 
-This directory contains executable scripts for development and testing.
+本目录包含各种实用脚本，用于项目设置、部署和维护。
 
-## Available Scripts
+## 目录结构
 
-### Server Management
-- **run_server.py** - Start the AgentOS development server
-- **start.py** - Alternative server startup script
+### setup/
+初始化和设置脚本
 
-### Testing & Debugging
-- **simple_test.py** - Simple test runner
-- **hello.py** - Basic hello world test
-- **hello_verbose.py** - Verbose hello world test
-- **analyze_differences.py** - Analyze code differences
-- **force_reload.py** - Force reload components
+- `install_deps.sh` - 安装依赖
+- `init_db.sh` - 初始化数据库
+- `setup_env.sh` - 设置环境
 
-## Usage
+### deploy/
+部署相关脚本
 
-### Start Server
+- `deploy.sh` - 部署到生产环境
+- `rollback.sh` - 回滚部署
+- `health_check.sh` - 健康检查
+
+### migration/
+数据迁移脚本
+
+- `migrate.sh` - 运行数据库迁移
+- `rollback_migration.sh` - 回滚迁移
+- `seed_data.sh` - 种子数据
+
+### dev/
+开发辅助脚本
+
+- `format.sh` - 代码格式化
+- `lint.sh` - 代码检查
+- `test.sh` - 运行测试
+- `serve.sh` - 启动开发服务器
+
+## 使用方法
+
 ```bash
-python scripts/run_server.py
-# or
-python scripts/start.py
+# 运行设置脚本
+./scripts/setup/install_deps.sh
+
+# 运行测试
+./scripts/dev/test.sh
+
+# 部署到生产
+./scripts/deploy/deploy.sh production
 ```
 
-### Run Tests
-```bash
-python scripts/simple_test.py
-```
+## 添加新脚本
 
-### Analyze Code
-```bash
-python scripts/analyze_differences.py
-```
+1. 将脚本放入相应的子目录
+2. 添加执行权限: `chmod +x script_name.sh`
+3. 在本文件中添加说明
+4. 确保脚本有适当的错误处理
 
-## Notes
+## 注意事项
 
-- These scripts are primarily for development purposes
-- For production deployment, use Docker containers
-- See `../deploy-docker.sh` for Docker deployment
+- 所有脚本应该以 `set -e` 开始，以便在错误时退出
+- 使用相对路径，以便从项目根目录运行
+- 添加适当的日志记录
+- 测试脚本后再提交
+
+---
+**维护者**: AgentOS Team
+**最后更新**: 2026-02-09
