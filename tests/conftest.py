@@ -30,7 +30,8 @@ from agent_os.knowledge.models import Card
 from agent_os.stage3.models import AgentDecision, Skill, TaskExecutionLog
 
 # Import search_engine (stage4) models
-from agent_os.search_engine.models import SearchIndex, IngestionJob, InsightCluster
+# Note: Renamed InsightCluster to InsightCluster4 to avoid conflicts with old insights module
+from agent_os.search_engine.models import SearchIndex, IngestionJob, InsightCluster as InsightCluster4
 
 # Create a list of PRD4 tables for testing
 PRD4_TABLES = [
@@ -67,7 +68,7 @@ def event_loop() -> Generator:
     loop.close()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def engine():
     """创建测试数据库引擎"""
     engine = create_async_engine(
@@ -89,8 +90,8 @@ async def engine():
             DecisionPoint.__table__.create(connection, checkfirst=True)
             LedgerEvent.__table__.create(connection, checkfirst=True)
             GraphEdge.__table__.create(connection, checkfirst=True)
-            InsightExtension.__table__.create(connection, checkfirst=True)
-            InsightCluster.__table__.create(connection, checkfirst=True)
+            # Note: Old insights module (InsightExtension, InsightCluster) deprecated
+            # Using search_engine InsightCluster instead (see below)
             # Auth tables
             User.__table__.create(connection, checkfirst=True)
             APIKey.__table__.create(connection, checkfirst=True)
@@ -128,8 +129,8 @@ async def engine():
             Skill.__table__.drop(connection, checkfirst=True)
             AgentDecision.__table__.drop(connection, checkfirst=True)
             # Drop PRD4 tables
-            InsightCluster.__table__.drop(connection, checkfirst=True)
-            InsightExtension.__table__.drop(connection, checkfirst=True)
+            # Note: Old insights module (InsightExtension, InsightCluster) deprecated
+            # Already dropped via search_engine InsightCluster4 above
             GraphEdge.__table__.drop(connection, checkfirst=True)
             LedgerEvent.__table__.drop(connection, checkfirst=True)
             DecisionPoint.__table__.drop(connection, checkfirst=True)
