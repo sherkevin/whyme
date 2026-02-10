@@ -44,7 +44,7 @@ class SearchIndex(Base):
         Index('ix_search_item_type_id', 'item_type', 'item_id'),
         Index('ix_search_created_at', 'created_at'),
         CheckConstraint(
-            "item_type IN ('card', 'task', 'note', 'decision_point', 'workspace', 'project')",
+            "item_type IN ('card', 'task', 'note', 'decision_point', 'workspace', 'project', 'resource', 'test')",
             name='check_search_item_type'
         ),
     )
