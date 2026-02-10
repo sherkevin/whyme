@@ -14,25 +14,44 @@ from agent_os.knowledge.models import Card
 
 async def generate_card_from_item(
     db: AsyncSession,
-    item: Item
+    item_id: str
 ) -> Optional[Card]:
     """从处理后的 InboxItem 生成 Card.
 
     Args:
         db: 数据库会话
-        item: Item 对象（已加载的 ORM 对象）
+        item_id: Item ID (字符串或UUID)
 
     Returns:
         生成的 Card 对象，如果失败则返回 None
 
     Raises:
-        ValueError: 如果 Item 状态不是 PROCESSED
+        ValueError: 如果 Item 状态不是 PROCESSED 或 Item 不存在
     """
-    # 1. 检查状态必须是 PROCESSED
-    if item.status != ItemStatus.PROCESSED:
+    # 1. 从数据库加载 Item
+    from sqlalchemy import select
+
+    # 转换为 UUID
+    try:
+        item_uuid = uuid.UUID(item_id) if isinstance(item_id, str) else item_id
+    except ValueError:
+        raise ValueError(f"Invalid item ID format: {item_id}")
+
+    # 查询 Item
+    stmt = select(Item).where(Item.id == item_uuid)
+    result = await db.execute(stmt)
+    item = result.scalar_one_or_none()
+
+    if not item:
+        raise ValueError(f"Item not found: {item_id}")
+
+    # 2. 检查状态必须是 PROCESSED
+    # Handle both string status and enum status for backward compatibility
+    current_status = item.status.value if hasattr(item.status, 'value') else item.status
+    if current_status != ItemStatus.PROCESSED.value:
         raise ValueError(
             f"Item must be in PROCESSED status to generate Card. "
-            f"Current status: {item.status.value}"
+            f"Current status: {current_status}"
         )
 
     # 2. 映射 item_type 到 card.para_type
@@ -115,7 +134,7 @@ def _extract_tags(item: Item) -> list:
 
     # 根据分类置信度添加标签
     if isinstance(metadata, dict) and "classification_confidence" in metadata:
-        confidence = metadata["classification_confidence"]
+        confidence = metadata["classification_confidence"].lower() if isinstance(metadata["classification_confidence"], str) else metadata["classification_confidence"]
         if confidence == "high":
             tags.append("high-confidence")
         elif confidence == "medium":

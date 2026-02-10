@@ -69,10 +69,10 @@ async def processed_item(db_session: AsyncSession, test_user_with_workspace):
         creator_id=user.id,
         title="Test Task Item",
         content="TODO: Complete the card generator implementation",
-        status=ItemStatus.PROCESSED,
-        item_type=ItemType.TASK,
+        status=ItemStatus.PROCESSED.value,  # Use string value
+        type=ItemType.TASK.value,  # Use type field with string value
         summary="Implementation task for card generator",
-        source_metadata={
+        source_meta={  # Changed from source_meta
             "classification_confidence": "HIGH",
             "item_subtype": "implementation"
         }
@@ -104,8 +104,8 @@ class TestMapItemTypeToParaType:
         assert result == "concept"
 
     def test_map_reference_to_reference(self, processed_item):
-        """验证 REFERENCE 类型映射到 reference"""
-        processed_item.item_type = ItemType.REFERENCE
+        """验证 RESOURCE 类型映射到 reference"""
+        processed_item.item_type = ItemType.RESOURCE
         result = _map_item_type_to_para_type(processed_item)
         assert result == "reference"
 
@@ -131,20 +131,20 @@ class TestExtractTags:
 
     def test_extract_tags_with_subtype(self, processed_item):
         """验证提取子类型标签"""
-        processed_item.source_metadata = {"item_subtype": "implementation"}
+        processed_item.source_meta = {"item_subtype": "implementation"}
         tags = _extract_tags(processed_item)
         assert "implementation" in tags
 
     def test_extract_tags_with_confidence(self, processed_item):
         """验证提取置信度标签"""
-        processed_item.source_metadata = {"classification_confidence": "HIGH"}
+        processed_item.source_meta = {"classification_confidence": "HIGH"}
         tags = _extract_tags(processed_item)
         assert "high-confidence" in tags
 
     def test_extract_tags_combined(self, processed_item):
         """验证组合标签提取"""
         processed_item.item_type = ItemType.TASK
-        processed_item.source_metadata = {
+        processed_item.source_meta = {
             "item_subtype": "implementation",
             "classification_confidence": "HIGH"
         }
@@ -210,7 +210,8 @@ class TestGenerateCardFromItem:
             creator_id=user.id,
             title="Raw Item",
             content="This is not processed",
-            status=ItemStatus.RAW
+            status=ItemStatus.RAW.value,
+            type=ItemType.NOTE.value
         )
         db_session.add(item)
         await db_session.commit()
@@ -240,8 +241,8 @@ class TestGenerateCardFromItem:
             creator_id=user.id,
             title="Concept Note",
             content="Key concept about the system architecture",
-            status=ItemStatus.PROCESSED,
-            item_type=ItemType.NOTE,
+            status=ItemStatus.PROCESSED.value,
+            type=ItemType.NOTE.value,
             summary="Architecture notes"
         )
         db_session.add(item)
@@ -256,7 +257,7 @@ class TestGenerateCardFromItem:
         print(f"✅ Generated concept card from note item")
 
     async def test_generate_card_for_reference_item(self, db_session, test_user_with_workspace):
-        """验证从 REFERENCE Item 生成 reference Card"""
+        """验证从 RESOURCE Item 生成 reference Card"""
         import uuid
 
         workspace = test_user_with_workspace["workspace"]
@@ -268,8 +269,8 @@ class TestGenerateCardFromItem:
             creator_id=user.id,
             title="Reference Link",
             content="https://example.com/documentation",
-            status=ItemStatus.PROCESSED,
-            item_type=ItemType.REFERENCE,
+            status=ItemStatus.PROCESSED.value,
+            type=ItemType.RESOURCE.value,
             summary="External documentation"
         )
         db_session.add(item)
@@ -278,10 +279,10 @@ class TestGenerateCardFromItem:
 
         card = await generate_card_from_item(db_session, str(item.id))
 
-        assert card.para_type == "reference"  # REFERENCE -> reference
-        assert "reference" in card.tags
+        assert card.para_type == "reference"  # RESOURCE -> reference
+        assert "resource" in card.tags
 
-        print(f"✅ Generated reference card from reference item")
+        print(f"✅ Generated reference card from resource item")
 
 
 if __name__ == "__main__":

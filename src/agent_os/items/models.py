@@ -156,6 +156,49 @@ class Item(Base):
     project = relationship("Project", backref="items")
     process_events = relationship("AgentProcessEvent", back_populates="item", cascade="all, delete-orphan")
 
+    # Properties for enum access (backward compatibility with card_generator)
+    @property
+    def item_type(self):
+        """Get type as ItemType enum."""
+        if self.type:
+            try:
+                return ItemType(self.type)
+            except (ValueError, KeyError):
+                # If type is not a valid ItemType, return None
+                return None
+        return None
+
+    @item_type.setter
+    def item_type(self, value):
+        """Set type from ItemType enum."""
+        if value is None:
+            self.type = None
+        elif isinstance(value, ItemType):
+            self.type = value.value
+        else:
+            self.type = str(value)
+
+    @property
+    def status_enum(self):
+        """Get status as ItemStatus enum."""
+        if self.status:
+            try:
+                return ItemStatus(self.status)
+            except (ValueError, KeyError):
+                # If status is not a valid ItemStatus, return None
+                return None
+        return None
+
+    @status_enum.setter
+    def status_enum(self, value):
+        """Set status from ItemStatus enum."""
+        if value is None:
+            self.status = None
+        elif isinstance(value, ItemStatus):
+            self.status = value.value
+        else:
+            self.status = str(value)
+
     __table_args__ = (
         Index('idx_items_workspace_user', 'workspace_id', 'creator_id'),
         Index('idx_items_type', 'type'),

@@ -8,7 +8,7 @@ from datetime import datetime
 from sqlalchemy import select
 
 from agent_os.agent.models import AgentProcessEvent
-from agent_os.items.models import Item, ItemStatus
+from agent_os.items.models import Item, ItemStatus, Workspace
 
 
 @pytest.mark.asyncio
