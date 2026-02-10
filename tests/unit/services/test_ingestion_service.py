@@ -65,7 +65,7 @@ class TestContentFetcher:
     async def test_extract_html_with_no_bs4(self, db_session, monkeypatch):
         """Test HTML extraction without BeautifulSoup."""
         # Temporarily disable BS4
-        import agent_os.stage4.content_fetcher as cf_module
+        import agent_os.search_engine.content_fetcher as cf_module
         monkeypatch.setattr(cf_module, "BS4_AVAILABLE", False)
 
         fetcher = ContentFetcher()

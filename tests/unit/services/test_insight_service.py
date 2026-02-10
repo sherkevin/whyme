@@ -280,8 +280,19 @@ class TestInsightService:
     async def test_get_insight(self, db_session):
         """Test retrieving an insight by ID."""
         insight_service = InsightService(db_session)
+        search_service = SearchService(db_session, auto_embed=False)
 
-        # Create an insight first
+        # First create some card items
+        for i in range(5):
+            await search_service.index_item(
+                item_type="card",
+                item_id=uuid.uuid4(),
+                title=f"Test Card {i}",
+                content=f"Test content {i}",
+                tags=["test_get_insight"]
+            )
+
+        # Create an insight
         summary = await insight_service.generate_summary(
             item_type="card",
             name="Get Test"
@@ -298,6 +309,25 @@ class TestInsightService:
     async def test_list_insights(self, db_session):
         """Test listing insights."""
         insight_service = InsightService(db_session)
+        search_service = SearchService(db_session, auto_embed=False)
+
+        # Create some card items first
+        for i in range(10):
+            await search_service.index_item(
+                item_type="card",
+                item_id=uuid.uuid4(),
+                title=f"Card {i}",
+                content=f"Content {i}",
+                tags=["test_list"]
+            )
+        for i in range(5):
+            await search_service.index_item(
+                item_type="task",
+                item_id=uuid.uuid4(),
+                title=f"Task {i}",
+                content=f"Task content {i}",
+                tags=["test_list"]
+            )
 
         # Create multiple insights
         await insight_service.generate_summary(item_type="card", name="Summary 1")
@@ -320,6 +350,17 @@ class TestInsightService:
     async def test_delete_insight(self, db_session):
         """Test deleting an insight."""
         insight_service = InsightService(db_session)
+        search_service = SearchService(db_session, auto_embed=False)
+
+        # First create some card items
+        for i in range(5):
+            await search_service.index_item(
+                item_type="card",
+                item_id=uuid.uuid4(),
+                title=f"Card {i}",
+                content=f"Content {i}",
+                tags=["test_delete"]
+            )
 
         # Create an insight
         summary = await insight_service.generate_summary(

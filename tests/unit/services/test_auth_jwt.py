@@ -1,6 +1,7 @@
 """Test JWT token creation and validation."""
 
 import pytest
+import uuid
 from datetime import timedelta, datetime, timezone
 
 from agent_os.auth.jwt_handler import (
@@ -17,7 +18,8 @@ class TestAccessTokenCreation:
 
     def test_create_access_token_returns_string(self):
         """Test creating access token returns a string."""
-        token = create_access_token(user_id=1)
+        user_id = uuid.uuid4()
+        token = create_access_token(user_id=user_id)
 
         assert isinstance(token, str)
         assert len(token) > 0
@@ -26,8 +28,9 @@ class TestAccessTokenCreation:
 
     def test_create_access_token_with_custom_expiration(self):
         """Test creating access token with custom expiration."""
+        user_id = uuid.uuid4()
         expires = timedelta(minutes=60)
-        token = create_access_token(user_id=1, expires_delta=expires)
+        token = create_access_token(user_id=user_id, expires_delta=expires)
 
         assert isinstance(token, str)
 
@@ -43,7 +46,8 @@ class TestAccessTokenCreation:
 
     def test_create_access_token_default_expiration(self):
         """Test creating access token with default expiration (30 minutes)."""
-        token = create_access_token(user_id=1)
+        user_id = uuid.uuid4()
+        token = create_access_token(user_id=user_id)
 
         payload = decode_token(token)
         assert payload is not None
@@ -56,11 +60,11 @@ class TestAccessTokenCreation:
 
     def test_access_token_contains_correct_payload(self):
         """Test access token contains correct payload."""
-        user_id = 42
+        user_id = uuid.uuid4()
         token = create_access_token(user_id=user_id)
 
         payload = decode_token(token)
-        assert int(payload['sub']) == user_id  # sub is string in JWT
+        assert payload['sub'] == str(user_id)  # sub is string in JWT
         assert payload['type'] == 'access'
         assert 'exp' in payload
 
@@ -70,14 +74,16 @@ class TestRefreshTokenCreation:
 
     def test_create_refresh_token_returns_string(self):
         """Test creating refresh token returns a string."""
-        token = create_refresh_token(user_id=1)
+        user_id = uuid.uuid4()
+        token = create_refresh_token(user_id=user_id)
 
         assert isinstance(token, str)
         assert "." in token
 
     def test_refresh_token_expiration(self):
         """Test refresh token expires in 7 days."""
-        token = create_refresh_token(user_id=1)
+        user_id = uuid.uuid4()
+        token = create_refresh_token(user_id=user_id)
 
         payload = decode_token(token)
         assert payload is not None
@@ -91,7 +97,8 @@ class TestRefreshTokenCreation:
 
     def test_refresh_token_type(self):
         """Test refresh token has type 'refresh'."""
-        token = create_refresh_token(user_id=1)
+        user_id = uuid.uuid4()
+        token = create_refresh_token(user_id=user_id)
 
         payload = decode_token(token)
         assert payload['type'] == 'refresh'
@@ -102,7 +109,7 @@ class TestTokenVerification:
 
     def test_verify_valid_access_token(self):
         """Test verifying valid access token."""
-        user_id = 123
+        user_id = uuid.uuid4()
         token = create_access_token(user_id=user_id)
 
         token_data = verify_token(token, token_type="access")
@@ -114,7 +121,7 @@ class TestTokenVerification:
 
     def test_verify_valid_refresh_token(self):
         """Test verifying valid refresh token."""
-        user_id = 456
+        user_id = uuid.uuid4()
         token = create_refresh_token(user_id=user_id)
 
         token_data = verify_token(token, token_type="refresh")
