@@ -216,27 +216,27 @@ sandbox:
 
 ---
 
-## 文档
+## 📚 文档
 
-### 用户文档
-- [快速开始指南](docs/04-guides/quickstart.md) - 新手入门教程
-- [Toolkit管理指南](docs/04-guides/toolkit-management.md) - 工具箱使用说明
-- [Docker部署指南](docs/04-guides/docker-setup.md) - 容器化部署
+### 核心文档
+- **[快速开始](QUICKSTART.md)** - 5分钟上手指南
+- **[测试指南](TESTING_GUIDE.md)** - 测试运行和最佳实践
+- **[架构文档](ARCHITECTURE.md)** - 系统架构设计
+- **[变更日志](CHANGELOG.md)** - 版本更新记录
+
+### 用户指南
+- **[部署指南](docs/guides/deployment.md)** - Docker部署详细步骤
 
 ### 开发文档
-- [API参考文档](docs/03-toolkit/api-reference.md) - 完整的API接口文档（前端团队）
-- [前后端协作指南](docs/03-toolkit/collaboration-guidelines.md) - 团队协作规范
-- [系统架构](docs/03-toolkit/architecture.md) - 技术架构设计
-- [最新进度报告](docs/02-progress/latest-status.md) - 当前实现状态
+- **[API参考](docs/03-toolkit/api-reference.md)** - 完整的API接口文档
+- **[系统架构](docs/03-toolkit/architecture.md)** - 技术架构设计
+- **[最新进度](docs/02-progress/latest-status.md)** - 当前实现状态
 
-### 产品文档
-- [PRD0 - 产品概述](docs/01-prd/PRD0.md) - 产品需求文档概述
-- [PRD1 - 架构规范](docs/01-prd/PRD1.md) - 详细的产品需求文档
-- [PRD2 - Toolkit系统](docs/01-prd/PRD2.md) - Toolkit系统需求
-
-### 测试文档
-- [测试套件说明](tests/README.md) - 测试结构和运行方法
-- [测试整理报告](docs/TEST_ORGANIZATION_REPORT.md) - 测试文件组织说明
+### 历史报告
+- **[性能报告](docs/reports/performance/)** - 性能基线和测试结果
+- **[PRD合规](docs/reports/prd/)** - PRD合规性审计
+- **[测试报告](docs/reports/testing/)** - 测试完成和改进报告
+- **[微信集成](docs/reports/wechat/)** - 微信集成实现文档
 
 ---
 
