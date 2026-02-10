@@ -6,6 +6,7 @@ import time
 import statistics
 from typing import List, Dict, Any
 from datetime import datetime
+from statistics import StatisticsError
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -154,11 +155,34 @@ class PerformanceMetrics:
             "mean": statistics.mean(durations) if durations else 0,
             "median": statistics.median(durations) if durations else 0,
             "stdev": statistics.stdev(durations) if len(durations) > 1 else 0,
-            "p50": statistics.quantiles(durations, n=2)[1] if durations else 0,
-            "p75": statistics.quantiles(durations, n=4)[3] if len(durations) > 1 else durations[0] if durations else 0,
-            "p95": statistics.quantiles(durations, n=20)[19] if len(durations) > 1 else durations[-1] if len(durations) > 1 else durations[0] if durations else 0,
-            "p99": statistics.quantiles(durations, n=100)[99] if len(durations) > 1 else durations[-1] if len(durations) > 1 else durations[0] if durations else 0,
         }
+
+        # Add percentiles if we have enough data
+        if len(durations) >= 2:
+            try:
+                stats["p50"] = statistics.quantiles(durations, n=2)[1]
+            except (IndexError, StatisticsError):
+                stats["p50"] = stats["median"]
+
+            try:
+                stats["p75"] = statistics.quantiles(durations, n=4)[3]
+            except (IndexError, StatisticsError):
+                stats["p75"] = durations[-1] if durations else 0
+
+            try:
+                stats["p95"] = statistics.quantiles(durations, n=20)[19] if len(durations) >= 20 else durations[-1]
+            except (IndexError, StatisticsError):
+                stats["p95"] = durations[-1] if durations else 0
+
+            try:
+                stats["p99"] = statistics.quantiles(durations, n=100)[99] if len(durations) >= 100 else durations[-1]
+            except (IndexError, StatisticsError):
+                stats["p99"] = durations[-1] if durations else 0
+        else:
+            stats["p50"] = durations[0] if durations else 0
+            stats["p75"] = durations[0] if durations else 0
+            stats["p95"] = durations[0] if durations else 0
+            stats["p99"] = durations[0] if durations else 0
 
         return stats
 
