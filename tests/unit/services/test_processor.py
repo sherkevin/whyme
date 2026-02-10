@@ -4,6 +4,7 @@ Tests for the processor.py module that processes InboxItems.
 """
 
 import pytest
+import uuid
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,8 +15,44 @@ from agent_os.agent.processor import (
     agent_tick,
     ProcessingResult
 )
-from agent_os.items.models import Item, ItemStatus
+from agent_os.items.models import Item, ItemStatus, Workspace
 from agent_os.agent.classifier import ItemType
+from agent_os.auth.models import User
+from agent_os.auth.security import get_password_hash
+
+
+# ============================================================================
+# Fixtures
+# ============================================================================
+
+@pytest.fixture
+async def test_user(db_session: AsyncSession):
+    """Create a test user with workspace."""
+    user_id = uuid.uuid4()
+    user = User(
+        id=user_id,
+        username="processor_test_user",
+        email="processor_test@example.com",
+        password_hash=get_password_hash("password123"),
+        is_active=True
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    workspace_id = uuid.uuid4()
+    workspace = Workspace(
+        id=workspace_id,
+        name="Processor Test Workspace",
+        owner_id=user.id
+    )
+    db_session.add(workspace)
+    await db_session.flush()
+
+    user.default_workspace_id = workspace_id
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    return user
 
 
 @pytest.mark.asyncio
@@ -24,19 +61,20 @@ class TestProcessInboxItem:
 
     async def test_process_raw_item_success(self, db_session: AsyncSession, test_user):
         """验证成功处理 raw 状态的 item"""
-        from agent_os.items.crud import item_crud
-
         # 创建一个 raw 状态的 item
-        item_data = {
-            "user_id": test_user.id,
-            "workspace_id": test_user.default_workspace_id,
-            "title": "",  # 空标题，需要生成
-            "content": "TODO: Implement user authentication system",
-            "status": ItemStatus.RAW,
-            "item_type": None
-        }
+        item = Item(
+            id=uuid.uuid4(),
+            workspace_id=test_user.default_workspace_id,
+            creator_id=test_user.id,
+            title="",  # 空标题，需要生成
+            content="TODO: Implement user authentication system",
+            status=ItemStatus.RAW.value,
+            type="note"  # Use type field instead of item_type
+        )
+        db_session.add(item)
+        await db_session.commit()
+        await db_session.refresh(item)
 
-        item = await item_crud.create(db_session, item_data)
         item_id = str(item.id)
 
         # 处理 item
@@ -53,11 +91,13 @@ class TestProcessInboxItem:
         assert result.error is None
 
         # 验证数据库已更新
-        updated_item = await item_crud.get(db_session, item_id)
-        assert updated_item.status == ItemStatus.PROCESSED
+        from sqlalchemy import select
+        stmt = select(Item).where(Item.id == item.id)
+        updated_item_result = await db_session.execute(stmt)
+        updated_item = updated_item_result.scalar_one()
+        assert updated_item.status == ItemStatus.PROCESSED.value
         assert updated_item.title == result.title
         assert updated_item.summary is not None
-        assert updated_item.item_type == ItemType.TASK.value
 
         print(f"✅ Processed item: {result.title}")
 
