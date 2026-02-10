@@ -98,3 +98,37 @@ class CreateResourceFromURL(BaseModel):
     url: str = Field(..., description="URL")
     default_area_id: Optional[str] = Field(None, description="默认区域ID")
     title: Optional[str] = Field(None, description="标题(可选)")
+
+
+# ============================================================================
+# WeChat Send Message Schemas
+# ============================================================================
+
+
+class SendTextMessageRequest(BaseModel):
+    """发送文本消息请求"""
+    openid: str = Field(..., description="用户OpenID")
+    content: str = Field(..., description="文本内容")
+
+
+class SendNewsMessageRequest(BaseModel):
+    """发送图文消息请求"""
+    openid: str = Field(..., description="用户OpenID")
+    articles: list = Field(..., description="图文列表")
+
+
+class SendCardMessageRequest(BaseModel):
+    """发送卡片消息请求"""
+    openid: str = Field(..., description="用户OpenID")
+    title: str = Field(..., description="标题")
+    description: str = Field(..., description="描述")
+    url: str = Field(..., description="跳转URL")
+    image_url: Optional[str] = Field(None, description="图片URL")
+
+
+class SendMessageResponse(BaseModel):
+    """发送消息响应"""
+    status: str = Field(..., description="发送状态: success, error")
+    errcode: Optional[int] = Field(None, description="错误码")
+    errmsg: Optional[str] = Field(None, description="错误信息")
+    msgid: Optional[str] = Field(None, description="消息ID")

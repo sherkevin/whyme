@@ -1,6 +1,7 @@
 """WeChat Integration Module - Stage 4 Implementation.
 
 Receives and processes WeChat messages, creates Resource items.
+Also provides functionality to send messages back to WeChat users.
 """
 
 import logging
@@ -10,6 +11,7 @@ import xml.etree.ElementTree as ET
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
+import httpx
 
 from agent_os.items.crud import create_item
 from agent_os.items.schema import ItemCreate
@@ -470,3 +472,340 @@ async def process_wechat_message(
             "status": "error",
             "error": str(e)
         }
+
+
+# ============================================================================
+# WeChat Message Sender
+# ============================================================================
+
+class WeChatMessageSender:
+    """
+    微信消息发送器
+
+    发送文本、图片等消息给微信用户
+    """
+
+    def __init__(
+        self,
+        app_id: str,
+        app_secret: str,
+        access_token: Optional[str] = None
+    ):
+        """
+        初始化消息发送器
+
+        Args:
+            app_id: 微信公众平台 AppID
+            app_secret: 微信公众平台 AppSecret
+            access_token: 访问令牌 (可选，如果不提供会自动获取)
+        """
+        self.app_id = app_id
+        self.app_secret = app_secret
+        self.access_token = access_token
+        self._http_client = httpx.AsyncClient(timeout=30.0)
+
+    async def get_access_token(self) -> str:
+        """
+        获取访问令牌
+
+        Returns:
+            access_token 字符串
+        """
+        if self.access_token:
+            return self.access_token
+
+        # 从微信服务器获取 access_token
+        url = "https://api.weixin.qq.com/cgi-bin/token"
+        params = {
+            "grant_type": "client_credential",
+            "appid": self.app_id,
+            "secret": self.app_secret
+        }
+
+        response = await self._http_client.get(url, params=params)
+        data = await response.json()
+
+        if data.get('errcode', 0) != 0:
+            raise Exception(f"Failed to get access_token: {data.get('errmsg')}")
+
+        access_token = data.get('access_token')
+        self.access_token = access_token
+
+        logger.info("Successfully obtained WeChat access token")
+        return access_token
+
+    async def send_text_message(
+        self,
+        openid: str,
+        content: str
+    ) -> Dict[str, Any]:
+        """
+        发送文本消息
+
+        Args:
+            openid: 用户OpenID
+            content: 文本内容
+
+        Returns:
+            发送结果
+        """
+        token = await self.get_access_token()
+        url = f"https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token={token}"
+
+        data = {
+            "touser": openid,
+            "msgtype": "text",
+            "text": {
+                "content": content
+            }
+        }
+
+        response = await self._http_client.post(url, json=data)
+        result = await response.json()
+
+        if result.get('errcode') == 0:
+            logger.info(f"Text message sent successfully to {openid}")
+            return {"status": "success", "msgid": result.get('msgid')}
+        else:
+            logger.error(f"Failed to send text message: {result.get('errmsg')}")
+            return {"status": "error", "error": result.get('errmsg')}
+
+    async def send_news_message(
+        self,
+        openid: str,
+        articles: List[Dict[str, str]]
+    ) -> Dict[str, Any]:
+        """
+        发送图文消息
+
+        Args:
+            openid: 用户OpenID
+            articles: 图文文章列表，每篇包含 title, description, url, picurl
+
+        Returns:
+            发送结果
+        """
+        token = await self.get_access_token()
+        url = f"https://api.weixin.qq.com/cgi-bin/message/custom/send?access_token={token}"
+
+        # 确保不超过8篇文章
+        articles = articles[:8]
+
+        data = {
+            "touser": openid,
+            "msgtype": "news",
+            "news": {
+                "articles": articles
+            }
+        }
+
+        response = await self._http_client.post(url, json=data)
+        result = await response.json()
+
+        if result.get('errcode') == 0:
+            logger.info(f"News message sent successfully to {openid}")
+            return {"status": "success"}
+        else:
+            logger.error(f"Failed to send news message: {result.get('errmsg')}")
+            return {"status": "error", "error": result.get('errmsg')}
+
+    async def send_card_message(
+        self,
+        openid: str,
+        title: str,
+        description: str,
+        url: str,
+        image_url: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        发送卡片消息（单图文）
+
+        Args:
+            openid: 用户OpenID
+            title: 标题
+            description: 描述
+            url: 点击跳转URL
+            image_url: 图片URL（可选）
+
+        Returns:
+            发送结果
+        """
+        article = {
+            "title": title,
+            "description": description,
+            "url": url,
+        }
+
+        if image_url:
+            article["picurl"] = image_url
+
+        return await self.send_news_message(openid, [article])
+
+    async def close(self):
+        """关闭HTTP客户端"""
+        await self._http_client.aclose()
+
+
+# ============================================================================
+# WeChat Service - 高层服务类
+# ============================================================================
+
+class WeChatService:
+    """
+    微信集成服务 - 高层接口
+
+    集成接收和发送功能，提供完整的微信集成
+    """
+
+    def __init__(
+        self,
+        webhook_token: Optional[str] = None,
+        app_id: Optional[str] = None,
+        app_secret: Optional[str] = None
+    ):
+        """
+        初始化微信服务
+
+        Args:
+            webhook_token: Webhook验证Token (接收消息)
+            app_id: 微信公众号AppID (发送消息)
+            app_secret: 微信公众号AppSecret (发送消息)
+        """
+        self.webhook_token = webhook_token
+        self.app_id = app_id
+        self.app_secret = app_secret
+
+        self.receiver = WeChatWebhookReceiver(token=webhook_token)
+        self.sender = None
+
+    async def get_sender(self) -> WeChatMessageSender:
+        """
+        获取消息发送器实例（延迟初始化）
+
+        Returns:
+            WeChatMessageSender实例
+        """
+        if self.sender is None:
+            if not self.app_id or not self.app_secret:
+                raise ValueError("app_id and app_secret are required for sending messages")
+
+            self.sender = WeChatMessageSender(
+                app_id=self.app_id,
+                app_secret=self.app_secret
+            )
+
+        return self.sender
+
+    async def handle_webhook(
+        self,
+        xml_data: str,
+        signature: Optional[str] = None,
+        timestamp: Optional[str] = None,
+        nonce: Optional[str] = None,
+        db: Optional[AsyncSession] = None,
+        workspace_id: Optional[str] = None,
+        creator_id: Optional[str] = None,
+        default_area_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        处理Webhook请求
+
+        Args:
+            xml_data: 微信XML数据
+            signature: 签名
+            timestamp: 时间戳
+            nonce: 随机数
+            db: 数据库会话
+            workspace_id: 工作空间ID
+            creator_id: 创建者ID
+            default_area_id: 默认区域ID
+
+        Returns:
+            处理结果
+        """
+        # 验证签名
+        if signature and timestamp and nonce:
+            if not self.receiver.verify_signature(signature, timestamp, nonce):
+                return {
+                    "status": "error",
+                    "error": "Invalid signature"
+                }
+
+        # 解析消息
+        try:
+            message = self.receiver.parse_xml_message(xml_data)
+        except Exception as e:
+            logger.error(f"Failed to parse WeChat XML: {e}")
+            return {
+                "status": "error",
+                "error": str(e)
+            }
+
+        # 如果提供了数据库，处理消息
+        if db and workspace_id and creator_id:
+            try:
+                result = await self.receiver.process_message(
+                    db, message, workspace_id, creator_id, default_area_id
+                )
+                return {
+                    "status": "success",
+                    "message": "WeChat message processed successfully",
+                    "result": result
+                }
+            except Exception as e:
+                logger.error(f"Failed to process WeChat message: {e}")
+                return {
+                    "status": "error",
+                    "error": str(e)
+                }
+        else:
+            return {
+                "status": "success",
+                "message": "WeChat message parsed (no database processing)",
+                "parsed_message": message
+            }
+
+    async def send_message_to_user(
+        self,
+        openid: str,
+        message_type: str,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """
+        发送消息给微信用户
+
+        Args:
+            openid: 用户OpenID
+            message_type: 消息类型 ('text', 'news', 'card')
+            **kwargs: 消息类型特定的参数
+
+        Returns:
+            发送结果
+        """
+        sender = await self.get_sender()
+
+        if message_type == 'text':
+            content = kwargs.get('content', '')
+            return await sender.send_text_message(openid, content)
+
+        elif message_type == 'card':
+            title = kwargs.get('title', '')
+            description = kwargs.get('description', '')
+            url = kwargs.get('url', '')
+            image_url = kwargs.get('image_url')
+            return await sender.send_card_message(openid, title, description, url, image_url)
+
+        elif message_type == 'news':
+            articles = kwargs.get('articles', [])
+            return await sender.send_news_message(openid, articles)
+
+        else:
+            return {
+                "status": "error",
+                "error": f"Unsupported message type: {message_type}"
+            }
+
+    async def close(self):
+        """关闭服务"""
+        if self.sender:
+            await self.sender.close()

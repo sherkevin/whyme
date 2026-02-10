@@ -2,13 +2,14 @@
 
 import uuid
 import logging
+import os
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 
-from agent_os.integrations.wechat import WeChatWebhookReceiver, process_wechat_message
+from agent_os.integrations.wechat import WeChatWebhookReceiver, process_wechat_message, WeChatService
 from agent_os.integrations.crawler import WebCrawler, crawl_url, LinkExtractor
 from agent_os.integrations.schema import (
     WebhookVerifyRequest,
@@ -19,7 +20,11 @@ from agent_os.integrations.schema import (
     CrawlURLResponse,
     ExtractLinksRequest,
     ExtractLinksResponse,
-    CreateResourceFromURL
+    CreateResourceFromURL,
+    SendTextMessageRequest,
+    SendNewsMessageRequest,
+    SendCardMessageRequest,
+    SendMessageResponse
 )
 from agent_os.items.crud import create_item, create_workspace
 from agent_os.items.schema import ItemCreate, WorkspaceCreate
@@ -200,6 +205,151 @@ async def wechat_webhook_health():
         status="healthy",
         service="wechat-webhook"
     )
+
+
+# ============================================================================
+# WeChat Send Message Endpoints
+# ============================================================================
+
+# Global WeChat service instance for sending messages
+_wechat_service: Optional[WeChatService] = None
+
+
+def get_wechat_service() -> WeChatService:
+    """获取或创建 WeChatService 实例"""
+    global _wechat_service
+    if _wechat_service is None:
+        # 从环境变量获取微信应用凭证
+        app_id = os.getenv("WECHAT_APP_ID")
+        app_secret = os.getenv("WECHAT_APP_SECRET")
+        webhook_token = os.getenv("WECHAT_WEBHOOK_TOKEN")
+
+        _wechat_service = WeChatService(
+            webhook_token=webhook_token,
+            app_id=app_id,
+            app_secret=app_secret
+        )
+    return _wechat_service
+
+
+@router.post("/wechat/send/text", response_model=SendMessageResponse)
+async def send_text_message(request_data: SendTextMessageRequest):
+    """
+    发送文本消息到微信
+
+    Args:
+        request_data: 发送请求
+
+    Returns:
+        SendMessageResponse: 发送结果
+    """
+    try:
+        service = get_wechat_service()
+
+        result = await service.send_message_to_user(
+            openid=request_data.openid,
+            message_type="text",
+            content=request_data.content
+        )
+
+        if result.get("errcode") == 0:
+            return SendMessageResponse(
+                status="success",
+                errcode=0,
+                errmsg="ok",
+                msgid=result.get("msgid")
+            )
+        else:
+            return SendMessageResponse(
+                status="error",
+                errcode=result.get("errcode"),
+                errmsg=result.get("errmsg", "Unknown error")
+            )
+
+    except Exception as e:
+        logger.error(f"Error sending text message: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/wechat/send/news", response_model=SendMessageResponse)
+async def send_news_message(request_data: SendNewsMessageRequest):
+    """
+    发送图文消息到微信
+
+    Args:
+        request_data: 发送请求
+
+    Returns:
+        SendMessageResponse: 发送结果
+    """
+    try:
+        service = get_wechat_service()
+
+        result = await service.send_message_to_user(
+            openid=request_data.openid,
+            message_type="news",
+            articles=request_data.articles
+        )
+
+        if result.get("errcode") == 0:
+            return SendMessageResponse(
+                status="success",
+                errcode=0,
+                errmsg="ok",
+                msgid=result.get("msgid")
+            )
+        else:
+            return SendMessageResponse(
+                status="error",
+                errcode=result.get("errcode"),
+                errmsg=result.get("errmsg", "Unknown error")
+            )
+
+    except Exception as e:
+        logger.error(f"Error sending news message: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/wechat/send/card", response_model=SendMessageResponse)
+async def send_card_message(request_data: SendCardMessageRequest):
+    """
+    发送卡片消息到微信 (使用图文消息格式)
+
+    Args:
+        request_data: 发送请求
+
+    Returns:
+        SendMessageResponse: 发送结果
+    """
+    try:
+        service = get_wechat_service()
+
+        result = await service.send_message_to_user(
+            openid=request_data.openid,
+            message_type="card",
+            title=request_data.title,
+            description=request_data.description,
+            url=request_data.url,
+            image_url=request_data.image_url
+        )
+
+        if result.get("errcode") == 0:
+            return SendMessageResponse(
+                status="success",
+                errcode=0,
+                errmsg="ok",
+                msgid=result.get("msgid")
+            )
+        else:
+            return SendMessageResponse(
+                status="error",
+                errcode=result.get("errcode"),
+                errmsg=result.get("errmsg", "Unknown error")
+            )
+
+    except Exception as e:
+        logger.error(f"Error sending card message: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================
