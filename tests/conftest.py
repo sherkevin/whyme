@@ -165,9 +165,29 @@ async def db_session(engine) -> AsyncGenerator[AsyncSession, None]:
     async with async_session_maker() as session:
         yield session
 
-    # 清理数据
+    # 清理数据 - 删除所有测试数据
     async with async_session_maker() as session:
-        await session.rollback()
+        from sqlalchemy import delete
+        # Delete in reverse order of dependencies
+        await session.execute(delete(AgentProcessEvent))
+        await session.execute(delete(Card))
+        await session.execute(delete(TaskExecutionLog))
+        await session.execute(delete(Skill))
+        await session.execute(delete(AgentDecision))
+        await session.execute(delete(SearchIndex))
+        await session.execute(delete(IngestionJob))
+        await session.execute(delete(InsightCluster4))
+        await session.execute(delete(User))
+        await session.execute(delete(APIKey))
+        await session.execute(delete(Session))
+        await session.execute(delete(Role))
+        await session.execute(delete(UserRole))
+        await session.execute(delete(AuditLog))
+        await session.execute(delete(Item))
+        await session.execute(delete(Project))
+        await session.execute(delete(Area))
+        await session.execute(delete(Workspace))
+        await session.commit()
 
 
 # ============================================================================

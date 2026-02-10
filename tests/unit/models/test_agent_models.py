@@ -87,18 +87,27 @@ class TestAgentProcessEvent:
 
         print("✅ Event with metadata created")
 
-    async def test_process_event_relationship_to_item(self, db_session, test_user):
-        """验证事件与 Item 的关系"""
-        from agent_os.items.crud import item_crud
+    async def test_process_event_relationship_to_item(self, db_session, sample_workspace_id):
+        """验证事件与 Item 的关系（简化版）"""
+        # 先创建一个 Workspace
+        workspace = Workspace(
+            id=sample_workspace_id,
+            name="Test Workspace"
+        )
+        db_session.add(workspace)
+        await db_session.commit()
 
         # 创建一个 Item
-        item = await item_crud.create(db_session, {
-            "user_id": test_user.id,
-            "workspace_id": test_user.default_workspace_id,
-            "title": "Test Item",
-            "content": "Test content",
-            "status": ItemStatus.RAW
-        })
+        item = Item(
+            title="Test Item",
+            content="Test content",
+            status=ItemStatus.RAW,
+            workspace_id=sample_workspace_id
+        )
+
+        db_session.add(item)
+        await db_session.commit()
+        await db_session.refresh(item)
 
         # 创建事件
         event = AgentProcessEvent(
@@ -114,12 +123,8 @@ class TestAgentProcessEvent:
 
         # 验证关系
         assert event.item_id == str(item.id)
-
-        # 查询 Item 的 process_events
-        # 注意：这需要在 Item 模型中已添加关系
-        # await db_session.refresh(item)
-        # assert len(item.process_events) == 1
-        # assert item.process_events[0].id == event.id
+        assert event.from_status == "raw"
+        assert event.to_status == "processed"
 
         print("✅ Event-Item relationship works")
 
@@ -172,8 +177,8 @@ class TestAgentProcessEvent:
         # 验证默认值
         assert event.result_summary is not None
         assert isinstance(event.result_summary, dict)
-        assert event.metadata is not None
-        assert isinstance(event.metadata, dict)
+        assert event.event_metadata is not None
+        assert isinstance(event.event_metadata, dict)
         assert event.processed_at is not None
         assert isinstance(event.processed_at, datetime)
         assert event.created_at is not None
