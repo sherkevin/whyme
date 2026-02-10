@@ -94,3 +94,8 @@ sandbox:
 io:
   websocket_path: "/ws"
   rest_prefix: "/api"
+  # Virtual IO (Aider + WebSocket integration) - DISABLED due to thread safety concerns
+  # Status: Experimental feature, pending architectural decision
+  # Decision Date: 2026-02-10
+  # See: P0_FIXES_REPORT.md section "Virtual IO 线程安全"
+  virtual_io_enabled: false
