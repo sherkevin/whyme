@@ -1,6 +1,10 @@
 """Tests for Agent core processor (Stage 2).
 
 Tests for the processor.py module that processes InboxItems.
+
+NOTE: These tests require LLM integration and are marked as integration tests.
+Run with: pytest tests/integration/ -v
+Or exclude from unit tests: pytest tests/unit/ -m "not integration"
 """
 
 import pytest
@@ -19,6 +23,9 @@ from agent_os.items.models import Item, ItemStatus, Workspace
 from agent_os.agent.classifier import ItemType
 from agent_os.auth.models import User
 from agent_os.auth.security import get_password_hash
+
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
 
 
 # ============================================================================
