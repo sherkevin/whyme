@@ -167,6 +167,44 @@ class TestSearchPerformance:
         assert stats['p95'] < 0.05, f"P95 ({stats['p95']*1000:.2f}ms) exceeds 50ms threshold"
 
 
+    @pytest.mark.asyncio
+    @pytest.mark.performance
+    async def test_hybrid_search_performance(self, perf_db, perf_metrics, perf_thresholds):
+        """Test hybrid search with vectors + keywords - PRD4 validation."""
+        from agent_os.search_engine.embedding_service import get_embedding_service
+
+        # Enable vector search for hybrid testing
+        engine = SearchEngine(perf_db, enable_vector_search=True)
+
+        # Initialize embedding service
+        embedding_service = get_embedding_service()
+
+        query = SearchQuery(query="Test content performance", page_size=20)
+
+        # Warmup
+        for _ in range(3):
+            result = await engine.search(query)
+
+        # Actual benchmark
+        for _ in range(20):
+            start = time.perf_counter()
+            result = await engine.search(query)
+            duration = time.perf_counter() - start
+            perf_metrics.add_result("search_hybrid_vector", duration)
+
+        stats = perf_metrics.get_statistics("search_hybrid_vector")
+        if stats and stats.get("mean"):
+            print(f"\nHybrid vector+text search (20 runs):")
+            print(f"  Mean: {stats['mean']*1000:.2f}ms")
+            print(f"  P75: {stats['p75']*1000:.2f}ms")
+            print(f"  P95: {stats['p95']*1000:.2f}ms")
+
+            # PRD4 requirement: hybrid search should also be fast
+            assert stats['p95'] < 0.1, f"P95 ({stats['p95']*1000:.2f}ms) exceeds 100ms threshold"
+        else:
+            pytest.skip("Could not collect hybrid search metrics")
+
+
 class TestAgentPerformance:
     """Performance tests for Agent functionality."""
 
