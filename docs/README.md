@@ -23,7 +23,8 @@
 - [PRD4 - 最新PRD](01-prd/PRD4.md) - 最新产品需求
 
 ### 🔧 开发文档
-- [API 参考](03-toolkit/api-reference.md) - API 接口文档
+- [完整 API 参考](09-api/COMPLETE_API_REFERENCE.md) - 完整 API 接口文档（包含 WeChat 集成）
+- [向量嵌入快速参考](09-api/EMBEDDING_QUICK_REFERENCE.md) - 向量嵌入 API 快速参考
 - [Skills系统](03-toolkit/skills-system-guide.md) - Skills 系统指南
 - [MCP Skills设计](03-toolkit/mcp-skills-design.md) - MCP Skills 设计
 - [协作指南](03-toolkit/collaboration-guidelines.md) - 团队协作规范
@@ -99,7 +100,8 @@
 | 部署到服务器 | [guides/deployment.md](guides/deployment.md) |
 | 运行测试 | [TESTING_GUIDE.md](../TESTING_GUIDE.md) |
 | 了解架构 | [ARCHITECTURE.md](../ARCHITECTURE.md) |
-| 调用 API | [03-toolkit/api-reference.md](03-toolkit/api-reference.md) |
+| 调用 API | [09-api/COMPLETE_API_REFERENCE.md](09-api/COMPLETE_API_REFERENCE.md) |
+| 向量嵌入 API | [09-api/EMBEDDING_QUICK_REFERENCE.md](09-api/EMBEDDING_QUICK_REFERENCE.md) |
 | 查看性能 | [reports/performance/PERFORMANCE_BASELINE_REPORT.md](reports/performance/PERFORMANCE_BASELINE_REPORT.md) |
 | 检查 PRD 合规性 | [reports/prd/PRD_COMPLIANCE_MATRIX.md](reports/prd/PRD_COMPLIANCE_MATRIX.md) |
 | 使用 Skills 系统 | [03-toolkit/skills-system-guide.md](03-toolkit/skills-system-guide.md) |
@@ -112,11 +114,11 @@
 | 角色 | 推荐文档 |
 |------|----------|
 | **新用户** | README.md → QUICKSTART.md → guides/deployment.md |
-| **开发者** | ARCHITECTURE.md → 03-toolkit/api-reference.md → TESTING_GUIDE.md |
+| **开发者** | ARCHITECTURE.md → 09-api/COMPLETE_API_REFERENCE.md → TESTING_GUIDE.md |
 | **测试员** | TESTING_GUIDE.md → reports/testing/ → 05-testing/ |
 | **产品经理** | 01-prd/ → reports/prd/ → 02-progress/latest-status.md |
 | **运维** | guides/deployment.md → 11-deployment/ → 10-architecture/ |
-| **前端开发** | 11-deployment/FRONTEND_INTEGRATION_GUIDE.md → 03-toolkit/api-reference.md |
+| **前端开发** | 11-deployment/FRONTEND_INTEGRATION_GUIDE.md → 09-api/COMPLETE_API_REFERENCE.md |
 
 ---
 
@@ -137,8 +139,7 @@ docs/
 ├── 02-progress/               # 进度报告（1个）
 │   └── latest-status.md        # 最新状态
 │
-├── 03-toolkit/                # 技术文档（5个）
-│   ├── api-reference.md        # API参考
+├── 03-toolkit/                # 技术文档（4个）
 │   ├── architecture.md         # 架构说明
 │   ├── collaboration-guidelines.md  # 协作指南
 │   ├── mcp-skills-design.md    # MCP Skills设计
