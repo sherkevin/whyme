@@ -80,13 +80,14 @@ async def init_db():
         )
     
     async with get_engine().begin() as conn:
-        from agent_os.knowledge.models import Card
-        from agent_os.items.models import Item
-        from agent_os.tasks.models import Task
+        # Import all models to ensure they're registered
         from agent_os.auth.models import User
         from agent_os.conversations.models import Conversation, ConversationSummary
+        from agent_os.items.models import Item, GraphEdge
+        from agent_os.tasks.models import Task
+        from agent_os.knowledge.models import Card
         from agent_os.agent.models import AgentProcessEvent
-        
+        # Create all tables
         await conn.run_sync(Base.metadata.create_all)
 
 

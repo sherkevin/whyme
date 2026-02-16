@@ -34,7 +34,8 @@ class Task(Base):
 
     __table_args__ = (
         # 复合索引优化多租户查询
-        Index('idx_task_org_user', 'organization_id', 'user_id'),
-        Index('idx_task_org_status', 'organization_id', 'status'),
-        Index('idx_task_org_status_date', 'organization_id', 'status', 'scheduled_date'),
+        # TODO: Re-enable when organizations table exists
+        # Index('idx_task_org_user', 'organization_id', 'user_id'),
+        # Index('idx_task_org_status', 'organization_id', 'status'),
+        # Index('idx_task_org_status_date', 'organization_id', 'status', 'scheduled_date'),
     )

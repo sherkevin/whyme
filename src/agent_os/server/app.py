@@ -53,6 +53,27 @@ app.include_router(stage3_router)
 app.include_router(stage4_router)
 app.include_router(connections_router)
 
+
+# Startup event to initialize database
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database engine on startup."""
+    from agent_os.db.base import get_engine, init_db
+    import logging
+
+    # Initialize database engine
+    get_engine()
+    logging.info("Database engine initialized")
+
+    # Create database tables
+    try:
+        await init_db()
+        logging.info("Database tables created successfully")
+    except Exception as e:
+        logging.error(f"Failed to create database tables: {e}")
+        # Don't fail startup if table creation fails
+
+
 # Import and include agent router after app creation
 # to avoid circular import issues with the agent package
 try:

@@ -18,6 +18,12 @@ except ImportError:
 
 from agent_os.db.base import Base
 
+# Import models that Item depends on for relationships
+try:
+    from agent_os.agent.models import AgentProcessEvent
+except ImportError:
+    AgentProcessEvent = None  # Will fail if this is critical
+
 
 class ItemType(str, Enum):
     """Item 类型枚举 - PRD4 规范"""
@@ -314,3 +320,10 @@ class GraphEdge(Base):
         CheckConstraint("relation_type IN ('topic', 'causal', 'supplement')", name='check_relation_type'),
         CheckConstraint("weight >= 0 AND weight <= 1", name='check_weight_range'),
     )
+
+
+# Import AgentProcessEvent at module level to ensure relationship can resolve
+# This must be after both classes are defined
+from agent_os.agent.models import AgentProcessEvent
+# Update the relationship with the actual class reference
+Item.process_events = relationship(AgentProcessEvent, back_populates="item", cascade="all, delete-orphan")

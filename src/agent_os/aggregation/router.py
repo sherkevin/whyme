@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_os.db.base import get_db
 from agent_os.conversations import ConversationRepository
-from agent_os.knowledge.models import Card
+from agent_os.auth.models import User
+# TODO: Implement InboxItem model
+# from agent_os.knowledge.models import Card
 from agent_os.items.models import Item as InboxItem
+from agent_os.knowledge.models import Card
 from agent_os.tasks.models import Task
 from agent_os.auth.dependencies import get_current_user
 from agent_os.auth.models import User
@@ -34,9 +37,7 @@ async def get_today_summary(
         - knowledge_context: 相关知识卡片
         - recent_conversations: 最近对话
     """
-    # Use authenticated user if provided
-    if user_id is None and current_user:
-        user_id = current_user.id
+    user_id = None  # TODO: Get from authenticated user
 
     if user_id is None:
         return {"error": "User ID required"}

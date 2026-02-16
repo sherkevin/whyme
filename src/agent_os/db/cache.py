@@ -180,6 +180,34 @@ cache_manager = CacheManager()
 
 
 # ============================================================================
+# Redis helper for verification service
+# ============================================================================
+
+def get_redis():
+    """Get synchronous Redis client for verification codes.
+
+    Returns:
+        Redis client or None if Redis not available
+    """
+    if not REDIS_AVAILABLE:
+        return None
+
+    try:
+        import redis
+        return redis.Redis(
+            host=os.getenv('REDIS_HOST', 'localhost'),
+            port=int(os.getenv('REDIS_PORT', 6379)),
+            db=int(os.getenv('REDIS_DB', 0)),
+            decode_responses=True,
+            socket_connect_timeout=5,
+            socket_timeout=5,
+        )
+    except Exception as e:
+        print(f"Failed to create Redis client: {e}")
+        return None
+
+
+# ============================================================================
 # Cache decorators
 # ============================================================================
 
