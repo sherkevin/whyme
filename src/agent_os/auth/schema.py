@@ -2,7 +2,7 @@
 
 import uuid
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Literal
 from datetime import datetime
 
 
@@ -24,6 +24,19 @@ class UserLogin(BaseModel):
 class RefreshTokenRequest(BaseModel):
     """Refresh token request."""
     refresh_token: str = Field(..., description="Refresh token")
+
+
+class EmailRegisterRequest(BaseModel):
+    """Email-based registration request."""
+    email: EmailStr = Field(..., description="Email address")
+    password: str = Field(..., min_length=6, max_length=100, description="Password")
+    code: str = Field(..., min_length=6, max_length=6, description="Email verification code")
+
+
+class EmailLoginRequest(BaseModel):
+    """Email-based login request."""
+    email: EmailStr = Field(..., description="Email address")
+    code: str = Field(..., min_length=6, max_length=6, description="Email verification code")
 
 
 class UserSettingsUpdate(BaseModel):
@@ -99,3 +112,45 @@ class ValidationErrorResponse(BaseModel):
     """Validation error response."""
     detail: str = Field(default="Validation error", description="Error message")
     errors: Dict[str, list[str]] = Field(default_factory=dict, description="Field errors")
+
+
+# ============== Verification Code Schemas ==============
+
+class SendCodeRequest(BaseModel):
+    """Send verification code request."""
+    email: EmailStr = Field(..., description="Email address to send code to")
+    code_type: Literal["login", "bind", "reset"] = Field(
+        default="login",
+        description="Verification code type"
+    )
+
+
+class SendCodeResponse(BaseModel):
+    """Send verification code response."""
+    code: str = Field(default="SUCCESS", description="Response code")
+    message: str = Field(..., description="Response message")
+    data: Optional[dict] = None
+
+
+class VerifyCodeRequest(BaseModel):
+    """Verify code request."""
+    email: EmailStr = Field(..., description="Email address")
+    code: str = Field(..., min_length=6, max_length=6, description="6-digit verification code")
+    code_type: Literal["login", "bind", "reset"] = Field(
+        default="login",
+        description="Verification code type"
+    )
+
+
+class VerifyCodeResponse(BaseModel):
+    """Verify code response."""
+    code: str = Field(..., description="Response code")
+    message: str = Field(..., description="Response message")
+    data: Optional[Dict[str, Any]] = None
+
+
+class RateLimitResponse(BaseModel):
+    """Rate limit error response."""
+    code: str = Field(default="RATE_LIMITED", description="Error code")
+    message: str = Field(..., description="Error message")
+    retry_after: int = Field(..., description="Seconds until retry allowed")

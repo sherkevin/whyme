@@ -14,7 +14,8 @@ class Task(Base):
     __tablename__ = "tasks"
 
     id = Column(Integer, primary_key=True, index=True)
-    organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    # TODO: Add organizations table and uncomment this
+    # organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     title = Column(String(200), nullable=False)
     description = Column(Text)
@@ -33,7 +34,8 @@ class Task(Base):
 
     __table_args__ = (
         # 复合索引优化多租户查询
-        Index('idx_task_org_user', 'organization_id', 'user_id'),
-        Index('idx_task_org_status', 'organization_id', 'status'),
-        Index('idx_task_org_status_date', 'organization_id', 'status', 'scheduled_date'),
+        # TODO: Re-enable when organizations table exists
+        # Index('idx_task_org_user', 'organization_id', 'user_id'),
+        # Index('idx_task_org_status', 'organization_id', 'status'),
+        # Index('idx_task_org_status_date', 'organization_id', 'status', 'scheduled_date'),
     )

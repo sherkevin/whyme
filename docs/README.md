@@ -21,6 +21,7 @@
 - [PRD1 - 架构规范](01-prd/PRD1.md) - 详细需求文档
 - [PRD2 - Toolkit系统](01-prd/PRD2.md) - Toolkit 系统需求
 - [PRD4 - 最新PRD](01-prd/PRD4.md) - 最新产品需求
+- [PRD5 - Auth 邮件服务](01-prd/PRD5-AUTH-SMTP-VERIFICATION.md) - 邮件服务与验证码功能
 
 ### 🔧 开发文档
 - [完整 API 参考](09-api/COMPLETE_API_REFERENCE.md) - 完整 API 接口文档（包含 WeChat 集成）
@@ -130,11 +131,12 @@ docs/
 ├── INDEX.md                   # 主索引
 ├── 00-start.md                 # 项目概述
 │
-├── 01-prd/                    # 产品需求文档（4个）
+├── 01-prd/                    # 产品需求文档（5个）
 │   ├── PRD0.md                 # 产品概述
 │   ├── PRD1.md                 # 架构规范
 │   ├── PRD2.md                 # Toolkit系统
-│   └── PRD4.md                 # 最新PRD
+│   ├── PRD4.md                 # 最新PRD
+│   └── PRD5-AUTH-SMTP-VERIFICATION.md  # 邮件服务与验证码
 │
 ├── 02-progress/               # 进度报告（1个）
 │   └── latest-status.md        # 最新状态
@@ -270,6 +272,6 @@ docs/
 
 ---
 
-**最后更新:** 2026-02-10
+**最后更新:** 2026-02-14
 **维护者:** AgentOS Team
-**文档总数:** ~70 个
+**文档总数:** ~71 个

@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_os.db.base import get_db
 from agent_os.conversations import ConversationRepository
-from agent_os.knowledge.models import InboxItem, Card
+from agent_os.auth.models import User
+# TODO: Implement InboxItem model
+# from agent_os.knowledge.models import InboxItem, Card
+from agent_os.knowledge.models import Card
 from agent_os.tasks.models import Task
 
 
@@ -17,7 +20,6 @@ router = APIRouter(prefix="/api/v1", tags=["aggregation"])
 
 @router.get("/today")
 async def get_today_summary(
-    user_id: int,
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """Get today's unified summary across all modules.
@@ -29,9 +31,7 @@ async def get_today_summary(
         - knowledge_context: 相关知识卡片
         - recent_conversations: 最近对话
     """
-    # Use authenticated user if provided
-    if user_id is None and current_user:
-        user_id = current_user.id
+    user_id = None  # TODO: Get from authenticated user
 
     if user_id is None:
         return {"error": "User ID required"}
@@ -162,20 +162,16 @@ async def get_today_summary(
 
 @router.get("/today/summary")
 async def get_today_summary_simple(
-    user_id: int | None = None,
-    current_user: User = None,
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """Get simplified today summary (for dashboard widgets)."""
-    # Use authenticated user if provided
-    if user_id is None and current_user:
-        user_id = current_user.id
+    user_id = None  # TODO: Get from authenticated user
 
     if user_id is None:
         return {"error": "User ID required"}
 
     # Get the full summary
-    full_summary = await get_today_summary(user_id, current_user, db)
+    full_summary = await get_today_summary(db)
 
     # Return only the summary part
     return full_summary.get("summary", {})

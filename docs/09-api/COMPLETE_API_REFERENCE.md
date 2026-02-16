@@ -1,9 +1,9 @@
 # AgentOS API 完整参考文档
 
-**版本**: v4.0
-**最后更新**: 2026-02-11
+**版本**: v6.0
+**最后更新**: 2026-02-16
 **基础路径**: `/api/v1`
-**总计**: 150+ API 端点
+**总计**: 154+ API 端点（新增2个邮箱验证码端点）
 
 ---
 
@@ -150,6 +150,338 @@ Authorization: Bearer {access_token}
 更新用户偏好设置
 
 **端点**: `PUT /api/v1/auth/settings`
+
+**请求头**:
+```
+Authorization: Bearer {access_token}
+```
+
+**请求体**:
+```json
+{
+  "settings": {
+    "daily_goal": 15,
+    "theme": "light",
+    "language": "en-US"
+  }
+}
+```
+
+**响应** (200):
+```json
+{
+  "id": "user-uuid",
+  "username": "johndoe",
+  "email": "john@example.com",
+  "settings": {
+    "daily_goal": 15,
+    "theme": "light",
+    "language": "en-US"
+  },
+  "is_active": true,
+  "created_at": "2024-01-01T00:00:00Z"
+}
+```
+
+### 1.6 发送验证码 (B-03B)
+
+向用户邮箱发送 6 位数字验证码
+
+**端点**: `POST /api/v1/auth/send-code`
+
+**请求体**:
+```json
+{
+  "email": "user@example.com",
+  "code_type": "login"
+}
+```
+
+**参数说明**:
+- `email`: 接收验证码的邮箱地址
+- `code_type`: 验证码类型
+  - `login`: 登录验证
+  - `bind`: 绑定邮箱
+  - `reset`: 重置密码
+  - 默认: `login`
+
+**响应** (200):
+```json
+{
+  "code": "SUCCESS",
+  "message": "验证码已发送",
+  "data": {
+    "expires_in": 300
+  }
+}
+```
+
+**频控响应** (200):
+```json
+{
+  "code": "RATE_LIMITED",
+  "message": "发送过于频繁，请 60 秒后重试",
+  "retry_after": 60
+}
+```
+
+**错误响应** (400):
+```json
+{
+  "detail": "邮箱格式不正确"
+}
+```
+
+**特性**:
+- 生成 6 位随机数字验证码
+- 验证码有效期 5 分钟（300 秒）
+- 频率限制：同邮箱 60 秒内只能发送 1 次
+- IP 频率限制：同 IP 60 秒内只能发送 1 次
+- 防止邮箱枚举：即使邮箱不存在也返回成功
+
+---
+
+### 1.7 邮箱验证码注册 ⭐ NEW
+
+**端点**: `POST /api/v1/auth/register/email`
+
+使用邮箱和验证码注册新账号（无需用户名）
+
+**功能说明**:
+- 用户只需提供邮箱和验证码即可注册
+- 系统自动从邮箱地址生成用户名
+- 支持所有邮箱类型（QQ、Gmail、163等）
+- 验证码通过邮件发送，5分钟有效
+
+**请求体**:
+```json
+{
+  "email": "user@example.com",
+  "password": "SecurePass123!",
+  "code": "123456"
+}
+```
+
+**参数说明**:
+- `email` (string): 用户邮箱地址（必填）
+- `password` (string): 设置密码，至少6位（必填）
+- `code` (string): 邮箱收到的6位验证码（必填）
+
+**响应** (201 Created):
+```json
+{
+  "access_token": "eyJ0eXAiOiJ...",
+  "refresh_token": "eyJ0eXAiOiJ...",
+  "token_type": "bearer",
+  "expires_in": 1800
+}
+```
+
+**成功返回数据**:
+- `access_token`: 访问令牌，用于后续API调用
+- `refresh_token`: 刷新令牌，用于获取新的访问令牌
+- `token_type`: 令牌类型，固定为 "bearer"
+- `expires_in`: 访问令牌有效期（秒），默认30分钟
+
+**错误响应**:
+
+邮箱已存在 (409 Conflict):
+```json
+{
+  "detail": "Email already registered"
+}
+```
+
+验证码无效 (422 Unprocessable Entity):
+```json
+{
+  "detail": "Invalid or expired verification code"
+}
+```
+
+验证码过期 (422 Unprocessable Entity):
+```json
+{
+  "detail": "Verification code has expired. Please request a new one."
+}
+```
+
+**使用示例**:
+```bash
+# 1. 发送验证码
+curl -X POST http://localhost:8003/api/v1/auth/send-code \
+  -H "Content-Type: application/json" \
+  -d '{"email":"newuser@example.com","code_type":"login"}'
+
+# 2. 使用验证码注册
+curl -X POST http://localhost:8003/api/v1/auth/register/email \
+  -H "Content-Type: application/json" \
+  -d '{"email":"newuser@example.com","password":"mypassword","code":"123456"}'
+```
+
+**用户名生成规则**:
+- 从邮箱地址提取：`user@example.com` → `user`
+- 清理特殊字符：`user.name@example.com` → `user_name`
+- 如有冲突，自动添加序号：`user_1`, `user_2`
+
+**安全特性**:
+- ✅ 验证码一次性使用（验证后自动失效）
+- ✅ 频率限制：60秒内只能发送1次
+- ✅ 有效期限制：5分钟后自动过期
+- ✅ 失败保护：5次失败后锁定30分钟
+
+---
+
+### 1.8 邮箱验证码登录 ⭐ NEW
+
+**端点**: `POST /api/v1/auth/login/email`
+
+使用邮箱和验证码登录（无需密码）
+
+**功能说明**:
+- 无需记忆密码，更安全便捷
+- 输入邮箱和验证码即可登录
+- 验证码通过邮件发送，2秒内到达
+- 支持所有邮箱类型
+
+**请求体**:
+```json
+{
+  "email": "user@example.com",
+  "code": "123456"
+}
+```
+
+**参数说明**:
+- `email` (string): 已注册的邮箱地址（必填）
+- `code` (string): 邮箱收到的6位验证码（必填）
+
+**响应** (200 OK):
+```json
+{
+  "access_token": "eyJ0eXAiOiJ...",
+  "refresh_token": "eyJ0eXAiOiJ...",
+  "token_type": "bearer",
+  "expires_in": 1800
+}
+```
+
+**成功返回数据**:
+- `access_token`: 访问令牌
+- `refresh_token`: 刷新令牌
+- `token_type`: "bearer"
+- `expires_in`: 有效期（秒），默认30分钟
+
+**错误响应**:
+
+用户不存在 (401 Unauthorized):
+```json
+{
+  "detail": "User not found. Please register first."
+}
+```
+
+验证码无效 (401 Unauthorized):
+```json
+{
+  "detail": "Invalid or expired verification code"
+}
+```
+
+账户已锁定 (423 Locked):
+```json
+{
+  "detail": "Account temporarily locked. Please try again later"
+}
+```
+
+验证码过期 (422 Unprocessable Entity):
+```json
+{
+  "detail": "Verification code has expired. Please request a new one."
+}
+```
+
+**使用示例**:
+```bash
+# 1. 发送验证码
+curl -X POST http://localhost:8003/api/v1/auth/send-code \
+  -H "Content-Type: application/json" \
+  -d '{"email":"existinguser@example.com","code_type":"login"}'
+
+# 2. 使用验证码登录
+curl -X POST http://localhost:8003/api/v1/auth/login/email \
+  -H "Content-Type: application/json" \
+  -d '{"email":"existinguser@example.com","code":"123456"}'
+```
+
+**安全特性**:
+- ✅ 无密码登录（更安全）
+- ✅ 验证码一次性使用
+- ✅ 自动更新最后登录时间
+- ✅ 失败次数限制
+- ✅ 账户锁定保护
+
+---
+
+### 1.9 验证验证码 (B-03C)
+
+验证用户提交的验证码
+
+**端点**: `POST /api/v1/auth/verify-code`
+
+**请求体**:
+```json
+{
+  "email": "user@example.com",
+  "code": "123456",
+  "code_type": "login"
+}
+```
+
+**参数说明**:
+- `email`: 邮箱地址
+- `code`: 6 位数字验证码
+- `code_type`: 验证码类型（默认: `login`）
+
+**响应** (200):
+```json
+{
+  "code": "SUCCESS",
+  "message": "验证通过",
+  "data": {
+    "token": "eyJ0eXAi...",
+    "user_id": "user-uuid"
+  }
+}
+```
+
+**错误响应** - 验证码错误 (400):
+```json
+{
+  "detail": "验证码错误，还剩 2 次机会"
+}
+```
+
+**错误响应** - 验证码过期 (400):
+```json
+{
+  "detail": "验证码已过期，请重新获取"
+}
+```
+
+**错误响应** - 尝试次数过多 (423):
+```json
+{
+  "detail": "验证失败次数过多，请 30 分钟后重试"
+}
+```
+
+**特性**:
+- 一次性使用：验证成功后立即删除验证码
+- 失败计数：最多允许 5 次错误尝试
+- 自动锁定：5 次失败后锁定 30 分钟
+- 安全保护：不区分"验证码错误"和"验证码不存在"
 
 **请求头**:
 ```
@@ -3091,6 +3423,26 @@ Content-Type: application/json
 
 ## 版本历史
 
+### v6.0 (2026-02-16) - 邮箱验证码注册登录 ⭐ NEW
+
+- 新增邮箱验证码注册 API - POST /auth/register/email
+- 新增邮箱验证码登录 API - POST /auth/login/email
+- 集成阿里企业邮箱SMTP服务（smtp.qiye.aliyun.com:465）
+- 支持所有邮箱类型（QQ、Gmail、163等）
+- 实现无密码登录功能
+- Web测试界面：http://localhost:8003/static/email-auth.html
+- 总计 154+ API 端点
+- 生产环境就绪
+
+### v5.0 (2026-02-14)
+
+- 新增验证码功能 API (PRD5)
+- POST /auth/send-code - 发送验证码到邮箱
+- POST /auth/verify-code - 验证邮箱验证码
+- 集成 SMTP 邮件服务
+- 支持验证码频控和锁定机制
+- 总计 152+ API 端点
+
 ### v4.0 (2026-02-11)
 
 - 完整的 API 文档，覆盖所有模块
@@ -3118,6 +3470,6 @@ Content-Type: application/json
 
 ---
 
-**最后更新**: 2026-02-11
+**最后更新**: 2026-02-16
 **维护者**: AgentOS Team
-**文档版本**: v4.0
+**文档版本**: v6.0
