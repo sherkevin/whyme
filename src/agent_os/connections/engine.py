@@ -234,6 +234,18 @@ class ConnectionEngine:
 
             if union == 0:
                 return 0.0
+            
+            # 如果 Jaccard 为 0，尝试字符级重叠（中文兜底）
+            if intersection == 0:
+                text_a = f"{item_a.title or ''} {item_a.content or ''}"
+                text_b = f"{item_b.title or ''} {item_b.content or ''}"
+                chars_a = set(text_a)
+                chars_b = set(text_b)
+                char_intersection = len(chars_a & chars_b)
+                char_union = len(chars_a | chars_b)
+                if char_union > 0:
+                    return char_intersection / char_union
+                return 0.0
 
             return intersection / union
 

@@ -18,6 +18,7 @@ from agent_os.auth.schema import (
 from agent_os.auth.jwt_handler import create_access_token, create_refresh_token, verify_token
 from agent_os.auth.dependencies import get_current_user
 from agent_os.auth.models import User
+from agent_os.items.models import Workspace
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
 
@@ -62,7 +63,17 @@ async def register(
         password=user_data.password
     )
 
+    # Create default workspace for user
+    default_workspace = Workspace(
+        id=user.id,  # Use user ID as workspace ID for simplicity
+        name=f"{user_data.username}'s Workspace",
+        owner_id=user.id,
+    )
+    db.add(default_workspace)
+    await db.commit()
+
     # Generate tokens
+
     access_token = create_access_token(user_id=user.id)
     refresh_token = create_refresh_token(user_id=user.id)
 

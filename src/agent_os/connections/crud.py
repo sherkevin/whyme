@@ -161,7 +161,9 @@ async def calculate_and_store_connection(
     db: AsyncSession,
     item_a_id: uuid.UUID,
     item_b_id: uuid.UUID,
-    engine: Optional[ConnectionEngine] = None
+    engine: Optional[ConnectionEngine] = None,
+    item_a_obj=None,
+    item_b_obj=None,
 ) -> Optional[GraphEdge]:
     """
     计算两个Item之间的连接并存储
@@ -176,18 +178,26 @@ async def calculate_and_store_connection(
         创建的GraphEdge，如果分数太低则返回None
     """
     # 获取Items
-    result_a = await db.execute(
-        select(Item).where(Item.id == item_a_id)
-    )
-    item_a = result_a.scalar_one_or_none()
+    # 获取Items（支持传入已有对象，避免从items表查不到cards）
+    if item_a_obj is not None:
+        item_a = item_a_obj
+    else:
+        result_a = await db.execute(
+            select(Item).where(Item.id == item_a_id)
+        )
+        item_a = result_a.scalar_one_or_none()
 
-    result_b = await db.execute(
-        select(Item).where(Item.id == item_b_id)
-    )
-    item_b = result_b.scalar_one_or_none()
+    if item_b_obj is not None:
+        item_b = item_b_obj
+    else:
+        result_b = await db.execute(
+            select(Item).where(Item.id == item_b_id)
+        )
+        item_b = result_b.scalar_one_or_none()
 
     if not item_a or not item_b:
         return None
+
 
     # 创建引擎
     if engine is None:
@@ -197,7 +207,7 @@ async def calculate_and_store_connection(
     score = await engine.calculate_score(item_a, item_b)
 
     # 如果分数太低，不创建连接
-    if score < 0.1:  # 降低阈值到0.1以适应没有embedding的情况
+    if score < 0.01:  # 降低阈值到0.1以适应没有embedding的情况
         return None
 
     # 判断关系类型和是否强连接

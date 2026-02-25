@@ -89,7 +89,7 @@ async def create_card(
         Created card
     """
     # Get user's default workspace
-    workspace_id = current_user.default_workspace_id
+    workspace_id = current_user.id
 
     card_data = card_in.model_dump()
     card = await crud.create_card(
@@ -98,6 +98,20 @@ async def create_card(
         workspace_id=workspace_id,
         obj_in=card_data
     )
+    # 自动写入搜索索引
+    try:
+        from agent_os.search_engine.models import SearchIndex
+        search_entry = SearchIndex(
+            item_type='card',
+            item_id=card.id,
+            title=card.title,
+            content=card.content,
+            tags=card.tags or [],
+        )
+        db.add(search_entry)
+        await db.commit()
+    except Exception:
+        pass  # 索引失败不影响卡片创建
     return CardResponse(
         id=card.id,
         workspace_id=card.workspace_id,
@@ -184,7 +198,7 @@ async def list_cards(
     skip = (page - 1) * page_size
 
     # Get user's default workspace
-    workspace_id = current_user.default_workspace_id
+    workspace_id = current_user.id
 
     cards, total = await crud.get_cards(
         db,
@@ -214,6 +228,36 @@ async def list_cards(
 
     return CardList(items=card_responses, total=total, page=page, page_size=page_size)
 
+@router.put("/cards/{card_id}", response_model=CardResponse)
+async def update_card(
+    *,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    card_id: str,
+    card_in: CardUpdate,
+) -> CardResponse:
+    """Update a card."""
+    card_uuid = uuid.UUID(card_id)
+    card = await crud.get_card(db, card_id=card_uuid, user_id=current_user.id)
+    if not card:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Card not found"
+        )
+    update_data = card_in.model_dump(exclude_unset=True)
+    card = await crud.update_card(db, db_obj=card, obj_in=update_data)
+    return CardResponse(
+        id=card.id,
+        workspace_id=card.workspace_id,
+        user_id=card.user_id,
+        title=card.title,
+        content=card.content,
+        para_type=card.para_type,
+        tags=card.tags or [],
+        source_inbox_item_id=card.source_inbox_item_id,
+        created_at=card.created_at.isoformat(),
+        updated_at=card.updated_at.isoformat(),
+    )
 
 @router.delete("/cards/{card_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_card(
@@ -234,6 +278,21 @@ async def delete_card(
     """
     card_uuid = uuid.UUID(card_id)
     success = await crud.delete_card(db, card_id=card_uuid, user_id=current_user.id)
+    # 删除搜索索引
+    try:
+        from agent_os.search_engine.models import SearchIndex
+        from sqlalchemy import select, and_
+        result = await db.execute(
+            select(SearchIndex).filter(
+                and_(SearchIndex.item_type == 'card', SearchIndex.item_id == card_uuid)
+            )
+        )
+        index_entry = result.scalar_one_or_none()
+        if index_entry:
+            await db.delete(index_entry)
+            await db.commit()
+    except Exception:
+        pass
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -21,6 +21,7 @@ from agent_os.search_engine.schema import (
     SearchIndexUpdate,
     SearchIndexResponse,
     SearchQueryRequest,
+    SearchResultItemResponse,
     SearchResponse,
     BulkIndexRequest,
     BulkIndexResponse,
@@ -296,7 +297,7 @@ async def search(
 
     # Convert to response format
     results_response = [
-        SearchResponse.model_validate({
+            SearchResultItemResponse.model_validate({
             "item_type": r.item_type,
             "item_id": r.item_id,
             "title": r.title,
@@ -688,6 +689,38 @@ async def list_insight_clusters(
     )
 
 
+@router.post("/insights/deep-generate")
+async def deep_generate_insights(
+    force: bool = False,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    """
+    基于知识图谱 Cluster 检测生成认知结晶
+
+    Args:
+        force: 是否清除旧 insight 重新生成
+    """
+    from agent_os.search_engine.insight_generator import InsightGenerator
+    generator = InsightGenerator(db)
+    result = await generator.generate_all(
+        generated_by=str(current_user.id) if current_user else None,
+        force=force,
+    )
+    return result
+
+
+@router.get("/insights/stats")
+async def get_insight_stats(
+    db: AsyncSession = Depends(get_db),
+):
+    """获取 Generated Insights 统计（按原始文档规则）"""
+    from agent_os.search_engine.insight_generator import InsightGenerator
+    generator = InsightGenerator(db)
+    count = await generator.get_generated_insights_count()
+    return {"generated_insights": count}
+
+
 @router.get("/insights/{insight_id}", response_model=InsightClusterResponse)
 async def get_insight_cluster(
     insight_id: str,
@@ -749,3 +782,4 @@ async def delete_insight_cluster(
 
     await db.delete(insight)
     await db.commit()
+

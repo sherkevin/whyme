@@ -16,13 +16,13 @@ from agent_os.connections.schema import (
     RecalculateRequest,
     RecalculateResponse
 )
-from agent_os.items.models import Item
+from agent_os.items.models import Item, GraphEdge
 from agent_os.db.base import get_db
 from sqlalchemy import select, and_
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/connections", tags=["connections"])
+router = APIRouter(prefix="/api/v1/knowledge", tags=["connections"])
 
 
 # ============================================================================
@@ -351,6 +351,190 @@ async def recalculate_connections(
 # ============================================================================
 # Health Check
 # ============================================================================
+
+@router.get("/graph/all", response_model=GraphData)
+async def get_full_graph(
+    limit: int = 50,
+    min_score: float = 0.0,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    获取用户的完整知识图谱数据（用于数字花园可视化）
+
+    Args:
+        limit: 节点数上限
+        min_score: 最低关联分数阈值
+
+    Returns:
+        完整图数据 (所有节点和边)
+    """
+    try:
+        from agent_os.connections.schema import GraphNode, GraphEdgeSimple
+
+        # 获取所有有连接的边
+        from sqlalchemy import desc
+        query = select(GraphEdge).order_by(desc(GraphEdge.weight))
+        if min_score > 0:
+            query = query.where(GraphEdge.weight >= min_score)
+        query = query.limit(limit * 5)  # 边数量可以多一些
+
+        result = await db.execute(query)
+        edges = result.scalars().all()
+
+        # 收集所有节点ID
+        node_ids = set()
+        for edge in edges:
+            node_ids.add(edge.from_node_id)
+            node_ids.add(edge.to_node_id)
+
+        # 限制节点数量
+        node_ids = list(node_ids)[:limit]
+
+        # 查询节点信息
+        nodes_data = []
+        node_connection_count = {}
+
+        for edge in edges:
+            for nid in [edge.from_node_id, edge.to_node_id]:
+                node_connection_count[nid] = node_connection_count.get(nid, 0) + 1
+
+        from agent_os.knowledge.models import Card
+        for nid in node_ids:
+            result = await db.execute(
+                select(Item).where(Item.id == nid)
+            )
+            item = result.scalar_one_or_none()
+            
+            if item:
+                nodes_data.append(GraphNode(
+                    id=item.id,
+                    label=item.title or (item.content[:50] if item.content else ""),
+                    type=item.type or "note",
+                    created_at=item.created_at.isoformat() if item.created_at else None
+                ))
+            else:
+                # Fallback: 查 cards 表
+                card_result = await db.execute(
+                    select(Card).where(Card.id == nid)
+                )
+                card = card_result.scalar_one_or_none()
+                if card:
+                    nodes_data.append(GraphNode(
+                        id=card.id,
+                        label=card.title or (card.content[:50] if card.content else ""),
+                        type="card",
+                        created_at=card.created_at.isoformat() if card.created_at else None
+                    ))
+
+
+        # 过滤边（只保留两端都在节点集中的边）
+        node_id_set = {n.id for n in nodes_data}
+        edges_data = [
+            GraphEdgeSimple(
+                from_node=edge.from_node_id,
+                to_node=edge.to_node_id,
+                weight=edge.weight,
+                relation_type=edge.relation_type,
+                is_strong=edge.is_strong
+            )
+            for edge in edges
+            if edge.from_node_id in node_id_set and edge.to_node_id in node_id_set
+        ]
+
+        return GraphData(
+            nodes=nodes_data,
+            edges=edges_data
+        )
+
+    except Exception as e:
+        logger.error(f"Error getting full graph: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/generate", response_model=RecalculateResponse)
+async def generate_all_connections(
+    force: bool = False,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    手动触发全量关联生成
+
+    Args:
+        force: 是否清除旧关联重新生成
+
+    Returns:
+        生成结果
+    """
+    try:
+        from datetime import datetime, timedelta
+
+        # 如果force，先清除所有边
+        if force:
+            from sqlalchemy import delete as sql_delete
+            await db.execute(sql_delete(GraphEdge))
+            await db.commit()
+
+        # 获取所有活跃Items
+        # 获取所有活跃Items
+        items_result = await db.execute(
+            select(Item).where(Item.status == "active").limit(200)
+        )
+        items = items_result.scalars().all()
+
+        # 同时获取 cards 表的数据，转为伪 Item 对象参与计算
+        from agent_os.knowledge.models import Card
+        cards_result = await db.execute(select(Card).limit(200))
+        cards = cards_result.scalars().all()
+        
+        # 将 Card 包装为兼容 Item 的对象
+        class CardAsItem:
+            def __init__(self, card):
+                self.id = card.id
+                self.title = card.title
+                self.content = card.content
+                self.embedding = None
+                self.area_id = None
+                self.workspace_id = card.workspace_id
+                self.type = "card"
+                self.status = "active"
+                self.updated_at = card.updated_at or card.created_at
+                self.created_at = card.created_at
+        
+        card_items = [CardAsItem(c) for c in cards]
+        items = list(items) + card_items
+
+
+        if not items:
+            return RecalculateResponse(
+                item_id=uuid.UUID('00000000-0000-0000-0000-000000000000'),
+                connections_created=0,
+                connections_updated=0,
+                message="No items found"
+            )
+
+        engine = ConnectionEngine()
+        created = 0
+
+        # 两两计算
+        for i, item_a in enumerate(items):
+            for item_b in items[i+1:]:
+                edge = await crud.calculate_and_store_connection(
+                    db, item_a.id, item_b.id, engine,
+                    item_a_obj=item_a, item_b_obj=item_b
+                )
+                if edge:
+                    created += 1
+
+        return RecalculateResponse(
+            item_id=items[0].id,
+            connections_created=created,
+            connections_updated=0,
+            message=f"Generated {created} relations from {len(items)} items"
+        )
+
+    except Exception as e:
+        logger.error(f"Error generating connections: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/health")
 async def health_check():

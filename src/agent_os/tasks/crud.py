@@ -17,22 +17,14 @@ async def create_task(
     db: AsyncSession,
     *,
     task_in: TaskCreate,
-    user_id: int
-) -> Task:
-    """Create a new task.
-
-    Args:
-        db: Async database session
-        task_in: Task creation data
-        user_id: ID of the user creating the task
-
-    Returns:
-        Created task object
-    """
+    user_id
+    ) -> Task:
     db_task = Task(
         **task_in.model_dump(),
-        user_id=user_id
+        user_id=user_id,
+        organization_id=None
     )
+
     db.add(db_task)
     await db.commit()
     await db.refresh(db_task)

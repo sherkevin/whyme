@@ -69,14 +69,24 @@ async def get_db() -> AsyncSession:
 
 async def init_db():
     """Initialize database tables."""
+    from sqlalchemy import Table, Column, Integer, String
+    
+    # Create missing 'organizations' table that tasks.models references
+    if 'organizations' not in Base.metadata.tables:
+        Table(
+            'organizations', Base.metadata,
+            Column('id', Integer, primary_key=True),
+            Column('name', String(200)),
+        )
+    
     async with get_engine().begin() as conn:
-        # Import all models to ensure they're registered
-        from agent_os.knowledge.models import InboxItem, Card
+        from agent_os.knowledge.models import Card
+        from agent_os.items.models import Item
         from agent_os.tasks.models import Task
-        from agent_os.auth.models import User, UserSettings
+        from agent_os.auth.models import User
         from agent_os.conversations.models import Conversation, ConversationSummary
-
-        # Create all tables
+        from agent_os.agent.models import AgentProcessEvent
+        
         await conn.run_sync(Base.metadata.create_all)
 
 

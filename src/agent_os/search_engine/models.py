@@ -142,10 +142,38 @@ class InsightCluster(Base):
     generated_at = Column(DateTime(timezone=True), server_default=func.now())
     expires_at = Column(DateTime(timezone=True), nullable=True)
 
+    # ===== G.7 Insight 认知结晶扩展字段 =====
+    # 核心结论（一句话，可复述可引用）
+    claim = Column(Text, nullable=True)
+    # 推导逻辑 / 因果链
+    rationale = Column(Text, nullable=True)
+    # 对行动或决策意味着什么
+    implications = Column(Text, nullable=True)
+    # Insight 类型: causal(因果) / principle(原则) / pattern(模式) / contradiction(矛盾)
+    insight_type = Column(String(30), nullable=True)
+    # 质量分数 0~1
+    quality_score = Column(Float, nullable=True)
+    # 稳定性分数 0~1
+    stability_score = Column(Float, nullable=True)
+    # 等级: 1=tactical, 2=structural, 3=strategic, 4=identity-level
+    level = Column(Integer, nullable=True, default=1)
+    # 状态: emerging / stable / reinforced / challenged / deprecated
+    status = Column(String(20), nullable=True, default='emerging')
+    # 去重哈希
+    canonical_hash = Column(String(64), nullable=True, index=True)
+    # 被引用次数
+    evidence_count = Column(Integer, nullable=True, default=1)
+    # 关联的 cluster_id（图谱中的连通子图标识）
+    cluster_id = Column(String(64), nullable=True)
+    # 主题 ID
+    theme_id = Column(String(64), nullable=True)
+    # 是否通过质量校验
+    is_valid_insight = Column(Boolean, nullable=True, default=False)
+
     # Table constraints
     __table_args__ = (
         CheckConstraint(
-            "cluster_type IN ('summary', 'trend', 'topic', 'pattern')",
+            "cluster_type IN ('summary', 'trend', 'topic', 'pattern', 'insight')",
             name='check_insight_cluster_type'
         ),
     )

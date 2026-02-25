@@ -8,6 +8,7 @@ import uuid
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_
 
 from agent_os.db.base import get_db
 from agent_os.inbox import crud

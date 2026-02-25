@@ -3,6 +3,7 @@
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict
+from uuid import UUID
 
 
 # =============================================================================
@@ -32,8 +33,8 @@ class InboxItemResponse(InboxItemBase):
     """Schema for inbox item response."""
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
-    user_id: int
+    id: UUID
+    user_id: UUID
     status: str
     created_at: datetime
     updated_at: datetime
@@ -57,7 +58,7 @@ class CardBase(BaseModel):
     content: str = Field(..., min_length=1, max_length=10000, description="Card content")
     para_type: str = Field(..., pattern="^(concept|action|reference)$", description="Paragraph type")
     tags: Optional[List[str]] = Field(default_factory=list, description="Tags for the card")
-    source_inbox_item_id: Optional[int] = Field(None, description="Source inbox item ID")
+    source_inbox_item_id: Optional[UUID] = Field(None, description="Source inbox item ID")
 
 
 class CardCreate(CardBase):
@@ -77,8 +78,8 @@ class CardResponse(CardBase):
     """Schema for card response."""
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
-    user_id: int
+    id: UUID
+    user_id: UUID
     created_at: datetime
     updated_at: datetime
 

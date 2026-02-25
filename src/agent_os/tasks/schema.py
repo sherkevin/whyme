@@ -3,6 +3,7 @@
 from datetime import date, datetime
 from typing import Optional, List
 from pydantic import BaseModel, Field, field_validator
+from uuid import UUID
 
 
 # =============================================================================
@@ -44,7 +45,7 @@ class TaskResponse(TaskBase):
     """Schema for task response."""
 
     id: int
-    user_id: int
+    user_id: UUID
     completed_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime

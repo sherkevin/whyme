@@ -1,7 +1,8 @@
 """Task management models."""
 
 from datetime import datetime, date
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Date, Boolean, Index
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Date, Boolean, Index, UUID
+import uuid
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -14,8 +15,8 @@ class Task(Base):
     __tablename__ = "tasks"
 
     id = Column(Integer, primary_key=True, index=True)
-    organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    organization_id = Column(UUID(as_uuid=True), nullable=True, index=True)  # 改为可空，去掉FK
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     title = Column(String(200), nullable=False)
     description = Column(Text)
     type = Column(String(50), default="task")  # task, habit, goal
