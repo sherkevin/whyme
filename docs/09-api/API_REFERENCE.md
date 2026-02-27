@@ -1,6 +1,6 @@
 # AgentOS API 文档
 
-**版本**: v7.0
+**版本**: v7.1
 **最后更新**: 2026-02-27
 **基础路径**: `/api`
 **API 端点总数**: 156+
@@ -114,6 +114,7 @@ async function loginWithCode(email, code) {
 | 📊 今日概览 | 1 | `/api/v1/today` | 每日聚合视图 |
 | 🤖 Agent 系统 | 18 | `/api/v1/agent` | 工作流、技能、LLM 处理 |
 | 💬 对话历史 | 4 | `/api/v1/conversations` | 会话管理 |
+| 🌿 Garden 系统 | 0 | `/api/v1/garden` | 知识图谱、Cluster 强度、Insight |
 | 🔗 连接管理 | 6 | `/connections` | 知识图谱连接 |
 | 📁 工作区 | 28 | `/prd4` | 工作区、区域、项目管理 |
 | 🔌 集成服务 | 11 | `/integrations` | 微信、爬虫等 |
@@ -585,6 +586,94 @@ Authorization: Bearer {access_token}
 
 ---
 
+### 6.5 Garden 系统 (`/api/v1/garden`) - 内部服务 ✨
+
+> **版本**: v7.1 新增功能
+> **说明**: 以下是内部服务层 API，供其他服务调用
+
+#### Garden Stats Service - 统计聚合服务
+
+```python
+from agent_os.garden import GardenStatsService
+
+# 使用示例
+service = GardenStatsService(db_session)
+stats = await service.get_user_garden_stats(user_id, workspace_id)
+```
+
+**返回数据结构**:
+```json
+{
+  "user_id": "uuid",
+  "workspace_id": "uuid",
+  "total_notes": 10,          // 活跃笔记/卡片总数
+  "neural_connections": 5,    // 强边去重数 (A-B = B-A)
+  "generated_insights": 3     // stable 且 level>=2 的 Insight 数
+}
+```
+
+**计算口径**:
+- `total_notes`: workspace 下 `status='active'` 的 Item 总数
+- `neural_connections`: `relation_strength >= 0.65` 且去重的边数
+- `generated_insights`: `status='stable'` 且 `level>=2`，按 `canonical_hash` 去重
+
+#### Cluster Service - Cluster 强度计算
+
+```python
+from agent_os.garden import ClusterService
+
+# 使用示例
+service = ClusterService(db_session)
+strength = await service.compute_cluster_strength(
+    node_ids=["uuid1", "uuid2", "uuid3"],
+    workspace_id="workspace-uuid"
+)
+```
+
+**计算公式**:
+```
+cluster_strength = strong_edges_count + (avg_relation_strength * 2.0) + (1.0 / (avg_days_between_nodes + 1))
+```
+
+#### Insight Worker - Insight 聚合 Worker
+
+```python
+from agent_os.garden import InsightWorker
+
+# 使用示例
+worker = InsightWorker(db_session)
+
+# 处理候选 Insight，检查是否满足 stable 条件
+result = await worker.process_candidate_insight(
+    insight_id="uuid",
+    source_item_ids=["id1", "id2", "id3"],
+    workspace_id="workspace-uuid"
+)
+
+# 去重方式创建/更新 Insight
+result = await worker.upsert_insight_with_deduplication(
+    workspace_id="workspace-uuid",
+    user_id="user-uuid",
+    canonical_hash="sha256-hash",
+    title="Insight Title",
+    content="Insight Content",
+    source_item_ids=["id1", "id2"],
+    level=2
+)
+```
+
+**触发条件** (candidate -> stable):
+- `sources >= 3`
+- `timespan >= 3 天`
+- `cluster_strength >= 2.5`
+
+**去重逻辑**:
+- 相同 `canonical_hash` 不新建记录
+- 累加 `evidence_count += 1`
+- 合并 `source_item_ids`
+
+---
+
 ### 7. 对话历史 (`/api/v1/conversations`)
 
 | 端点 | 方法 | 描述 | 认证 |
@@ -631,7 +720,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 9. 连接管理 (`/connections`)
+### 8. 工作区与项目 (`/prd4`)
 
 | 端点 | 方法 | 描述 | 认证 |
 |------|------|------|------|
@@ -643,7 +732,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 10. 集成服务 (`/integrations`)
+### 9. 连接管理 (`/connections`)
 
 | 端点 | 方法 | 描述 | 认证 |
 |------|------|------|------|
@@ -655,7 +744,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 11. 可观测性 (`/observability`)
+### 10. 集成服务 (`/integrations`)
 
 | 端点 | 方法 | 描述 | 认证 |
 |------|------|------|------|
@@ -666,7 +755,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-## 认证与授权
+### 11. 可观测性 (`/observability`)
 
 ### 认证方式
 
@@ -850,9 +939,61 @@ interface InboxItem {
 }
 ```
 
+### Garden (PRD8)
+
+```typescript
+// 用户花园统计
+interface GardenStats {
+  user_id: string;
+  workspace_id: string;
+  total_notes: number;           // 活跃笔记数
+  neural_connections: number;    // 强边去重数
+  generated_insights: number;    // stable 且 level>=2 的 Insight 数
+}
+
+// 知识卡片连接 (无向图)
+interface KnowledgeCardLink {
+  id: string;
+  workspace_id: string;
+  from_id: string;  // 源节点 ID
+  to_id: string;    // 目标节点 ID
+  type: 'related' | 'support' | 'contradict' | 'reference';
+  relation_strength: number;  // 0.0 - 1.0
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// 每日洞察
+interface DailyInsight {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  title: string;
+  content: string;
+  status: 'draft' | 'candidate' | 'stable' | 'rejected';
+  level: 1 | 2 | 3;
+  canonical_hash: string;      // 用于去重
+  stability_score: number;     // 0.0 - 1.0
+  evidence_count: number;      // 证据计数
+  source_item_ids: string[];   // 源项目 ID 列表
+  created_at: string;
+  updated_at: string;
+}
+```
+
 ---
 
 ## 更新日志
+
+### v7.1 (2026-02-27)
+
+- ✨ 新增 Garden 系统 (PRD8 模块二)
+  - GardenStatsService: 用户花园统计 (total_notes, neural_connections, generated_insights)
+  - ClusterService: Cluster 强度计算服务
+  - InsightWorker: Insight 聚合与状态跃迁 Worker
+- ✨ 配置管理新增 `GARDEN_STRONG_EDGE_THRESHOLD` (默认 0.65)
+- 📝 新增 23 个单元测试，覆盖率 100%
 
 ### v7.0 (2026-02-27)
 
