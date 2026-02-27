@@ -11,7 +11,7 @@ from alembic import context
 
 # Import Base and models
 from agent_os.db.base import Base
-from agent_os.auth.models import User, UserSettings
+from agent_os.auth.models import User
 from agent_os.knowledge.models import InboxItem, Card
 from agent_os.tasks.models import Task
 from agent_os.garden.models import KnowledgeCardLink, DailyInsight
