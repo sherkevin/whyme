@@ -33,6 +33,9 @@ from agent_os.stage3.models import AgentDecision, Skill, TaskExecutionLog
 # Note: Renamed InsightCluster to InsightCluster4 to avoid conflicts with old insights module
 from agent_os.search_engine.models import SearchIndex, IngestionJob, InsightCluster as InsightCluster4
 
+# Import garden models (PRD7)
+from agent_os.garden.models import KnowledgeCardLink, DailyInsight, RelationType, InsightStatus
+
 # Create a list of PRD4 tables for testing
 PRD4_TABLES = [
     'workspaces', 'areas', 'projects', 'items',
@@ -46,7 +49,9 @@ PRD4_TABLES = [
     'task_execution_logs',  # Stage 3
     'search_indices',  # Stage 4 / search_engine
     'ingestion_jobs',  # Stage 4 / search_engine
-    'stage4_insight_clusters'  # Stage 4 / search_engine
+    'stage4_insight_clusters',  # Stage 4 / search_engine
+    'knowledge_card_links',  # PRD7 Garden
+    'daily_insights'  # PRD7 Garden
 ]
 
 
@@ -111,6 +116,9 @@ async def engine():
             SearchIndex.__table__.create(connection, checkfirst=True)
             IngestionJob.__table__.create(connection, checkfirst=True)
             InsightCluster4.__table__.create(connection, checkfirst=True)
+            # PRD7 Garden tables
+            KnowledgeCardLink.__table__.create(connection, checkfirst=True)
+            DailyInsight.__table__.create(connection, checkfirst=True)
 
         def drop_prd4_tables(connection):
             # Drop auth tables first (foreign key dependencies)
@@ -124,6 +132,9 @@ async def engine():
             InsightCluster4.__table__.drop(connection, checkfirst=True)
             IngestionJob.__table__.drop(connection, checkfirst=True)
             SearchIndex.__table__.drop(connection, checkfirst=True)
+            # Drop PRD7 Garden tables
+            DailyInsight.__table__.drop(connection, checkfirst=True)
+            KnowledgeCardLink.__table__.drop(connection, checkfirst=True)
             # Drop Stage 3 tables
             TaskExecutionLog.__table__.drop(connection, checkfirst=True)
             Skill.__table__.drop(connection, checkfirst=True)
@@ -169,20 +180,29 @@ async def db_session(engine) -> AsyncGenerator[AsyncSession, None]:
     async with async_session_maker() as session:
         from sqlalchemy import delete
         # Delete in reverse order of dependencies
-        await session.execute(delete(AgentProcessEvent))
-        await session.execute(delete(Card))
+        # PRD7 Garden tables first
+        await session.execute(delete(KnowledgeCardLink))
+        await session.execute(delete(DailyInsight))
+        # Stage 4 tables
+        await session.execute(delete(InsightCluster4))
+        await session.execute(delete(IngestionJob))
+        await session.execute(delete(SearchIndex))
+        # Stage 3 tables
         await session.execute(delete(TaskExecutionLog))
         await session.execute(delete(Skill))
         await session.execute(delete(AgentDecision))
-        await session.execute(delete(SearchIndex))
-        await session.execute(delete(IngestionJob))
-        await session.execute(delete(InsightCluster4))
+        # Knowledge tables
+        await session.execute(delete(Card))
+        # Agent tables
+        await session.execute(delete(AgentProcessEvent))
+        # Auth tables
+        await session.execute(delete(UserRole))
+        await session.execute(delete(AuditLog))
         await session.execute(delete(User))
         await session.execute(delete(APIKey))
         await session.execute(delete(Session))
         await session.execute(delete(Role))
-        await session.execute(delete(UserRole))
-        await session.execute(delete(AuditLog))
+        # PRD4 tables
         await session.execute(delete(Item))
         await session.execute(delete(Project))
         await session.execute(delete(Area))

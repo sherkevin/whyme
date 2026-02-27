@@ -14,6 +14,8 @@ from agent_os.db.base import Base
 from agent_os.auth.models import User, UserSettings
 from agent_os.knowledge.models import InboxItem, Card
 from agent_os.tasks.models import Task
+from agent_os.garden.models import KnowledgeCardLink, DailyInsight
+from agent_os.items.models import Workspace, Area, Project, Item, TaskExtension, DecisionPoint, LedgerEvent, GraphEdge
 
 # this is the Alembic Config object
 config = context.config
