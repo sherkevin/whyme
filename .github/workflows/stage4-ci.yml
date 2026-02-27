@@ -78,9 +78,9 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_USER: ${{ env.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
-          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -90,8 +90,8 @@ jobs:
           - 5432:5432
 
     env:
-      DATABASE_URL: postgresql+asyncpg://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_DB }}
-      SYNC_DATABASE_URL: postgresql://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_DB }}
+      DATABASE_URL: postgresql+asyncpg://test_user:test_password@localhost:5432/test_db
+      SYNC_DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
 
     steps:
       - name: Checkout code
@@ -132,9 +132,9 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_USER: ${{ env.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
-          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -144,8 +144,8 @@ jobs:
           - 5432:5432
 
     env:
-      DATABASE_URL: postgresql+asyncpg://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_DB }}
-      SYNC_DATABASE_URL: postgresql://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_DB }}
+      DATABASE_URL: postgresql+asyncpg://test_user:test_password@localhost:5432/test_db
+      SYNC_DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
 
     steps:
       - name: Checkout code
@@ -273,9 +273,9 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_USER: ${{ env.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
-          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -285,7 +285,7 @@ jobs:
           - 5432:5432
 
     env:
-      DATABASE_URL: postgresql+asyncpg://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_DB }}
+      DATABASE_URL: postgresql+asyncpg://test_user:test_password@localhost:5432/test_db
 
     steps:
       - name: Checkout code
