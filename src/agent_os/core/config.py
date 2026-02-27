@@ -122,3 +122,40 @@ def instantiate(class_path: str, *args: Any, **kwargs: Any) -> Any:
     """
     cls = load_class(class_path)
     return cls(*args, **kwargs)
+
+
+# ============================================================================
+# Garden Configuration
+# ============================================================================
+
+def get_garden_strong_edge_threshold() -> float:
+    """Get the strong edge threshold for Garden knowledge graph.
+
+    Reads from environment variable GARDEN_STRONG_EDGE_THRESHOLD.
+    Returns default value 0.65 if not set.
+
+    Returns:
+        float: Strong edge threshold (0.0 - 1.0)
+    """
+    threshold = os.getenv("GARDEN_STRONG_EDGE_THRESHOLD")
+    if threshold is None:
+        return 0.65
+
+    try:
+        value = float(threshold)
+        # Clamp to valid range [0.0, 1.0]
+        return max(0.0, min(1.0, value))
+    except (ValueError, TypeError):
+        return 0.65
+
+
+def get_garden_config() -> dict[str, Any]:
+    """Get all Garden-related configuration.
+
+    Returns:
+        dict: Garden configuration including:
+            - strong_edge_threshold: Threshold for strong edges (default: 0.65)
+    """
+    return {
+        "strong_edge_threshold": get_garden_strong_edge_threshold(),
+    }
