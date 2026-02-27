@@ -5,6 +5,7 @@ Part of PA 1.0 Stage 2 implementation.
 """
 
 import logging
+import os
 from datetime import datetime
 from typing import Optional, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +14,15 @@ from agent_os.items.models import Item, ItemStatus
 from agent_os.agent.title_generator import generate_title, generate_title_from_metadata
 from agent_os.agent.summarizer import generate_summary, calculate_summary_quality
 from agent_os.agent.classifier import classify_content, ItemType, infer_subtype
+
+# Import LLM processor for optional LLM-based processing
+USE_LLM_PROCESSING = os.getenv("USE_LLM_PROCESSING", "false").lower() == "true"
+if USE_LLM_PROCESSING:
+    from agent_os.agent.llm_processor import (
+        generate_summary_llm,
+        generate_tags_llm,
+        generate_summary_and_tags_llm,
+    )
 
 
 logger = logging.getLogger(__name__)
@@ -135,12 +145,34 @@ async def process_inbox_item(
             # 从内容或元数据生成标题
             title = generate_title_from_metadata(content, metadata, max_length=200)
 
-        # 4. 生成摘要
-        summary = generate_summary(content, max_length=500)
+        # 4. 生成摘要和标签 (LLM 或规则)
+        if USE_LLM_PROCESSING:
+            # 使用 LLM 生成 summary 和 tags
+            try:
+                llm_result = await generate_summary_and_tags_llm(content, max_length=500, max_tags=8)
+                summary = llm_result.get("summary", "")
+                tags = llm_result.get("tags", [])
+                metadata["llm_summary"] = True
+                metadata["llm_tags"] = tags
+                logger.info(f"LLM generated summary and tags for item {item_id}")
+            except Exception as e:
+                logger.warning(f"LLM processing failed for item {item_id}, falling back to rules: {e}")
+                # Fallback to rule-based processing
+                summary = generate_summary(content, max_length=500)
+                tags = []
+                metadata["llm_fallback"] = True
+        else:
+            # 使用规则生成 summary
+            summary = generate_summary(content, max_length=500)
+            tags = []
 
         # 计算摘要质量
         quality_metrics = calculate_summary_quality(summary, len(content))
         metadata["summary_quality"] = quality_metrics
+
+        # 保存 tags 到 metadata
+        if tags:
+            metadata["tags"] = tags
 
         # 5. 分类内容
         item_type, confidence = classify_content(content, title, metadata)
