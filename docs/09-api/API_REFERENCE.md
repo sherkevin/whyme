@@ -16,11 +16,12 @@
 - **产品经理**: 查看 [功能模块概览](#功能模块概览)
 
 ### 快速链接
+- [快速开始](#快速开始)
 - [认证与授权](#认证与授权)
 - [核心 API](#核心-api)
 - [LLM 智能处理](#llm-智能处理) ✨ 新增
+- [完整 API 参考](#完整-api-参考)
 - [错误处理](#错误处理)
-- [分页与过滤](#分页与过滤)
 
 ---
 
@@ -36,10 +37,9 @@ const API_BASE_URL = 'http://localhost:8000/api';
 let accessToken = localStorage.getItem('access_token');
 ```
 
-### 2. 请求示例
+### 2. 通用请求函数
 
 ```javascript
-// 通用请求函数
 async function apiRequest(endpoint, options = {}) {
   const config = {
     ...options,
@@ -131,23 +131,6 @@ async function loginWithCode(email, code) {
 const todayTasks = await apiRequest('/v1/tasks/today');
 ```
 
-**响应示例**:
-```json
-{
-  "tasks": [
-    {
-      "id": "task-uuid",
-      "title": "完成项目报告",
-      "status": "pending",
-      "priority": "high",
-      "due_date": "2026-02-27"
-    }
-  ],
-  "total": 5,
-  "completed": 2
-}
-```
-
 #### 创建任务
 ```javascript
 // POST /api/v1/tasks
@@ -178,12 +161,6 @@ await apiRequest('/v1/tasks/batch', {
     updates: { status: 'completed' }
   })
 });
-
-// 批量删除
-await apiRequest('/v1/tasks/batch', {
-  method: 'DELETE',
-  body: JSON.stringify({ ids: ['id1', 'id2'] })
-});
 ```
 
 ---
@@ -201,12 +178,6 @@ const card = await apiRequest('/v1/knowledge/cards', {
     type: "note"
   })
 });
-```
-
-#### 获取卡片列表
-```javascript
-// GET /api/v1/knowledge/cards
-const cards = await apiRequest('/v1/knowledge/cards?page=1&limit=20');
 ```
 
 ---
@@ -251,8 +222,7 @@ const inboxItem = await apiRequest('/v1/inbox/items', {
 ```javascript
 // POST /api/v1/agent/process/{item_id}
 const result = await apiRequest(`/v1/agent/process/${itemId}`, {
-  method: 'POST',
-  body: JSON.stringify({ force_reprocess: false })
+  method: 'POST'
 });
 ```
 
@@ -267,22 +237,9 @@ const result = await apiRequest(`/v1/agent/process/${itemId}`, {
   "metadata": {
     "tags": ["标签 1", "标签 2", "标签 3"],
     "llm_summary": true,
-    "llm_tags": ["标签 1", "标签 2"],
-    "summary_quality": { ... }
+    "llm_tags": ["标签 1", "标签 2"]
   }
 }
-```
-
-#### 批量处理（Agent Tick）
-```javascript
-// POST /api/v1/agent/tick
-const result = await apiRequest('/v1/agent/tick', {
-  method: 'POST',
-  body: JSON.stringify({
-    max_items: 10,
-    force_reprocess: false
-  })
-});
 ```
 
 ---
@@ -339,28 +296,11 @@ async function createAndProcess(content) {
 }
 ```
 
-### 测试结果示例
-
-**输入内容** (会议记录):
-```
-今日团队会议讨论了项目进度、前端重构完成 80%、
-后端 API 已完成、下周计划集成测试...
-```
-
-**生成的摘要**:
-> 团队会议讨论了项目进度、人员安排、下周计划、技术债务和风险管理等事项，
-> 包括前端重构完成 80%、后端 API 优化、数据库迁移准备等。
-
-**生成的标签**:
-```json
-["团队会议", "项目进度", "前端开发", "后端优化", "技术债务", "风险管理"]
-```
-
 ---
 
 ## 完整 API 参考
 
-### 认证系统 (`/api/v1/auth`)
+### 1. 认证系统 (`/api/v1/auth`)
 
 | 端点 | 方法 | 描述 | 认证 |
 |------|------|------|------|
@@ -373,9 +313,148 @@ async function createAndProcess(content) {
 | `/me` | GET | 获取用户信息 | ✅ |
 | `/settings` | PUT | 更新设置 | ✅ |
 
+<details>
+<summary><strong>查看详细请求/响应示例</strong></summary>
+
+#### 1.1 用户注册
+
+**端点**: `POST /api/v1/auth/register`
+
+**请求体**:
+```json
+{
+  "username": "johndoe",
+  "email": "john@example.com",
+  "password": "SecurePass123!"
+}
+```
+
+**响应** (201):
+```json
+{
+  "access_token": "eyJ0eXAi...",
+  "refresh_token": "eyJ0eXAi...",
+  "token_type": "bearer",
+  "expires_in": 1800
+}
+```
+
+#### 1.2 用户登录
+
+**端点**: `POST /api/v1/auth/login`
+
+**请求体** (form-data):
+```
+username: johndoe
+password: SecurePass123!
+```
+
+**响应** (200):
+```json
+{
+  "access_token": "eyJ0eXAi...",
+  "refresh_token": "eyJ0eXAi...",
+  "token_type": "bearer",
+  "expires_in": 1800
+}
+```
+
+#### 1.3 邮箱验证码登录
+
+**端点**: `POST /api/v1/auth/login/email`
+
+**请求体**:
+```json
+{
+  "email": "user@example.com",
+  "code": "123456"
+}
+```
+
+**响应** (200):
+```json
+{
+  "access_token": "eyJ0eXAi...",
+  "refresh_token": "eyJ0eXAi...",
+  "token_type": "bearer",
+  "expires_in": 1800
+}
+```
+
+#### 1.4 发送验证码
+
+**端点**: `POST /api/v1/auth/send-code`
+
+**请求体**:
+```json
+{
+  "email": "user@example.com",
+  "code_type": "login"
+}
+```
+
+**响应** (200):
+```json
+{
+  "code": "SUCCESS",
+  "message": "验证码已发送",
+  "data": {
+    "expires_in": 300
+  }
+}
+```
+
+#### 1.5 刷新令牌
+
+**端点**: `POST /api/v1/auth/refresh`
+
+**请求体**:
+```json
+{
+  "refresh_token": "eyJ0eXAi..."
+}
+```
+
+**响应** (200):
+```json
+{
+  "access_token": "eyJ0eXAi...",
+  "refresh_token": "eyJ0eXAi...",
+  "token_type": "bearer",
+  "expires_in": 1800
+}
+```
+
+#### 1.6 获取用户信息
+
+**端点**: `GET /api/v1/auth/me`
+
+**请求头**:
+```
+Authorization: Bearer {access_token}
+```
+
+**响应** (200):
+```json
+{
+  "id": "user-uuid",
+  "username": "johndoe",
+  "email": "john@example.com",
+  "settings": {
+    "daily_goal": 10,
+    "theme": "dark",
+    "language": "zh-CN"
+  },
+  "is_active": true,
+  "created_at": "2024-01-01T00:00:00Z"
+}
+```
+
+</details>
+
 ---
 
-### 任务管理 (`/api/v1/tasks`)
+### 2. 任务管理 (`/api/v1/tasks`)
 
 | 端点 | 方法 | 描述 | 认证 |
 |------|------|------|------|
@@ -391,9 +470,67 @@ async function createAndProcess(content) {
 | `/{task_id}/status` | PATCH | 更新状态 | ✅ |
 | `/{task_id}` | DELETE | 删除任务 | ✅ |
 
+<details>
+<summary><strong>查看详细请求/响应示例</strong></summary>
+
+#### 创建任务
+
+**端点**: `POST /api/v1/tasks`
+
+**请求体**:
+```json
+{
+  "title": "完成 API 文档",
+  "description": "编写完整的 API 参考文档",
+  "status": "todo",
+  "type": "feature",
+  "priority": 8,
+  "due_date": "2024-12-31"
+}
+```
+
+**响应** (201):
+```json
+{
+  "id": 1,
+  "title": "完成 API 文档",
+  "status": "todo",
+  "priority": 8,
+  "created_at": "2024-01-01T00:00:00Z"
+}
+```
+
+#### 今日任务
+
+**端点**: `GET /api/v1/tasks/today`
+
+**响应** (200):
+```json
+{
+  "date": "2024-01-01",
+  "tasks": [
+    {
+      "id": 1,
+      "title": "完成 API 文档",
+      "status": "todo",
+      "priority": 8
+    }
+  ],
+  "stats": {
+    "total": 10,
+    "todo": 5,
+    "in_progress": 3,
+    "done": 2,
+    "completion_rate": 0.2
+  }
+}
+```
+
+</details>
+
 ---
 
-### 知识管理 (`/api/v1/knowledge`)
+### 3. 知识管理 (`/api/v1/knowledge`)
 
 | 端点 | 方法 | 描述 | 认证 |
 |------|------|------|------|
@@ -404,7 +541,7 @@ async function createAndProcess(content) {
 
 ---
 
-### 搜索引擎 (`/api/v1/search`)
+### 4. 搜索引擎 (`/api/v1/search`)
 
 | 端点 | 方法 | 描述 | 认证 |
 |------|------|------|------|
@@ -420,7 +557,7 @@ async function createAndProcess(content) {
 
 ---
 
-### 收件箱 (`/api/v1/inbox`)
+### 5. 收件箱 (`/api/v1/inbox`)
 
 | 端点 | 方法 | 描述 | 认证 |
 |------|------|------|------|
@@ -433,12 +570,12 @@ async function createAndProcess(content) {
 
 ---
 
-### Agent 系统 (`/api/v1/agent`)
+### 6. Agent 系统 (`/api/v1/agent`)
 
 | 端点 | 方法 | 描述 | 认证 |
 |------|------|------|------|
-| `/tick` | POST | 处理周期 | ✅ |
-| `/process/{item_id}` | POST | 处理项目 | ✅ |
+| `/tick` | POST | 处理周期 (LLM 批量处理) | ✅ |
+| `/process/{item_id}` | POST | 处理项目 (LLM 单个处理) | ✅ |
 | `/status` | GET | Agent 状态 | ✅ |
 | `/flow/start` | POST | 启动工作流 | ✅ |
 | `/flow/{id}/status` | GET | 工作流状态 | ✅ |
@@ -448,7 +585,7 @@ async function createAndProcess(content) {
 
 ---
 
-### 对话历史 (`/api/v1/conversations`)
+### 7. 对话历史 (`/api/v1/conversations`)
 
 | 端点 | 方法 | 描述 | 认证 |
 |------|------|------|------|
@@ -459,7 +596,7 @@ async function createAndProcess(content) {
 
 ---
 
-### 工作区与项目 (`/prd4`)
+### 8. 工作区与项目 (`/prd4`)
 
 #### 工作区
 | 端点 | 方法 | 描述 | 认证 |
@@ -494,7 +631,7 @@ async function createAndProcess(content) {
 
 ---
 
-### 连接管理 (`/connections`)
+### 9. 连接管理 (`/connections`)
 
 | 端点 | 方法 | 描述 | 认证 |
 |------|------|------|------|
@@ -506,11 +643,11 @@ async function createAndProcess(content) {
 
 ---
 
-### 集成服务 (`/integrations`)
+### 10. 集成服务 (`/integrations`)
 
 | 端点 | 方法 | 描述 | 认证 |
 |------|------|------|------|
-| `/wechat/webhook` | POST | 微信消息 | ❌ |
+| `/wechat/webhook` | GET/POST | 微信消息 | ❌ |
 | `/wechat/send/text` | POST | 发送文本 | ✅ |
 | `/wechat/send/news` | POST | 发送图文 | ✅ |
 | `/crawler/crawl` | POST | 爬取 URL | ✅ |
@@ -518,7 +655,7 @@ async function createAndProcess(content) {
 
 ---
 
-### 可观测性 (`/observability`)
+### 11. 可观测性 (`/observability`)
 
 | 端点 | 方法 | 描述 | 认证 |
 |------|------|------|------|
@@ -591,10 +728,6 @@ GET /api/v1/items?page=1&limit=20
 
 ### 过滤参数
 
-```
-GET /api/v1/tasks?status=pending&priority=high
-```
-
 | 参数 | 类型 | 描述 |
 |------|------|------|
 | `status` | string | 状态过滤 |
@@ -648,7 +781,6 @@ async function apiRequest(endpoint, options = {}) {
       // 处理 401 错误（Token 过期）
       if (response.status === 401) {
         await handleTokenRefresh();
-        // 重试请求
         return apiRequest(endpoint, options);
       }
 
@@ -750,7 +882,6 @@ interface InboxItem {
 
 - [数据库架构](../10-architecture/DATABASE_ARCHITECTURE.md)
 - [向量嵌入指南](../10-architecture/EMBEDDING_VECTOR_GUIDE.md)
-- [前端集成指南](../11-deployment/FRONTEND_INTEGRATION_GUIDE.md)
 
 ### OpenAPI 规范
 
