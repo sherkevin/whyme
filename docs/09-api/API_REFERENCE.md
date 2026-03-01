@@ -1,9 +1,9 @@
 # AgentOS API 文档
 
-**版本**: v7.1
-**最后更新**: 2026-02-27
+**版本**: v7.2
+**最后更新**: 2026-03-01
 **基础路径**: `/api`
-**API 端点总数**: 156+
+**API 端点总数**: 162+
 **生产状态**: ✅ 可用
 
 ---
@@ -111,10 +111,10 @@ async function loginWithCode(email, code) {
 | 🧠 知识管理 | 4 | `/api/v1/knowledge` | 卡片管理 |
 | 🔍 搜索引擎 | 15 | `/api/v1/search` | 全文搜索、洞察生成 |
 | 📥 收件箱 | 6 | `/api/v1/inbox` | 内容收集与处理 |
-| 📊 今日概览 | 1 | `/api/v1/today` | 每日聚合视图 |
+| 📊 今日概览 | 2 | `/api/v1/today` | 每日聚合视图、Insight ✨ |
 | 🤖 Agent 系统 | 18 | `/api/v1/agent` | 工作流、技能、LLM 处理 |
+| 🌿 Garden 系统 | 3 | `/api/v1/garden` | 知识图谱、节点列表、边查询 ✨ |
 | 💬 对话历史 | 4 | `/api/v1/conversations` | 会话管理 |
-| 🌿 Garden 系统 | 0 | `/api/v1/garden` | 知识图谱、Cluster 强度、Insight |
 | 🔗 连接管理 | 6 | `/connections` | 知识图谱连接 |
 | 📁 工作区 | 28 | `/prd4` | 工作区、区域、项目管理 |
 | 🔌 集成服务 | 11 | `/integrations` | 微信、爬虫等 |
@@ -674,6 +674,274 @@ result = await worker.upsert_insight_with_deduplication(
 
 ---
 
+### 6.6 Garden 系统 HTTP API (PRD9 模块三) ✨
+
+> **版本**: v7.2 新增功能
+> **说明**: 以下是面向前端的花园图谱 HTTP API
+
+#### 6.6.1 获取 Garden 节点列表
+
+**端点**: `GET /api/v1/garden/nodes`
+
+**认证**: ✅ 需要
+
+**查询参数**:
+| 参数 | 类型 | 默认值 | 描述 |
+|------|------|--------|------|
+| `workspace_id` | uuid | 必填 | 工作区 ID |
+| `date_range` | string | - | 日期范围：`last_7_days`, `last_90_days`, `all` |
+| `types` | array | - | 类型过滤：`note`, `card`, `task` 等 |
+| `limit` | integer | 300 | 每页数量 |
+| `offset` | integer | 0 | 偏移量 |
+
+**响应示例** (200):
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "object_type": "note",
+      "title": "节点标题",
+      "created_at": "2026-02-01T00:00:00Z",
+      "strong_connection_count": 5,
+      "snippet": "内容摘要..."
+    }
+  ],
+  "total": 100,
+  "limit": 300,
+  "offset": 0
+}
+```
+
+**前端使用示例**:
+```javascript
+// 获取节点列表
+const nodes = await apiRequest('/v1/garden/nodes?workspace_id=xxx&limit=50');
+
+// 带过滤条件
+const recentNotes = await apiRequest(
+  '/v1/garden/nodes?workspace_id=xxx&date_range=last_7_days&types[]=note'
+);
+```
+
+#### 6.6.2 批量查询 Garden 边
+
+**端点**: `POST /api/v1/garden/edges/batch`
+
+**认证**: ✅ 需要
+
+**查询参数**:
+| 参数 | 类型 | 描述 |
+|------|------|------|
+| `workspace_id` | uuid | 工作区 ID |
+
+**请求体**:
+```json
+{
+  "node_ids": ["uuid1", "uuid2", "uuid3"]
+}
+```
+
+**响应示例** (200):
+```json
+{
+  "data": [
+    {
+      "id": "edge-uuid",
+      "from_id": "uuid1",
+      "to_id": "uuid2",
+      "type": "related",
+      "relation_strength": 0.85,
+      "created_at": "2026-02-01T00:00:00Z"
+    }
+  ],
+  "connections_count": 1,
+  "metadata": {
+    "threshold": 0.65,
+    "requested_nodes": 3
+  }
+}
+```
+
+**说明**:
+- 仅返回 `relation_strength >= 0.65` 的强边
+- 边的起点和终点必须都在 `node_ids` 列表中
+
+**前端使用示例**:
+```javascript
+// 获取节点间的强连接
+const edges = await apiRequest('/v1/garden/edges/batch?workspace_id=xxx', {
+  method: 'POST',
+  body: JSON.stringify({ node_ids: ['uuid1', 'uuid2', 'uuid3'] })
+});
+```
+
+#### 6.6.3 获取 Garden 节点详情
+
+**端点**: `GET /api/v1/garden/nodes/{id}`
+
+**认证**: ✅ 需要
+
+**查询参数**:
+| 参数 | 类型 | 描述 |
+|------|------|------|
+| `workspace_id` | uuid | 工作区 ID |
+
+**响应示例** (200):
+```json
+{
+  "id": "node-uuid",
+  "object_type": "note",
+  "title": "节点标题",
+  "type": "note",
+  "time": "2026-02-01T00:00:00Z",
+  "summary": "内容摘要...",
+  "jump_url": "/items/node-uuid",
+  "connected_nodes": [
+    {
+      "id": "connected-uuid",
+      "title": "连接节点",
+      "object_type": "card",
+      "relation_strength": 0.9,
+      "jump_url": "/items/connected-uuid"
+    }
+  ]
+}
+```
+
+**说明**:
+- `connected_nodes` 最多返回 5 个相关节点
+- 按 `relation_strength` 降序排列
+
+**前端使用示例**:
+```javascript
+// 获取节点详情及连接
+const nodeDetail = await apiRequest(
+  `/v1/garden/nodes/${nodeId}?workspace_id=xxx`
+);
+```
+
+---
+
+### 6.7 今日 Insight API (PRD9 模块三) ✨
+
+> **版本**: v7.2 新增功能
+
+#### 获取今日 Insight
+
+**端点**: `GET /api/v1/today/insight`
+
+**认证**: ✅ 需要
+
+**查询参数**:
+| 参数 | 类型 | 必填 | 描述 |
+|------|------|------|------|
+| `day` | string | ✅ | 日期格式：`YYYY-MM-DD` |
+| `workspace_id` | uuid | ✅ | 工作区 ID |
+| `theme` | string | - | 可选的主题过滤 |
+
+**响应示例** (200):
+```json
+{
+  "data": [
+    {
+      "id": "insight-uuid",
+      "claim": "洞察的核心主张",
+      "rationale": "推理和解释内容...",
+      "implications": ["影响 1", "影响 2"],
+      "sources": [
+        {
+          "id": "source-uuid",
+          "title": "来源标题",
+          "item_type": "note"
+        }
+      ],
+      "level": 2,
+      "status": "stable",
+      "evidence_count": 3,
+      "created_at": "2026-02-01T00:00:00Z",
+      "updated_at": "2026-02-01T00:00:00Z"
+    }
+  ],
+  "day": "2026-02-01",
+  "total": 1
+}
+```
+
+**说明**:
+- 仅返回 `status='stable'` 且 `level>=2` 的高质量洞察
+- 必需字段：`claim`, `rationale`, `implications`, `sources`
+
+**前端使用示例**:
+```javascript
+// 获取今日洞察
+const todayInsights = await apiRequest(
+  `/v1/today/insight?day=${today}&workspace_id=xxx`
+);
+
+// 渲染示例
+todayInsights.data.forEach(insight => {
+  console.log('主张:', insight.claim);
+  console.log('理由:', insight.rationale);
+  console.log('影响:', insight.implications);
+  console.log('来源:', insight.sources);
+});
+```
+
+---
+
+### 6.8 获取用户信息 (PRD9 模块三更新) ✨
+
+> **版本**: v7.2 更新 - 增加 stats 字段
+
+#### 获取当前用户信息（带 Garden 统计）
+
+**端点**: `GET /api/v1/auth/me`
+
+**认证**: ✅ 需要
+
+**查询参数**:
+| 参数 | 类型 | 描述 |
+|------|------|------|
+| `workspace_id` | uuid | 可选，提供时返回 Garden 统计 |
+
+**响应示例** (200):
+```json
+{
+  "id": "user-uuid",
+  "username": "johndoe",
+  "email": "john@example.com",
+  "settings": {
+    "daily_goal": 10,
+    "theme": "dark",
+    "language": "zh-CN"
+  },
+  "is_active": true,
+  "created_at": "2024-01-01T00:00:00Z",
+  "stats": {
+    "total_notes": 15,
+    "neural_connections": 8,
+    "generated_insights": 3
+  }
+}
+```
+
+**stats 字段说明**:
+- `total_notes`: 工作区下活跃笔记/卡片总数
+- `neural_connections`: 强边去重数量 (`relation_strength >= 0.65`)
+- `generated_insights`: 稳定且 level>=2 的洞察数量
+
+**前端使用示例**:
+```javascript
+// 获取用户信息（含 Garden 统计）
+const userInfo = await apiRequest('/v1/auth/me?workspace_id=xxx');
+console.log('笔记数:', userInfo.stats.total_notes);
+console.log('连接数:', userInfo.stats.neural_connections);
+console.log('洞察数:', userInfo.stats.generated_insights);
+```
+
+---
+
 ### 7. 对话历史 (`/api/v1/conversations`)
 
 | 端点 | 方法 | 描述 | 认证 |
@@ -985,6 +1253,18 @@ interface DailyInsight {
 ---
 
 ## 更新日志
+
+### v7.2 (2026-03-01) - PRD9 模块三 API 接口层
+
+- ✨ 新增 PRD9 模块三 - Garden 系统 HTTP API
+  - `GET /api/v1/garden/nodes`: 节点列表（支持分页、日期范围、类型过滤）
+  - `POST /api/v1/garden/edges/batch`: 批量查询强边
+  - `GET /api/v1/garden/nodes/{id}`: 节点详情（含 sorted connected_nodes）
+  - `GET /api/v1/today/insight`: 今日洞察（claim, rationale, implications, sources）
+  - `GET /api/v1/auth/me`: 增加 `stats` 字段（total_notes, neural_connections, generated_insights）
+- 📝 新增 14 个 API 集成测试，覆盖率 100%
+- 🐛 修复 `today/router.py` 导入问题
+- 🐛 修复 `garden/router.py` type 字段访问问题
 
 ### v7.1 (2026-02-27)
 

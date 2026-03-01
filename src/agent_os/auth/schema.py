@@ -89,6 +89,26 @@ class UserInfo(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UserGardenStats(BaseModel):
+    """User's garden statistics for /auth/me endpoint."""
+    total_notes: int = Field(..., description="Total number of active notes/cards")
+    neural_connections: int = Field(..., description="Unique strong connections (undirected graph)")
+    generated_insights: int = Field(..., description="Stable insights with level >= 2")
+
+
+class UserInfoWithStats(BaseModel):
+    """Current user info with garden statistics."""
+    id: uuid.UUID
+    username: str
+    email: EmailStr
+    settings: Dict[str, Any] = Field(default_factory=dict)
+    is_active: bool
+    created_at: datetime
+    stats: Optional[UserGardenStats] = Field(None, description="Garden statistics")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class UserSettings(BaseModel):
     """User settings schema."""
     theme: str = Field(default="light", description="UI theme preference")
