@@ -25,6 +25,7 @@ from agent_os.aggregation.router import router as aggregation_router
 from agent_os.conversations.router import router as conversations_router
 from agent_os.stage3.router import router as stage3_router
 from agent_os.search_engine.router import router as stage4_router
+from agent_os.garden.router import router as garden_router
 # Import agent_router later to avoid circular import issues
 
 app = FastAPI(
@@ -43,6 +44,7 @@ app.include_router(aggregation_router)
 app.include_router(conversations_router)
 app.include_router(stage3_router)
 app.include_router(stage4_router)
+app.include_router(garden_router)
 
 
 # Startup event to initialize database

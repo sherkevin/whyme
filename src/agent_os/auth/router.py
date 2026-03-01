@@ -3,7 +3,7 @@
 import uuid
 import logging
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +13,8 @@ from agent_os.auth.schema import (
     UserRegister,
     Token,
     UserInfo,
+    UserInfoWithStats,
+    UserGardenStats,
     UserSettingsUpdate,
     ErrorResponse,
     RefreshTokenRequest,
@@ -180,26 +182,53 @@ async def refresh_token(
 
 @router.get(
     "/me",
-    response_model=UserInfo,
+    response_model=UserInfoWithStats,
     responses={
         401: {"model": ErrorResponse, "description": "Not authenticated"}
     }
 )
 async def get_current_user_info(
-    current_user = Depends(get_current_user)  # type: User
+    workspace_id: Optional[uuid.UUID] = Query(None, description="Workspace ID for stats calculation"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get current authenticated user information.
 
-    Returns user details including settings.
+    Returns user details including settings and optional garden statistics.
+    If workspace_id is provided, also returns garden stats (total_notes, neural_connections, generated_insights).
     """
-    return UserInfo(
-        id=current_user.id,
-        username=current_user.username,
-        email=current_user.email,
-        settings=current_user.settings,
-        is_active=current_user.is_active,
-        created_at=current_user.created_at
-    )
+    from agent_os.garden.stats_service import GardenStatsService
+
+    # Build base response
+    response_data = {
+        "id": current_user.id,
+        "username": current_user.username,
+        "email": current_user.email,
+        "settings": current_user.settings,
+        "is_active": current_user.is_active,
+        "created_at": current_user.created_at,
+    }
+
+    # Add garden stats if workspace_id is provided
+    if workspace_id:
+        try:
+            stats_service = GardenStatsService(db)
+            stats = await stats_service.get_user_garden_stats(
+                user_id=str(current_user.id),
+                workspace_id=str(workspace_id)
+            )
+            response_data["stats"] = UserGardenStats(
+                total_notes=stats["total_notes"],
+                neural_connections=stats["neural_connections"],
+                generated_insights=stats["generated_insights"]
+            )
+        except Exception as e:
+            logger.warning(f"Failed to get garden stats: {e}")
+            response_data["stats"] = None
+    else:
+        response_data["stats"] = None
+
+    return UserInfoWithStats(**response_data)
 
 
 @router.put(
