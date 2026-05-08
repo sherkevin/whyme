@@ -4,13 +4,13 @@ Provides statistics aggregation for user's garden knowledge graph.
 """
 
 import uuid
-from typing import Dict, Any, Optional
+from typing import Any, Dict
+
+from sqlalchemy import and_, distinct, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, or_, distinct
-from sqlalchemy.sql import select as sql_select
 
 from agent_os.core.config import get_garden_strong_edge_threshold
-from agent_os.garden.models import KnowledgeCardLink, DailyInsight
+from agent_os.garden.models import DailyInsight, KnowledgeCardLink
 from agent_os.items.models import Item
 
 
@@ -35,7 +35,7 @@ class GardenStatsService:
         self,
         user_id: str,
         workspace_id: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get garden statistics for a user.
 
         Args:

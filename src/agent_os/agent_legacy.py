@@ -9,18 +9,17 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from agent_os.conversations import ConversationRepository
 from agent_os.core.config import Config, load_config
 from agent_os.core.interfaces import (
-    LLMProvider,
-    CodingCapability,
     AgentCallbackHandler,
-    MemoryProvider,
+    CodingCapability,
     ContextManager,
+    LLMProvider,
+    MemoryProvider,
 )
 from agent_os.core.types import RuntimeContext
-from agent_os.llm.litellm_impl import LiteLLMProvider
 from agent_os.tools import ToolRegistryImpl
-from agent_os.conversations import ConversationRepository
 
 
 class Agent:
@@ -438,7 +437,7 @@ class Agent:
                         print(f"Failed to persist tool message: {e}")
                         await self.db_session.rollback()
         else:
-            print(f"[DEBUG] No tool calls in response")
+            print("[DEBUG] No tool calls in response")
 
         # Get final response after tool execution (only if tools were called)
         if "tool_calls" in response and response["tool_calls"]:

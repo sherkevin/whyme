@@ -1,20 +1,16 @@
 """Test medium priority fixes for Mem0, Security, Git, and Config."""
 
-import asyncio
-import pytest
 import tempfile
 from pathlib import Path
 
+import pytest
+
+from agent_os.capabilities.vcs.git import GitWrapper
 from agent_os.memory.mem0_impl import Mem0Provider
 from agent_os.server.security import (
     SecurityValidator,
-    sanitize_path,
-    validate_filename,
-    validate_command,
     escape_shell_args,
-    validate_file_size,
 )
-from agent_os.capabilities.vcs.git import GitWrapper, GitOperationError
 
 
 class TestMem0Provider:

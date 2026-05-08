@@ -4,19 +4,15 @@ This module provides API endpoints for agent processing.
 """
 
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel, Field
 
-from agent_os.agent import (
-    agent_tick,
-    process_inbox_item,
-    ProcessingResult
-)
-from agent_os.db.base import get_db
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from agent_os.agent import agent_tick, process_inbox_item
 from agent_os.auth.dependencies import get_current_user
 from agent_os.auth.models import User
-
+from agent_os.db.base import get_db
 
 router = APIRouter(prefix="/api/v1/agent", tags=["agent"])
 
@@ -60,12 +56,12 @@ class ProcessItemResponse(BaseModel):
     """处理单个 Item 响应"""
     success: bool
     item_id: str
-    from_status: Optional[str]
-    to_status: Optional[str]
-    title: Optional[str]
-    summary: Optional[str]
-    item_type: Optional[str]
-    error: Optional[str]
+    from_status: str | None
+    to_status: str | None
+    title: str | None
+    summary: str | None
+    item_type: str | None
+    error: str | None
     processed_at: str
 
 
@@ -158,9 +154,10 @@ async def get_agent_status(
     Returns:
         Agent 状态统计信息
     """
+    from sqlalchemy import func, select
+
     from agent_os.agent.processor import get_raw_items
     from agent_os.items.models import Item, ItemStatus
-    from sqlalchemy import select, func
 
     # 获取当前用户的 raw items 数量
     stmt = select(func.count(Item.id)).where(

@@ -1,12 +1,24 @@
 """Unified Items Model - PRD4 Implementation."""
 
-from datetime import datetime
+import uuid
 from enum import Enum
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, JSON, Float, Boolean, Integer, Index, CheckConstraint, ARRAY, Date
+
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    CheckConstraint,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-import uuid
 
 # Try to import pgvector, fallback to ARRAY
 try:
@@ -325,5 +337,6 @@ class GraphEdge(Base):
 # Import AgentProcessEvent at module level to ensure relationship can resolve
 # This must be after both classes are defined
 from agent_os.agent.models import AgentProcessEvent
+
 # Update the relationship with the actual class reference
 Item.process_events = relationship(AgentProcessEvent, back_populates="item", cascade="all, delete-orphan")

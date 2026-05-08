@@ -1,8 +1,9 @@
 """Unit tests for Stage 4 Embedding Service."""
 
+
 import pytest
-import asyncio
-from agent_os.search_engine.embedding_service import SimpleEmbedding, EmbeddingService
+
+from agent_os.search_engine.embedding_service import EmbeddingService, SimpleEmbedding
 from agent_os.search_engine.models import SearchIndex
 
 
@@ -176,7 +177,7 @@ class TestEmbeddingService:
         for i in range(len(vec1)):
             assert abs(vec1[i] - vec2[i]) < 0.001
 
-        print(f"✅ Embedding consistency: vectors are identical")
+        print("✅ Embedding consistency: vectors are identical")
 
 
 @pytest.mark.asyncio
@@ -185,9 +186,10 @@ class TestEmbeddingIntegration:
 
     async def test_search_with_embeddings(self, db_session):
         """Test that embeddings work with search."""
-        from agent_os.search_engine.search_service import SearchService
-        from agent_os.search_engine.search_engine import SearchEngine, SearchQuery
         import uuid
+
+        from agent_os.search_engine.search_engine import SearchEngine, SearchQuery
+        from agent_os.search_engine.search_service import SearchService
 
         # Enable auto-embedding
         search_service = SearchService(db_session, auto_embed=True)

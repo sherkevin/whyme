@@ -11,7 +11,7 @@ class RuntimeContext(BaseModel):
     session_id: str
     user_id: str
     trace_id: str
-    sandbox_id: Optional[str] = None
+    sandbox_id: str | None = None
 
 
 class PruningReport(BaseModel):
@@ -21,4 +21,4 @@ class PruningReport(BaseModel):
     remaining_tokens: int
     pruned_count: int
     strategy_used: str
-    summary_content: Optional[str] = None
+    summary_content: str | None = None

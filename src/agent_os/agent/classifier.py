@@ -26,8 +26,8 @@ class ClassificationConfidence(str, Enum):
 
 def classify_content(
     content: str,
-    title: Optional[str] = None,
-    metadata: Optional[dict] = None
+    title: str | None = None,
+    metadata: dict | None = None
 ) -> tuple[ItemType, ClassificationConfidence]:
     """分类内容类型.
 
@@ -117,7 +117,7 @@ def _is_reference(content: str, metadata: dict) -> bool:
     return False
 
 
-def _calculate_task_score(content: str, title: Optional[str], metadata: dict) -> int:
+def _calculate_task_score(content: str, title: str | None, metadata: dict) -> int:
     """计算任务得分.
 
     得分规则:
@@ -187,7 +187,7 @@ def _calculate_task_score(content: str, title: Optional[str], metadata: dict) ->
     return score
 
 
-def _calculate_note_score(content: str, title: Optional[str], metadata: dict) -> int:
+def _calculate_note_score(content: str, title: str | None, metadata: dict) -> int:
     """计算笔记得分.
 
     得分规则:
@@ -240,7 +240,7 @@ def _calculate_note_score(content: str, title: Optional[str], metadata: dict) ->
     return score
 
 
-def infer_subtype(content: str, item_type: ItemType) -> Optional[str]:
+def infer_subtype(content: str, item_type: ItemType) -> str | None:
     """推断内容子类型.
 
     Args:
@@ -260,7 +260,7 @@ def infer_subtype(content: str, item_type: ItemType) -> Optional[str]:
     return None
 
 
-def _infer_task_subtype(content: str) -> Optional[str]:
+def _infer_task_subtype(content: str) -> str | None:
     """推断任务子类型."""
     content_lower = content.lower()
 
@@ -278,7 +278,7 @@ def _infer_task_subtype(content: str) -> Optional[str]:
     return "general"
 
 
-def _infer_note_subtype(content: str) -> Optional[str]:
+def _infer_note_subtype(content: str) -> str | None:
     """推断笔记子类型."""
     content_lower = content.lower()
 
@@ -294,7 +294,7 @@ def _infer_note_subtype(content: str) -> Optional[str]:
     return "general"
 
 
-def _infer_reference_subtype(content: str) -> Optional[str]:
+def _infer_reference_subtype(content: str) -> str | None:
     """推断参考子类型."""
     if 'http://' in content or 'https://' in content:
         return "url"

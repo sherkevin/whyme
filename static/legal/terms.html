@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>服务条款 · Terms of Service — Mydow</title>
+  <meta
+    name="description"
+    content="Mydow 服务条款 — Mydow Terms of Service. 使用规范、订阅、责任与终止条款。"
+  />
+  <style>
+    :root {
+      --bg: #0c0e14;
+      --bg-elev: #161924;
+      --border: #2a2f3d;
+      --text: #e6e8ef;
+      --text-muted: #a8b0c2;
+      --accent: #7c5cff;
+      --link: #9d85ff;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 64px 24px 96px;
+    }
+    header.page-head {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 40px;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .brand-mark {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #7c5cff, #36c1ff);
+    }
+    h1 {
+      margin: 12px 0 4px;
+      font-size: 36px;
+      letter-spacing: -0.02em;
+    }
+    h2 {
+      margin-top: 48px;
+      margin-bottom: 12px;
+      font-size: 22px;
+      letter-spacing: -0.01em;
+    }
+    h3 {
+      margin-top: 24px;
+      margin-bottom: 8px;
+      font-size: 16px;
+    }
+    p, li { font-size: 16px; }
+    p { margin: 0 0 16px; }
+    ul {
+      padding-left: 24px;
+      margin: 0 0 16px;
+    }
+    ul li { margin-bottom: 6px; }
+    .meta {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    a {
+      color: var(--link);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+    }
+    a:hover { border-bottom-color: var(--link); }
+    .lang-toggle {
+      display: inline-flex;
+      gap: 0;
+      margin-top: 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+      background: var(--bg-elev);
+      width: fit-content;
+    }
+    .lang-toggle button {
+      background: transparent;
+      border: 0;
+      color: var(--text-muted);
+      padding: 6px 14px;
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+    }
+    .lang-toggle button.active {
+      background: var(--accent);
+      color: #fff;
+    }
+    .callout {
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      background: var(--bg-elev);
+      padding: 14px 18px;
+      border-radius: 8px;
+      margin: 0 0 16px;
+    }
+    .lang-section { display: none; }
+    .lang-section.active { display: block; }
+    footer.page-foot {
+      margin-top: 64px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+    .row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="page-head">
+      <span class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        Mydow
+      </span>
+      <h1>服务条款 · Terms of Service</h1>
+      <p class="meta">
+        <span data-zh>最后更新：2026 年 5 月 6 日</span>
+        <span data-en>Last updated: May 6, 2026</span>
+      </p>
+      <div class="lang-toggle" role="tablist" aria-label="Language">
+        <button type="button" data-lang="zh" class="active" aria-pressed="true">中文</button>
+        <button type="button" data-lang="en" aria-pressed="false">English</button>
+      </div>
+    </header>
+
+    <!-- ===== Chinese ===== -->
+    <section class="lang-section active" data-lang-section="zh">
+      <div class="callout">
+        欢迎使用 Mydow。当你注册或访问 Mydow 服务（含网页端、SDK、API），即表示
+        你已阅读、理解并同意本服务条款。如不同意，请勿使用本服务。
+      </div>
+
+      <h2>1. 服务说明</h2>
+      <p>
+        Mydow 提供个人灵感采集、知识管理、AI 助理与 Skills 自动化能力。
+        我们持续迭代功能；本条款适用于所有形态的 Mydow 服务。
+      </p>
+
+      <h2>2. 账号</h2>
+      <ul>
+        <li>你需提供真实邮箱并妥善保管密码。</li>
+        <li>禁止冒用、盗用他人账号或共享凭证。</li>
+        <li>账号一旦发现安全问题应立即修改密码并联系我们。</li>
+      </ul>
+
+      <h2>3. 你创建的内容</h2>
+      <p>
+        你保留你输入到 Mydow 的所有内容（笔记、文档、对话）的<strong>所有权</strong>。
+        在你授权范围内，我们仅为提供服务（存储、检索、AI 推理）使用这些内容。
+      </p>
+      <p>
+        你不得上传、生成或分享：违法信息、侵权内容、儿童不当材料、
+        侵犯他人肖像/隐私的资料、用于实施网络攻击的恶意代码。
+      </p>
+
+      <h2>4. AI 输出免责</h2>
+      <p>
+        AI 生成内容可能存在不准确或过时的信息。Mydow AI 不能替代专业的
+        医疗、法律、财务或安全建议；在采取重要决策前请独立核实。
+      </p>
+
+      <h2>5. 订阅与付费（如适用）</h2>
+      <ul>
+        <li>免费版包含基础功能；专业版（Pro）解锁高级能力（详见定价页）。</li>
+        <li>订阅采用月付/年付循环计费；可随时取消，已支付期间不退款。</li>
+        <li>所有费用以人民币结算（含税），未包含支付通道手续费。</li>
+      </ul>
+
+      <h2>6. 服务可用性</h2>
+      <p>
+        我们以商业上合理的努力提供 99.5% 月度可用性，但不承诺任何 SLA 赔偿
+        除非另行签订企业协议。计划维护会提前公告。
+      </p>
+
+      <h2>7. 终止</h2>
+      <ul>
+        <li>你可随时通过 <code>DELETE /api/v1/me</code> 或邮件 <a href="mailto:support@mydow.example">support@mydow.example</a> 注销账号。</li>
+        <li>若你违反本条款（含但不限于第 3 节内容规则），我们有权暂停或终止你的账号。</li>
+        <li>终止后，你的数据按隐私政策第 4 节规定保留或删除。</li>
+      </ul>
+
+      <h2>8. 责任限制</h2>
+      <p>
+        在适用法律允许的最大范围内，Mydow 对任何间接、附带、特殊、惩罚性损失
+        不承担责任；总责任不超过你最近 12 个月支付给 Mydow 的费用。
+      </p>
+
+      <h2>9. 条款变更</h2>
+      <p>
+        我们可能不定期更新本条款；重大修改会通过邮件或站内通知至少提前 14 天告知。
+        修改后继续使用即视为接受新版本。
+      </p>
+
+      <h2>10. 适用法律</h2>
+      <p>
+        本条款受中华人民共和国法律管辖（不含冲突法规则）；任何争议由 Mydow 注册地
+        有管辖权的法院专属管辖。
+      </p>
+
+      <h2>11. 联系</h2>
+      <ul>
+        <li>支持：<a href="mailto:support@mydow.example">support@mydow.example</a></li>
+        <li>商务：<a href="mailto:business@mydow.example">business@mydow.example</a></li>
+        <li>合规配套：<a href="/legal/privacy.html">隐私政策</a></li>
+      </ul>
+    </section>
+
+    <!-- ===== English ===== -->
+    <section class="lang-section" data-lang-section="en">
+      <div class="callout">
+        Welcome to Mydow. By signing up for or accessing the Mydow services
+        (web, SDK, API), you agree to these Terms of Service. If you do not
+        agree, please stop using the service.
+      </div>
+
+      <h2>1. Service Description</h2>
+      <p>
+        Mydow is a personal inspiration capture, knowledge management, AI
+        assistant, and Skills-automation platform. These terms apply to every
+        flavour of the Mydow service.
+      </p>
+
+      <h2>2. Accounts</h2>
+      <ul>
+        <li>Provide a real email and keep your password safe.</li>
+        <li>Do not impersonate others or share credentials.</li>
+        <li>Notify us immediately at any sign of compromise.</li>
+      </ul>
+
+      <h2>3. Your Content</h2>
+      <p>
+        You retain <strong>ownership</strong> of everything you put into
+        Mydow (notes, documents, conversations). Within the scope you grant
+        us, we use the content only to operate the service (storage,
+        retrieval, AI inference).
+      </p>
+      <p>
+        Prohibited content includes anything unlawful, infringing,
+        privacy-violating, sexually explicit minor content, or malicious code.
+      </p>
+
+      <h2>4. AI Output Disclaimer</h2>
+      <p>
+        AI-generated text may be inaccurate or out of date. Mydow AI is not a
+        substitute for professional medical, legal, financial, or security
+        advice. Verify independently before any high-stakes decision.
+      </p>
+
+      <h2>5. Subscriptions &amp; Billing</h2>
+      <ul>
+        <li>Free tier includes core features; Pro unlocks advanced features (see pricing page).</li>
+        <li>Subscriptions are recurring (monthly / yearly); cancellable any time, no refunds for the current period.</li>
+        <li>All fees include applicable taxes; payment processor fees may apply separately.</li>
+      </ul>
+
+      <h2>6. Availability</h2>
+      <p>
+        We use commercially reasonable efforts to deliver 99.5% monthly
+        uptime but make no SLA-credit commitment outside enterprise
+        agreements. Planned maintenance is announced in advance.
+      </p>
+
+      <h2>7. Termination</h2>
+      <ul>
+        <li>Close your account anytime via <code>DELETE /api/v1/me</code> or by emailing <a href="mailto:support@mydow.example">support@mydow.example</a>.</li>
+        <li>We may suspend or terminate accounts that violate these terms (including §3 content rules).</li>
+        <li>After termination your data follows §4 of the Privacy Policy.</li>
+      </ul>
+
+      <h2>8. Limitation of Liability</h2>
+      <p>
+        To the maximum extent permitted by law, Mydow is not liable for any
+        indirect, incidental, special, or punitive damages. Total liability
+        is capped at the fees you paid Mydow in the trailing 12 months.
+      </p>
+
+      <h2>9. Changes to These Terms</h2>
+      <p>
+        We may update these terms occasionally. Material changes are
+        announced by email or in-app at least 14 days before they take
+        effect. Continued use after the effective date is acceptance.
+      </p>
+
+      <h2>10. Governing Law</h2>
+      <p>
+        These terms are governed by the laws of the People's Republic of
+        China (excluding conflict-of-law rules). Disputes go to the courts
+        of competent jurisdiction at Mydow's registered seat.
+      </p>
+
+      <h2>11. Contact</h2>
+      <ul>
+        <li>Support: <a href="mailto:support@mydow.example">support@mydow.example</a></li>
+        <li>Business: <a href="mailto:business@mydow.example">business@mydow.example</a></li>
+        <li>Companion docs: <a href="/legal/privacy.html">Privacy Policy</a></li>
+      </ul>
+    </section>
+
+    <footer class="page-foot">
+      <div class="row">
+        <span data-zh>© 2026 Mydow · 让灵感不再消失</span>
+        <span data-en>© 2026 Mydow · Capture every spark</span>
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      const buttons = document.querySelectorAll('.lang-toggle button[data-lang]');
+      const sections = document.querySelectorAll('[data-lang-section]');
+      const inlineSpans = document.querySelectorAll('[data-zh], [data-en]');
+
+      function setLang(lang) {
+        sections.forEach(function (sec) {
+          sec.classList.toggle('active', sec.dataset.langSection === lang);
+        });
+        buttons.forEach(function (btn) {
+          const isActive = btn.dataset.lang === lang;
+          btn.classList.toggle('active', isActive);
+          btn.setAttribute('aria-pressed', String(isActive));
+        });
+        inlineSpans.forEach(function (span) {
+          if (span.hasAttribute('data-zh')) {
+            span.style.display = lang === 'zh' ? '' : 'none';
+          }
+          if (span.hasAttribute('data-en')) {
+            span.style.display = lang === 'en' ? '' : 'none';
+          }
+        });
+        document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+        try { localStorage.setItem('mydow_legal_lang', lang); } catch (e) {}
+      }
+
+      buttons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          setLang(btn.dataset.lang);
+        });
+      });
+
+      let initial = 'zh';
+      try { initial = localStorage.getItem('mydow_legal_lang') || initial; } catch (e) {}
+      setLang(initial);
+    })();
+  </script>
+</body>
+</html>

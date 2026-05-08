@@ -1,6 +1,6 @@
 """Version Control System (VCS) capabilities."""
 
-from agent_os.capabilities.vcs.git import GitWrapper, GitOperationError
+from agent_os.capabilities.vcs.git import GitOperationError, GitWrapper
 
 __all__ = [
     "GitWrapper",

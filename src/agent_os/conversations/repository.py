@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from typing import List, Optional
-from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
+
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import Conversation, ConversationSummary
 
@@ -20,9 +20,9 @@ class ConversationRepository:
         session_id: str,
         role: str,
         content: str,
-        tool_calls: Optional[dict] = None,
-        model: Optional[str] = None,
-        tokens: Optional[int] = None,
+        tool_calls: dict | None = None,
+        model: str | None = None,
+        tokens: int | None = None,
     ) -> Conversation:
         """Add a message to conversation history.
 
@@ -58,9 +58,9 @@ class ConversationRepository:
         session: AsyncSession,
         user_id: int,
         session_id: str,
-        limit: Optional[int] = None,
-        before_id: Optional[int] = None,
-    ) -> List[Conversation]:
+        limit: int | None = None,
+        before_id: int | None = None,
+    ) -> list[Conversation]:
         """Retrieve conversation history.
 
         Args:
@@ -93,7 +93,7 @@ class ConversationRepository:
         self,
         session: AsyncSession,
         conversation_id: int,
-    ) -> Optional[Conversation]:
+    ) -> Conversation | None:
         """Get a specific conversation by ID.
 
         Args:
@@ -162,7 +162,7 @@ class ConversationRepository:
         user_id: int,
         session_id: str,
         summary_text: str,
-        message_ids: List[int],
+        message_ids: list[int],
     ) -> ConversationSummary:
         """Create a conversation summary and archive old messages.
 
@@ -199,7 +199,7 @@ class ConversationRepository:
         session: AsyncSession,
         user_id: int,
         limit: int = 10,
-    ) -> List[str]:
+    ) -> list[str]:
         """Get recent session IDs for a user.
 
         Args:

@@ -3,13 +3,17 @@
 Tests for 5-dimensional connection calculation engine.
 """
 
-import pytest
 import uuid
 from datetime import datetime, timedelta
 
-from agent_os.connections.engine import ConnectionEngine, calculate_connection
-from agent_os.connections.extractors import KeywordExtractor, EntityExtractor, extract_keywords_and_entities
+import pytest
 
+from agent_os.connections.engine import ConnectionEngine
+from agent_os.connections.extractors import (
+    EntityExtractor,
+    KeywordExtractor,
+    extract_keywords_and_entities,
+)
 
 # ============================================================================
 # Unit Tests - Extractors
@@ -372,8 +376,9 @@ async def test_connection_with_no_embeddings():
 @pytest.mark.asyncio
 async def test_connection_calculation_performance():
     """测试连接计算性能"""
-    from agent_os.items.models import Item
     import time
+
+    from agent_os.items.models import Item
 
     engine = ConnectionEngine()
 

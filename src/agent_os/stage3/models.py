@@ -5,8 +5,8 @@ Note: We use AgentDecision instead of DecisionPoint to avoid conflict with items
 """
 
 import uuid
-from datetime import datetime
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, JSON, Integer, Boolean, Index
+
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -108,8 +108,17 @@ class Skill(Base):
     version = Column(String(20), nullable=False, default="1.0")
     parent_skill_id = Column(UUID(as_uuid=True), ForeignKey("skills.id"))
 
+    # PRD10 §5.13 / §17 display + lifecycle fields
+    icon = Column(String(50), nullable=True)
+    status = Column(String(20), nullable=False, default="published")  # published, draft, archived
+    usage_count = Column(Integer, nullable=False, default=0)
+    is_installed_default = Column(Boolean, nullable=False, default=True)
+    input_schema = Column(JSON, default=dict, nullable=True)
+    output_schema = Column(JSON, default=dict, nullable=True)
+
     # Creation info
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     created_by = Column(String(36), nullable=True)  # User UUID as string
     is_active = Column(Boolean, default=True)  # Soft delete
 
@@ -120,7 +129,36 @@ class Skill(Base):
     __table_args__ = (
         Index('idx_skill_category', 'category', 'is_active'),
         Index('idx_skill_version', 'id', 'version'),
+        Index('idx_skill_status', 'status', 'is_active'),
     )
+
+    def to_prd10_dict(self, *, is_installed: bool | None = None) -> dict:
+        """Serialize to PRD10 §5.13 / §17 skill DTO."""
+
+        return {
+            "id": str(self.id),
+            "name": self.name,
+            "description": self.description or "",
+            "category": self.category,
+            "icon": self.icon,
+            "status": self.status,
+            "is_installed": (
+                bool(is_installed)
+                if is_installed is not None
+                else bool(self.is_installed_default)
+            ),
+            "usage_count": int(self.usage_count or 0),
+            "input_schema": dict(self.input_schema or {}),
+            "output_schema": dict(self.output_schema or {}),
+            # PRD10 §17 recommendation algo (§16.5) needs the tag list to score
+            # skills against recent capture tags. Frontend Skills 广场 also uses
+            # this to render tag chips on each card.
+            "required_tags": list(self.required_tags or []),
+            "applicable_item_types": list(self.applicable_item_types or []),
+            "version": self.version,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
 
 
 class TaskExecutionLog(Base):

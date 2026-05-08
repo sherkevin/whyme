@@ -54,11 +54,7 @@ def test_agent_router_has_endpoints():
 
 def test_agent_functions_exported():
     """验证 Agent 包导出所需函数"""
-    from agent_os.agent import (
-        agent_tick,
-        process_inbox_item,
-        ProcessingResult
-    )
+    from agent_os.agent import ProcessingResult, agent_tick, process_inbox_item
 
     # 验证函数存在
     assert callable(agent_tick), "agent_tick should be callable"

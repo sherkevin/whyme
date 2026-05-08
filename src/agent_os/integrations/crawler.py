@@ -5,8 +5,7 @@ Extracts content and metadata from URLs.
 
 import logging
 import re
-from typing import Optional, Dict, Any, List
-from urllib.parse import urljoin, urlparse
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +34,7 @@ class WebCrawler:
         self,
         url: str,
         session: Any = None
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         抓取网页内容
 
@@ -64,7 +63,7 @@ class WebCrawler:
         self,
         session: Any,  # aiohttp.ClientSession
         url: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         使用已有session抓取页面
 
@@ -131,7 +130,7 @@ class WebCrawler:
         self,
         url: str,
         html_content: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         从HTML内容中提取元数据
 
@@ -265,7 +264,6 @@ class WebCrawler:
         save_path: str
     ) -> bool:
         """使用已有session下载图片"""
-        import aiohttp
 
         headers = {'User-Agent': self.user_agent}
 
@@ -286,7 +284,7 @@ class WebCrawler:
             logger.info(f"Downloaded image to {save_path}")
             return True
 
-    def extract_urls_from_text(self, text: str) -> List[str]:
+    def extract_urls_from_text(self, text: str) -> list[str]:
         """
         从文本中提取所有URL (便捷方法)
 
@@ -305,8 +303,8 @@ class WebCrawler:
 
 async def crawl_url(
     url: str,
-    crawler: Optional[WebCrawler] = None
-) -> Optional[Dict[str, Any]]:
+    crawler: WebCrawler | None = None
+) -> dict[str, Any] | None:
     """
     抓取单个URL (便捷函数)
 
@@ -328,7 +326,7 @@ class LinkExtractor:
 
     URL_PATTERN = r'https?://\S+'
 
-    def extract_urls(self, text: str) -> List[str]:
+    def extract_urls(self, text: str) -> list[str]:
         """从文本中提取所有URL"""
         import re
 
@@ -348,7 +346,7 @@ class LinkExtractor:
 
         return list(set(cleaned_urls))
 
-    def extract_first_url(self, text: str) -> Optional[str]:
+    def extract_first_url(self, text: str) -> str | None:
         """提取第一个URL"""
         urls = self.extract_urls(text)
         return urls[0] if urls else None

@@ -2,9 +2,10 @@
 
 import hashlib
 import secrets
-import jwt
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
+import jwt
 from passlib.context import CryptContext
 
 # Password hashing context
@@ -32,7 +33,7 @@ def get_password_hash(password: str) -> str:
     salt = secrets.token_hex(16)
 
     # Hash password with salt
-    salted_password = f"{salt}{password}".encode('utf-8')
+    salted_password = f"{salt}{password}".encode()
     password_hash = hashlib.sha256(salted_password).hexdigest()
 
     # Return salt$hash format for verification
@@ -54,7 +55,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         salt, password_hash = hashed_password.split('$', 1)
 
         # Hash the plain password with the same salt
-        salted_password = f"{salt}{plain_password}".encode('utf-8')
+        salted_password = f"{salt}{plain_password}".encode()
         computed_hash = hashlib.sha256(salted_password).hexdigest()
 
         # Compare hashes
@@ -75,8 +76,8 @@ REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 
 def create_access_token(
-    data: Dict[str, Any],
-    expires_delta: Optional[timedelta] = None
+    data: dict[str, Any],
+    expires_delta: timedelta | None = None
 ) -> str:
     """Create a JWT access token.
 
@@ -105,8 +106,8 @@ def create_access_token(
 
 
 def create_refresh_token(
-    data: Dict[str, Any],
-    expires_delta: Optional[timedelta] = None
+    data: dict[str, Any],
+    expires_delta: timedelta | None = None
 ) -> str:
     """Create a JWT refresh token.
 
@@ -134,7 +135,7 @@ def create_refresh_token(
     return encoded_jwt
 
 
-def decode_token(token: str) -> Optional[Dict[str, Any]]:
+def decode_token(token: str) -> dict[str, Any] | None:
     """Decode and validate a JWT token.
 
     Args:

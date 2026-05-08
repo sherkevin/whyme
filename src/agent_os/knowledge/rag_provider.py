@@ -1,15 +1,16 @@
 """Concrete RAG provider implementation using database."""
 
-from typing import List, Dict, Any, Optional
-from sqlalchemy import select, func
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from agent_os.knowledge.models import Card
 from agent_os.knowledge.rag_interface import (
+    KnowledgeContext,
     RAGProvider,
     SearchResult,
-    KnowledgeContext,
 )
-from agent_os.knowledge.models import Card, InboxItem
 
 # Try to import pgvector cosine_distance, but don't fail if not available
 try:
@@ -40,9 +41,9 @@ class CardRAGProvider(RAGProvider):
         user_id: int,
         query: str,
         limit: int = 5,
-        para_type: Optional[str] = None,
-        tags: Optional[List[str]] = None
-    ) -> List[SearchResult]:
+        para_type: str | None = None,
+        tags: list[str] | None = None
+    ) -> list[SearchResult]:
         """Search knowledge base using vector similarity.
 
         Args:
@@ -106,8 +107,8 @@ class CardRAGProvider(RAGProvider):
         title: str,
         content: str,
         para_type: str,
-        tags: List[str] = None,
-        metadata: Dict[str, Any] = None
+        tags: list[str] = None,
+        metadata: dict[str, Any] = None
     ) -> int:
         """Add knowledge card with optional embedding generation.
 
@@ -185,7 +186,7 @@ class CardRAGProvider(RAGProvider):
     async def get_user_knowledge_stats(
         self,
         user_id: int
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get user's knowledge statistics.
 
         Args:
@@ -227,7 +228,7 @@ class CardRAGProvider(RAGProvider):
 
     def _format_context(
         self,
-        results: List[SearchResult],
+        results: list[SearchResult],
         query: str
     ) -> str:
         """Format search results into context for AI.

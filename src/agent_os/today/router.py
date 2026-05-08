@@ -3,32 +3,33 @@
 Provides the Today view - an aggregated view of items needing user attention.
 """
 
-from typing import Optional
 import uuid
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func
+from typing import Optional
 
-from agent_os.db.base import get_db
-from agent_os.today import crud
-from agent_os.today.schema import (
-    TodayViewResponse,
-    TodayItem,
-    TodayErrorResponse,
-    DailyInsightResponse,
-    TodayInsightListResponse,
-    InsightSource,
-)
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from agent_os.auth.dependencies import get_current_user
 from agent_os.auth.models import User
+from agent_os.db.base import get_db
 from agent_os.items.models import Workspace
+from agent_os.today import crud
+from agent_os.today.schema import (
+    DailyInsightResponse,
+    InsightSource,
+    TodayErrorResponse,
+    TodayInsightListResponse,
+    TodayItem,
+    TodayViewResponse,
+)
 
 router = APIRouter(prefix="/api/v1/today", tags=["Today"])
 
 
 @router.get(
-    "",
+    "/legacy",
     response_model=TodayViewResponse,
     responses={
         401: {"model": TodayErrorResponse, "description": "Not authenticated"},
@@ -105,7 +106,7 @@ async def get_today_view(
 )
 async def get_today_insights(
     day: str = Query(..., pattern=r"^\d{4}-\d{2}-\d{2}$", description="Date in YYYY-MM-DD format"),
-    theme: Optional[str] = Query(None, description="Optional theme filter"),
+    theme: str | None = Query(None, description="Optional theme filter"),
     workspace_id: uuid.UUID = Query(..., description="Workspace ID"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -120,7 +121,7 @@ async def get_today_insights(
 
     **Required fields**: claim, rationale, implications, sources
     """
-    from agent_os.garden.models import DailyInsight, InsightStatus
+    from agent_os.garden.models import DailyInsight
     from agent_os.items.models import Item
 
     # Verify workspace access

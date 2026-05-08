@@ -1,6 +1,5 @@
 """Test suite for enhanced RepoMap implementation."""
 
-import os
 import tempfile
 from pathlib import Path
 

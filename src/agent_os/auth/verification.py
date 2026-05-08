@@ -6,13 +6,9 @@
 - Attempt counting and lockout
 """
 
-import os
-import random
 import logging
-from typing import Optional, Literal, TYPE_CHECKING
-from datetime import datetime, timedelta
-
-from fastapi import HTTPException, status
+import random
+from typing import Literal, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +125,7 @@ class VerificationService:
         self,
         email: str,
         code_type: Literal["login", "bind", "reset"] = TYPE_LOGIN,
-        ip: Optional[str] = None
+        ip: str | None = None
     ) -> str:
         """Create and store verification code.
 
@@ -289,7 +285,7 @@ class VerificationService:
         return max(0, self.MAX_ATTEMPTS - attempts)
 
 
-def get_verification_service() -> Optional[VerificationService]:
+def get_verification_service() -> VerificationService | None:
     """Get verification service instance.
 
     Returns:

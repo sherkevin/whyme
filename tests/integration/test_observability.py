@@ -3,21 +3,18 @@
 Complete integration tests for monitoring, logging, and health checks.
 """
 
-import pytest
-import uuid
-import time
 import asyncio
 
-from agent_os.observability.middleware import (
-    PerformanceMetrics,
-    performance_metrics,
-    monitor_performance,
-    HealthChecker,
-    health_checker,
-    log_context,
-    configure_logging
-)
+import pytest
 
+from agent_os.observability.middleware import (
+    HealthChecker,
+    PerformanceMetrics,
+    configure_logging,
+    log_context,
+    monitor_performance,
+    performance_metrics,
+)
 
 # ============================================================================
 # Performance Metrics Tests

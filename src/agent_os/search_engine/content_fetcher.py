@@ -8,8 +8,8 @@ This module provides functionality for:
 
 import logging
 import re
-from typing import Optional
 from pathlib import Path
+from typing import Optional
 
 try:
     import aiohttp
@@ -49,7 +49,7 @@ class ContentFetcher:
     async def fetch_url(
         self,
         url: str,
-        timeout: Optional[int] = None
+        timeout: int | None = None
     ) -> str:
         """Fetch content from URL.
 

@@ -1,11 +1,14 @@
 """Simple test of AiderAgent"""
-import sys
 import os
+import sys
+
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
-from agent_os.agent_aider import AiderAgent
-from agent_os.core.config import Config, LLMConfig, AgentConfig, MemoryConfig, ContextConfig
 import asyncio
+
+from agent_os.agent_aider import AiderAgent
+from agent_os.core.config import AgentConfig, Config, ContextConfig, LLMConfig, MemoryConfig
+
 
 async def test():
     config = Config(

@@ -6,12 +6,13 @@ This module provides functionality for:
 - Skill versioning and matching
 """
 
-import uuid
 import logging
-from typing import Dict, List, Optional, Any
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+import uuid
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_os.stage3.models import Skill
 
@@ -33,12 +34,12 @@ class SkillService:
         name: str,
         description: str,
         category: str,
-        steps: List[Dict[str, Any]],
+        steps: list[dict[str, Any]],
         created_by: str,
-        applicable_item_types: Optional[List[str]] = None,
-        required_tags: Optional[List[str]] = None,
+        applicable_item_types: list[str] | None = None,
+        required_tags: list[str] | None = None,
         version: str = "1.0",
-        parent_skill_id: Optional[str] = None
+        parent_skill_id: str | None = None
     ) -> Skill:
         """Create a new Skill.
 
@@ -75,7 +76,7 @@ class SkillService:
         logger.info(f"Created Skill: {skill.name} (v{skill.version})")
         return skill
 
-    async def get_skill(self, skill_id: str) -> Optional[Skill]:
+    async def get_skill(self, skill_id: str) -> Skill | None:
         """Get a Skill by ID.
 
         Args:
@@ -96,12 +97,12 @@ class SkillService:
 
     async def list_skills(
         self,
-        category: Optional[str] = None,
-        created_by: Optional[str] = None,
+        category: str | None = None,
+        created_by: str | None = None,
         is_active: bool = True,
         limit: int = 100,
         offset: int = 0
-    ) -> List[Skill]:
+    ) -> list[Skill]:
         """List Skills with optional filters.
 
         Args:
@@ -134,7 +135,7 @@ class SkillService:
         self,
         skill_id: str,
         **updates
-    ) -> Optional[Skill]:
+    ) -> Skill | None:
         """Update a Skill.
 
         Args:
@@ -188,9 +189,9 @@ class SkillService:
     async def create_skill_version(
         self,
         parent_skill_id: str,
-        changes: Dict[str, Any],
+        changes: dict[str, Any],
         created_by: str
-    ) -> Optional[Skill]:
+    ) -> Skill | None:
         """Create a new version of an existing Skill.
 
         Args:
@@ -243,10 +244,10 @@ class SkillService:
     async def recommend_skills(
         self,
         task_type: str,
-        task_tags: Optional[List[str]] = None,
-        task_content: Optional[str] = None,
+        task_tags: list[str] | None = None,
+        task_content: str | None = None,
         limit: int = 5
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Recommend Skills for a given Task.
 
         Args:
@@ -307,7 +308,7 @@ class SkillService:
         self,
         skill: Skill,
         task_type: str,
-        task_tags: Optional[List[str]]
+        task_tags: list[str] | None
     ) -> str:
         """Generate explanation for why a skill was recommended."""
         reasons = []
@@ -326,7 +327,7 @@ class SkillService:
     # Skill Analytics
     # =========================================================================
 
-    async def get_skill_versions(self, skill_id: str) -> List[Skill]:
+    async def get_skill_versions(self, skill_id: str) -> list[Skill]:
         """Get all versions of a Skill.
 
         Args:
@@ -375,7 +376,7 @@ class SkillService:
 
         return sorted(versions, key=lambda x: x.created_at)
 
-    async def get_skill_stats(self, skill_id: str) -> Optional[Dict[str, Any]]:
+    async def get_skill_stats(self, skill_id: str) -> dict[str, Any] | None:
         """Get usage statistics for a Skill.
 
         Args:

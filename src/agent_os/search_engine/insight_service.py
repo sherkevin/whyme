@@ -9,12 +9,13 @@ This module provides aggregation and analysis capabilities:
 
 import uuid
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional, Any
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, or_
 from sqlalchemy.sql import select
 
-from agent_os.search_engine.models import SearchIndex, InsightCluster
+from agent_os.search_engine.models import InsightCluster, SearchIndex
 
 
 class InsightService:
@@ -35,8 +36,8 @@ class InsightService:
     async def generate_summary(
         self,
         item_type: str,
-        item_ids: List[str] = None,
-        date_range: Dict[str, str] = None,
+        item_ids: list[str] = None,
+        date_range: dict[str, str] = None,
         name: str = None,
         generated_by: str = None
     ) -> InsightCluster:
@@ -149,7 +150,7 @@ class InsightService:
         self,
         item_type: str,
         metric: str = "count",
-        date_range: Dict[str, str] = None,
+        date_range: dict[str, str] = None,
         group_by: str = "day",
         name: str = None,
         generated_by: str = None
@@ -261,7 +262,7 @@ class InsightService:
     async def generate_topics(
         self,
         item_type: str,
-        item_ids: List[str] = None,
+        item_ids: list[str] = None,
         num_topics: int = 5,
         name: str = None,
         generated_by: str = None
@@ -340,7 +341,7 @@ class InsightService:
         self,
         item_type: str,
         pattern_type: str = "creation_time",
-        date_range: Dict[str, str] = None,
+        date_range: dict[str, str] = None,
         name: str = None,
         generated_by: str = None
     ) -> InsightCluster:
@@ -418,7 +419,7 @@ class InsightService:
     async def get_insight(
         self,
         insight_id: str
-    ) -> Optional[InsightCluster]:
+    ) -> InsightCluster | None:
         """Get an insight cluster by ID.
 
         Args:
@@ -442,7 +443,7 @@ class InsightService:
         source_item_type: str = None,
         limit: int = 20,
         include_expired: bool = False
-    ) -> List[InsightCluster]:
+    ) -> list[InsightCluster]:
         """List insight clusters.
 
         Args:
@@ -508,7 +509,7 @@ class InsightService:
     # Private helper methods
     # ========================================================================
 
-    def _parse_datetime(self, dt_str: str) -> Optional[datetime]:
+    def _parse_datetime(self, dt_str: str) -> datetime | None:
         """Parse datetime string.
 
         Supports ISO format and common variants.
@@ -528,7 +529,7 @@ class InsightService:
                     continue
             return None
 
-    def _generate_summary_text(self, items: List[SearchIndex]) -> str:
+    def _generate_summary_text(self, items: list[SearchIndex]) -> str:
         """Generate summary text from items."""
         if not items:
             return "No items to summarize."
@@ -561,7 +562,7 @@ class InsightService:
 
         return " ".join(summary_parts)
 
-    def _calculate_trend_statistics(self, values: List[int]) -> Dict[str, Any]:
+    def _calculate_trend_statistics(self, values: list[int]) -> dict[str, Any]:
         """Calculate trend statistics from time series values."""
         if len(values) < 2:
             return {
@@ -596,7 +597,7 @@ class InsightService:
             "last_period_value": values[-1]
         }
 
-    def _extract_topics(self, items: List[SearchIndex], num_topics: int) -> Dict[str, Any]:
+    def _extract_topics(self, items: list[SearchIndex], num_topics: int) -> dict[str, Any]:
         """Extract topics from items using tag analysis."""
         # Aggregate tags
         tag_counts = {}
@@ -636,7 +637,7 @@ class InsightService:
             "coverage": coverage
         }
 
-    def _detect_patterns(self, items: List[SearchIndex], pattern_type: str) -> Dict[str, Any]:
+    def _detect_patterns(self, items: list[SearchIndex], pattern_type: str) -> dict[str, Any]:
         """Detect patterns in items."""
         patterns = []
 

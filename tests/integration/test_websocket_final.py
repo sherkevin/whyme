@@ -1,8 +1,10 @@
 """Quick WebSocket test to verify aider works through web UI."""
 
 import asyncio
-import websockets
 import json
+
+import websockets
+
 
 async def test_websocket():
     """Test WebSocket with simple file creation."""
@@ -48,11 +50,11 @@ async def test_websocket():
                             content = payload['content']
                             # Check for success indicators
                             if 'Applied edit' in content or 'Added' in content:
-                                print(f"[OK] File edit detected!")
+                                print("[OK] File edit detected!")
                             if 'Error' not in content and len(content) > 50:
                                 print(f"[OK] Received content ({len(content)} chars)")
 
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     print("[OK] Timeout (waiting for more responses)")
                     break
 

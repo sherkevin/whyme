@@ -3,6 +3,7 @@
 import asyncio
 import json
 import sys
+
 import websockets
 
 SESSION_ID = "b9bffa2c-edd6-40a2-bffe-f203b7ba5dae"
@@ -43,7 +44,7 @@ async def test_aider_extended():
                     else:
                         print(f"[{i:02d}] [Empty AI response]")
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 continue
 
         print("\n[Test ended - timeout or connection closed]")

@@ -8,20 +8,18 @@ Tests cover:
 5. Insight filtering
 """
 
-import pytest
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import List
+from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select, and_
+import pytest
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_os.auth.models import User
-from agent_os.items.models import Item, Workspace
-from agent_os.garden.models import KnowledgeCardLink, DailyInsight
-from agent_os.garden.stats_service import GardenStatsService
 from agent_os.core.config import get_garden_strong_edge_threshold
-
+from agent_os.garden.models import DailyInsight, KnowledgeCardLink
+from agent_os.garden.stats_service import GardenStatsService
+from agent_os.items.models import Item, Workspace
 
 # ============================================================================
 # Test Fixtures (using conftest.py base)
@@ -63,10 +61,10 @@ async def test_items(
     test_workspace: Workspace,
     test_user: User,
     count: int = 10
-) -> List[Item]:
+) -> list[Item]:
     """Create test items."""
     items = []
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     for i in range(count):
         item = Item(
@@ -89,8 +87,8 @@ async def test_items(
 async def test_edges(
     db_session: AsyncSession,
     test_workspace: Workspace,
-    test_items: List[Item]
-) -> List[KnowledgeCardLink]:
+    test_items: list[Item]
+) -> list[KnowledgeCardLink]:
     """Create test edges between items."""
     edges = []
 
@@ -137,10 +135,10 @@ async def test_insights(
     db_session: AsyncSession,
     test_workspace: Workspace,
     test_user: User
-) -> List[DailyInsight]:
+) -> list[DailyInsight]:
     """Create test insights."""
     insights = []
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     insights_data = [
         ("Stable Insight 1", "stable", 2, 0),  # Today, level 2
@@ -183,7 +181,7 @@ class TestSchemaValidation:
         db_session: AsyncSession,
         test_user: User,
         test_workspace: Workspace,
-        test_items: List[Item]
+        test_items: list[Item]
     ):
         """Test GardenStatsService calculates correctly."""
         service = GardenStatsService(db_session)
@@ -214,7 +212,7 @@ class TestStatsServiceDeduplication:
         db_session: AsyncSession,
         test_user: User,
         test_workspace: Workspace,
-        test_edges: List[KnowledgeCardLink]
+        test_edges: list[KnowledgeCardLink]
     ):
         """Test neural_connections deduplicates A-B and B-A as one."""
         service = GardenStatsService(db_session)
@@ -250,7 +248,7 @@ class TestInsightFiltering:
         db_session: AsyncSession,
         test_user: User,
         test_workspace: Workspace,
-        test_insights: List[DailyInsight]
+        test_insights: list[DailyInsight]
     ):
         """Test only stable insights with level >= 2 are counted."""
         service = GardenStatsService(db_session)
@@ -281,8 +279,8 @@ class TestEdgeBatchQuery:
         self,
         db_session: AsyncSession,
         test_workspace: Workspace,
-        test_items: List[Item],
-        test_edges: List[KnowledgeCardLink]
+        test_items: list[Item],
+        test_edges: list[KnowledgeCardLink]
     ):
         """Test edge batch query returns only strong edges."""
         threshold = get_garden_strong_edge_threshold()
@@ -319,8 +317,8 @@ class TestConnectedNodesSorting:
         self,
         db_session: AsyncSession,
         test_workspace: Workspace,
-        test_items: List[Item],
-        test_edges: List[KnowledgeCardLink]
+        test_items: list[Item],
+        test_edges: list[KnowledgeCardLink]
     ):
         """Test that connected nodes are sorted by relation_strength descending."""
         threshold = get_garden_strong_edge_threshold()
@@ -378,10 +376,10 @@ class TestDateRangeFiltering:
         db_session: AsyncSession,
         test_workspace: Workspace,
         test_user: User,
-        test_items: List[Item]
+        test_items: list[Item]
     ):
         """Test date range filter returns only recent items."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         seven_days_ago = now - timedelta(days=7)
 
         stmt = select(Item).where(

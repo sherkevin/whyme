@@ -7,7 +7,7 @@ import os
 
 import pytest
 
-from agent_os.capabilities.coding.full_aider_adapter import FullAiderAdapter, AiderCoderFactory
+from agent_os.capabilities.coding.full_aider_adapter import AiderCoderFactory, FullAiderAdapter
 
 # Check if Aider is available
 AIDER_AVAILABLE = False
@@ -134,8 +134,8 @@ class TestFullAiderAdapter:
     @pytest.mark.asyncio
     async def test_repo_map(self) -> None:
         """Test repository map generation."""
-        import tempfile
         import os
+        import tempfile
 
         # Create temporary workspace
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -1,44 +1,45 @@
 """FastAPI router for Stage 4 - Search, Ingestion, and Insight."""
 
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime
 import time
+import uuid as uuid_pkg
+from datetime import datetime
+from typing import List, Optional
 
-from agent_os.db.base import get_db
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from agent_os.auth.dependencies import get_current_user
 from agent_os.auth.models import User
+from agent_os.db.base import get_db
 
-# Import services
-from agent_os.search_engine.search_service import SearchService
-from agent_os.search_engine.search_engine import SearchEngine, SearchQuery
+# Import models
+from agent_os.search_engine.models import IngestionJob, InsightCluster
 
 # Import schemas
 from agent_os.search_engine.schema import (
-    # Search schemas
-    SearchIndexCreate,
-    SearchIndexUpdate,
-    SearchIndexResponse,
-    SearchQueryRequest,
-    SearchResponse,
     BulkIndexRequest,
     BulkIndexResponse,
-    RebuildIndexResponse,
     # Ingestion schemas
     IngestionJobCreate,
-    IngestionJobResponse,
     IngestionJobListResponse,
+    IngestionJobResponse,
     # Insight schemas
     InsightClusterCreate,
+    InsightClusterListResponse,
     InsightClusterResponse,
-    InsightClusterListResponse
+    RebuildIndexResponse,
+    # Search schemas
+    SearchIndexCreate,
+    SearchIndexResponse,
+    SearchIndexUpdate,
+    SearchQueryRequest,
+    SearchResponse,
 )
+from agent_os.search_engine.search_engine import SearchEngine, SearchQuery
 
-# Import models
-from agent_os.search_engine.models import SearchIndex, IngestionJob, InsightCluster
-from sqlalchemy import select, func
-import uuid as uuid_pkg
+# Import services
+from agent_os.search_engine.search_service import SearchService
 
 # =============================================================================
 # Router Setup
@@ -250,10 +251,10 @@ async def rebuild_search_index(
 @router.get("", response_model=SearchResponse)
 async def search(
     query: str = Query(..., min_length=1, description="Search query"),
-    item_types: Optional[List[str]] = Query(None, description="Filter by item types"),
-    tags: Optional[List[str]] = Query(None, description="Filter by tags"),
-    date_from: Optional[datetime] = Query(None, description="Filter from date"),
-    date_to: Optional[datetime] = Query(None, description="Filter to date"),
+    item_types: list[str] | None = Query(None, description="Filter by item types"),
+    tags: list[str] | None = Query(None, description="Filter by tags"),
+    date_from: datetime | None = Query(None, description="Filter from date"),
+    date_to: datetime | None = Query(None, description="Filter to date"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Results per page"),
     sort_by: str = Query("relevance", description="Sort by: relevance, date, -date"),
@@ -415,7 +416,7 @@ async def create_ingestion_job(
 
 @router.get("/ingestion/jobs", response_model=IngestionJobListResponse)
 async def list_ingestion_jobs(
-    status: Optional[str] = Query(None, description="Filter by status"),
+    status: str | None = Query(None, description="Filter by status"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
@@ -525,13 +526,13 @@ async def start_ingestion_job(
 async def generate_insight(
     cluster_type: str = Query(..., description="Type of insight: summary, trend, topic, pattern"),
     item_type: str = Query(..., description="Source item type to analyze"),
-    item_ids: Optional[List[str]] = Query(None, description="Optional list of specific item IDs"),
-    date_range: Optional[dict] = None,
+    item_ids: list[str] | None = Query(None, description="Optional list of specific item IDs"),
+    date_range: dict | None = None,
     num_topics: int = Query(5, ge=1, le=20, description="Number of topics to extract"),
     group_by: str = Query("day", description="Time grouping for trend: day, week, month"),
     metric: str = Query("count", description="Metric for trend analysis"),
     pattern_type: str = Query("creation_time", description="Pattern type to detect"),
-    name: Optional[str] = None,
+    name: str | None = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -639,8 +640,8 @@ async def create_insight_cluster(
 
 @router.get("/insights", response_model=InsightClusterListResponse)
 async def list_insight_clusters(
-    cluster_type: Optional[str] = Query(None, description="Filter by cluster type"),
-    source_item_type: Optional[str] = Query(None, description="Filter by source item type"),
+    cluster_type: str | None = Query(None, description="Filter by cluster type"),
+    source_item_type: str | None = Query(None, description="Filter by source item type"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),

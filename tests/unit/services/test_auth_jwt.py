@@ -1,15 +1,14 @@
 """Test JWT token creation and validation."""
 
-import pytest
 import uuid
-from datetime import timedelta, datetime, timezone
+from datetime import UTC, datetime, timedelta
 
 from agent_os.auth.jwt_handler import (
+    TokenData,
     create_access_token,
     create_refresh_token,
-    verify_token,
     decode_token,
-    TokenData,
+    verify_token,
 )
 
 
@@ -38,8 +37,8 @@ class TestAccessTokenCreation:
         payload = decode_token(token)
         assert payload is not None
         # Use UTC for comparison
-        exp = datetime.fromtimestamp(payload['exp'], tz=timezone.utc)
-        now = datetime.now(timezone.utc)
+        exp = datetime.fromtimestamp(payload['exp'], tz=UTC)
+        now = datetime.now(UTC)
         # Should be about 60 minutes from now (within 1 minute tolerance)
         time_diff = exp - now
         assert 59 * 60 <= time_diff.total_seconds() <= 61 * 60
@@ -52,8 +51,8 @@ class TestAccessTokenCreation:
         payload = decode_token(token)
         assert payload is not None
         # Use UTC for comparison
-        exp = datetime.fromtimestamp(payload['exp'], tz=timezone.utc)
-        now = datetime.now(timezone.utc)
+        exp = datetime.fromtimestamp(payload['exp'], tz=UTC)
+        now = datetime.now(UTC)
         # Should be about 30 minutes from now
         time_diff = exp - now
         assert 29 * 60 <= time_diff.total_seconds() <= 31 * 60
@@ -88,8 +87,8 @@ class TestRefreshTokenCreation:
         payload = decode_token(token)
         assert payload is not None
         # Use UTC for comparison
-        exp = datetime.fromtimestamp(payload['exp'], tz=timezone.utc)
-        now = datetime.now(timezone.utc)
+        exp = datetime.fromtimestamp(payload['exp'], tz=UTC)
+        now = datetime.now(UTC)
         # Should be about 7 days from now (within 1 minute tolerance)
         time_diff = exp - now
         expected_seconds = 7 * 24 * 60 * 60

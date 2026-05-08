@@ -1,13 +1,13 @@
 """CRUD operations for Task management."""
 
-from datetime import datetime, date, UTC
-from typing import Optional, List, Tuple
-from sqlalchemy import select, and_, or_, desc, asc, func
+from datetime import UTC, date, datetime
+from typing import List, Optional, Tuple
+
+from sqlalchemy import and_, asc, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_os.tasks.models import Task
-from agent_os.tasks.schema import TaskCreate, TaskUpdate, TaskStatusUpdate
-
+from agent_os.tasks.schema import TaskCreate, TaskStatusUpdate, TaskUpdate
 
 # =============================================================================
 # Task CRUD Operations
@@ -44,7 +44,7 @@ async def get_task_by_id(
     *,
     task_id: int,
     user_id: int
-) -> Optional[Task]:
+) -> Task | None:
     """Get a task by ID.
 
     Args:
@@ -69,18 +69,18 @@ async def list_tasks(
     db: AsyncSession,
     *,
     user_id: int,
-    status: Optional[str] = None,
-    task_type: Optional[str] = None,
-    priority_min: Optional[int] = None,
-    priority_max: Optional[int] = None,
-    date_from: Optional[date] = None,
-    date_to: Optional[date] = None,
-    scheduled_date: Optional[date] = None,
+    status: str | None = None,
+    task_type: str | None = None,
+    priority_min: int | None = None,
+    priority_max: int | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    scheduled_date: date | None = None,
     skip: int = 0,
     limit: int = 100,
     sort_by: str = "created_at",
     sort_order: str = "desc"
-) -> Tuple[List[Task], int]:
+) -> tuple[list[Task], int]:
     """List tasks with filtering and pagination.
 
     Args:
@@ -213,7 +213,7 @@ async def get_tasks_for_today(
     *,
     user_id: int,
     today: date
-) -> List[Task]:
+) -> list[Task]:
     """Get all tasks for today.
 
     Args:
@@ -245,7 +245,7 @@ async def get_task_stats(
     db: AsyncSession,
     *,
     user_id: int,
-    today: Optional[date] = None
+    today: date | None = None
 ) -> dict:
     """Get task statistics.
 
@@ -323,9 +323,9 @@ async def get_task_stats(
 async def create_tasks_batch(
     db: AsyncSession,
     *,
-    tasks_data: List[TaskCreate],
+    tasks_data: list[TaskCreate],
     user_id: int
-) -> List[Task]:
+) -> list[Task]:
     """Create multiple tasks in batch.
 
     Args:
@@ -354,7 +354,7 @@ async def create_tasks_batch(
 async def update_tasks_batch(
     db: AsyncSession,
     *,
-    task_ids: List[int],
+    task_ids: list[int],
     user_id: int,
     updates: TaskUpdate
 ) -> int:
@@ -394,7 +394,7 @@ async def update_tasks_batch(
 async def delete_tasks_batch(
     db: AsyncSession,
     *,
-    task_ids: List[int],
+    task_ids: list[int],
     user_id: int
 ) -> int:
     """Delete multiple tasks in batch.

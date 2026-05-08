@@ -7,14 +7,14 @@ This module contains performance benchmarks to verify PRD4 requirements:
 - Concurrent operations: 4 searches < 500ms
 """
 
-import pytest
 import asyncio
-import time
 import statistics
-from datetime import datetime, timedelta
+import time
 
-from agent_os.search_engine.search_engine import SearchEngine, SearchQuery
+import pytest
+
 from agent_os.search_engine.models import SearchIndex
+from agent_os.search_engine.search_engine import SearchEngine, SearchQuery
 
 
 class TestSearchPerformance:
@@ -35,7 +35,7 @@ class TestSearchPerformance:
             perf_metrics.add_result("search_empty", duration)
 
         stats = perf_metrics.get_statistics("search_empty")
-        print(f"\nEmpty search (20 runs):")
+        print("\nEmpty search (20 runs):")
         print(f"  Mean: {stats['mean']*1000:.2f}ms")
         print(f"  P75: {stats['p75']*1000:.2f}ms")
         print(f"  P95: {stats['p95']*1000:.2f}ms")
@@ -58,7 +58,7 @@ class TestSearchPerformance:
             perf_metrics.add_result("search_100", duration)
 
         stats = perf_metrics.get_statistics("search_100")
-        print(f"\nSearch 100 items (20 runs):")
+        print("\nSearch 100 items (20 runs):")
         print(f"  Mean: {stats['mean']*1000:.2f}ms")
         print(f"  P75: {stats['p75']*1000:.2f}ms")
         print(f"  P95: {stats['p95']*1000:.2f}ms")
@@ -85,7 +85,7 @@ class TestSearchPerformance:
             perf_metrics.add_result("search_200", duration)
 
         stats = perf_metrics.get_statistics("search_200")
-        print(f"\nSearch 200 items (20 runs):")
+        print("\nSearch 200 items (20 runs):")
         print(f"  Mean: {stats['mean']*1000:.2f}ms")
         print(f"  P75: {stats['p75']*1000:.2f}ms")
         print(f"  P95: {stats['p95']*1000:.2f}ms")
@@ -119,7 +119,7 @@ class TestSearchPerformance:
             perf_metrics.add_result("concurrent_search_4", total_duration)
 
         stats = perf_metrics.get_statistics("concurrent_search_4")
-        print(f"\nConcurrent 4 searches (10 runs):")
+        print("\nConcurrent 4 searches (10 runs):")
         print(f"  Total time (4 searches): {stats['mean']*1000:.2f}ms")
         print(f"  Per search average: {stats['mean']/4*1000:.2f}ms")
         print(f"  P95 total: {stats['p95']*1000:.2f}ms")
@@ -154,7 +154,7 @@ class TestSearchPerformance:
             mean_times = [s["mean"] for s in all_stats.values()]
             p95_times = [s.get("p95", s["mean"]) for s in all_stats.values()]
 
-            print(f"\nSearch pagination (5 pages):")
+            print("\nSearch pagination (5 pages):")
             print(f"  Mean per page: {statistics.mean(mean_times)*1000:.2f}ms")
             print(f"  P95 per page: {statistics.mean(p95_times)*1000:.2f}ms")
 
@@ -194,7 +194,7 @@ class TestSearchPerformance:
 
         stats = perf_metrics.get_statistics("search_hybrid_vector")
         if stats and stats.get("mean"):
-            print(f"\nHybrid vector+text search (20 runs):")
+            print("\nHybrid vector+text search (20 runs):")
             print(f"  Mean: {stats['mean']*1000:.2f}ms")
             print(f"  P75: {stats['p75']*1000:.2f}ms")
             print(f"  P95: {stats['p95']*1000:.2f}ms")
@@ -232,18 +232,18 @@ class TestAgentPerformance:
 
         stats = perf_metrics.get_statistics("agent_tick_framework")
         if stats and stats.get("mean"):
-            print(f"\nAgent tick framework (5 runs):")
+            print("\nAgent tick framework (5 runs):")
             print(f"  Mean: {stats['mean']*1000:.2f}ms")
             print(f"  P75: {stats.get('p75', 0)*1000:.2f}ms")
             print(f"  Max: {stats['max']*1000:.2f}ms")
 
             # Framework overhead should be minimal
             if stats.get('p95', stats['max']) < 0.1:  # 100ms framework overhead
-                print(f"✓ Framework overhead is acceptable")
+                print("✓ Framework overhead is acceptable")
             else:
-                print(f"⚠️ Framework overhead needs optimization")
+                print("⚠️ Framework overhead needs optimization")
         else:
-            print(f"\n⚠️ Could not collect agent tick performance data")
+            print("\n⚠️ Could not collect agent tick performance data")
 
 
 class TestDatabasePerformance:
@@ -262,7 +262,7 @@ class TestDatabasePerformance:
             index = SearchIndex(
                 item_type="test",
                 item_id=uuid.uuid4(),
-                title=f"Performance Test Item",
+                title="Performance Test Item",
                 content="Test content"
             )
             perf_db.add(index)
@@ -272,7 +272,7 @@ class TestDatabasePerformance:
             perf_metrics.add_result("db_write_single", duration)
 
         stats = perf_metrics.get_statistics("db_write_single")
-        print(f"\nDB single write (50 inserts):")
+        print("\nDB single write (50 inserts):")
         print(f"  Mean: {stats['mean']*1000:.2f}ms")
         print(f"  P95: {stats['p95']*1000:.2f}ms")
 
@@ -297,7 +297,7 @@ class TestDatabasePerformance:
             perf_metrics.add_result("db_read_single", duration)
 
         stats = perf_metrics.get_statistics("db_read_single")
-        print(f"\nDB single read (100 reads):")
+        print("\nDB single read (100 reads):")
         print(f"  Mean: {stats['mean']*1000:.2f}ms")
         print(f"  P95: {stats['p95']*1000:.2f}ms")
 
@@ -312,8 +312,9 @@ class TestMemoryPerformance:
     @pytest.mark.performance
     async def test_search_indexing_performance(self, perf_db, perf_metrics):
         """Test search indexing performance."""
-        from agent_os.search_engine.search_service import SearchService
         import uuid
+
+        from agent_os.search_engine.search_service import SearchService
 
         service = SearchService(perf_db, auto_embed=False)
 
@@ -340,7 +341,7 @@ class TestMemoryPerformance:
             )
 
         stats = perf_metrics.get_statistics("index_batch_50")
-        print(f"\nBatch indexing (50 items, 3 batches):")
+        print("\nBatch indexing (50 items, 3 batches):")
         print(f"  Mean: {stats['mean']*1000:.2f}ms")
         print(f"  Per item: {stats['mean']/50*1000:.2f}ms")
 
@@ -356,8 +357,9 @@ class TestResourceLimits:
     async def test_memory_usage(self, perf_db):
         """Check memory usage during operations."""
         try:
-            import psutil
             import os
+
+            import psutil
         except ImportError:
             pytest.skip("psutil not installed - skipping memory test")
             return
@@ -376,7 +378,7 @@ class TestResourceLimits:
         mem_after = process.memory_info().rss / 1024 / 1024  # MB
         mem_delta = mem_after - mem_before
 
-        print(f"\nMemory usage:")
+        print("\nMemory usage:")
         print(f"  Before: {mem_before:.2f} MB")
         print(f"  After: {mem_after:.2f} MB")
         print(f"  Delta: {mem_delta:.2f} MB")
@@ -388,8 +390,9 @@ class TestResourceLimits:
     async def test_cpu_usage(self, perf_db):
         """Check CPU usage during operations."""
         try:
-            import psutil
             import os
+
+            import psutil
         except ImportError:
             pytest.skip("psutil not installed - skipping CPU test")
             return
@@ -428,7 +431,7 @@ class TestResourceLimits:
 
         avg_cpu = sum(cpu_samples) / len(cpu_samples) if cpu_samples else 0
 
-        print(f"\nCPU usage:")
+        print("\nCPU usage:")
         print(f"  Average: {avg_cpu:.1f}%")
         print(f"  Samples: {len(cpu_samples)}")
 

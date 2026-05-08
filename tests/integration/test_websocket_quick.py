@@ -1,9 +1,11 @@
 """Simple WebSocket test to verify aider works."""
 
 import asyncio
-import websockets
 import json
 from pathlib import Path
+
+import websockets
+
 
 async def quick_test():
     """Quick test: create a file via WebSocket."""
@@ -40,13 +42,13 @@ async def quick_test():
                                 print(f"[ERROR] {content[:200]}")
                                 return False
                             elif 'websocket_test.txt' in content or 'WebSocket Success' in content:
-                                print(f"[OK] Response looks good!")
+                                print("[OK] Response looks good!")
 
                         if action == 'done':
                             print("[OK] Done")
                             break
 
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     print(f"[WAIT] Waiting... ({i*2}s)")
                     continue
 
@@ -56,7 +58,7 @@ async def quick_test():
 
             if test_file.exists():
                 content = test_file.read_text(encoding='utf-8')
-                print(f"\n[SUCCESS] File created!")
+                print("\n[SUCCESS] File created!")
                 print(f"Location: {test_file}")
                 print(f"Content: {content}")
                 return True

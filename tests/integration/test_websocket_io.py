@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import asyncio
-import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 import pytest
 
-from agent_os.server.websocket_io import WebSocketIO, AiderExecutor
+from agent_os.server.websocket_io import AiderExecutor, WebSocketIO
 
 
 class TestWebSocketIO:
@@ -108,7 +107,7 @@ class TestWebSocketIO:
                     elif action == "request_input":
                         io.receive_input(f"Response {inputs_received}")
                         inputs_received += 1
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     break
 
             # Wait for threads to complete (with longer timeout)

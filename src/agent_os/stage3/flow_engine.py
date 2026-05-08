@@ -3,12 +3,13 @@
 This module implements the core execution engine for multi-step Agent workflows.
 """
 
-import uuid
 import logging
+import uuid
 from datetime import datetime
-from typing import Dict, List, Optional, Any
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Any, Dict, List, Optional
+
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_os.stage3.models import AgentDecision, Skill, TaskExecutionLog
 
@@ -23,7 +24,7 @@ class FlowExecution:
         execution_id: str,
         task_id: str,
         skill_id: str,
-        context: Dict[str, Any]
+        context: dict[str, Any]
     ):
         self.execution_id = execution_id
         self.task_id = task_id
@@ -31,7 +32,7 @@ class FlowExecution:
         self.context = context
         self.current_step = 0
         self.status = "not_started"
-        self.logs: List[TaskExecutionLog] = []
+        self.logs: list[TaskExecutionLog] = []
 
 
 class FlowEngine:
@@ -47,7 +48,7 @@ class FlowEngine:
         self,
         task_id: str,
         skill_id: str,
-        initial_context: Dict[str, Any]
+        initial_context: dict[str, Any]
     ) -> FlowExecution:
         """Start executing an Agent Flow.
 
@@ -99,7 +100,7 @@ class FlowEngine:
     async def get_execution_status(
         self,
         execution_id: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get current execution status.
 
         Args:
@@ -329,7 +330,7 @@ class FlowEngine:
 
         return execution
 
-    async def _load_skill(self, skill_id) -> Optional[Skill]:
+    async def _load_skill(self, skill_id) -> Skill | None:
         """Load skill from database.
 
         Args:
@@ -348,7 +349,7 @@ class FlowEngine:
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def _load_decision(self, decision_id) -> Optional[AgentDecision]:
+    async def _load_decision(self, decision_id) -> AgentDecision | None:
         """Load decision from database.
 
         Args:
@@ -448,8 +449,8 @@ class FlowEngine:
     async def _execute_agent_action(
         self,
         action: str,
-        context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        context: dict[str, Any]
+    ) -> dict[str, Any]:
         """Execute an Agent action.
 
         Args:
@@ -471,8 +472,8 @@ class FlowEngine:
 
     async def _generate_decision_options(
         self,
-        context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        context: dict[str, Any]
+    ) -> dict[str, Any]:
         """Generate decision options (simplified implementation).
 
         Args:
@@ -515,8 +516,8 @@ class FlowEngine:
 
     async def _classify_and_summarize(
         self,
-        context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        context: dict[str, Any]
+    ) -> dict[str, Any]:
         """Classify and summarize context (simplified implementation).
 
         Args:
@@ -537,7 +538,7 @@ class FlowEngine:
         self,
         task_id: str,
         step_name: str,
-        options: List[Dict[str, Any]]
+        options: list[dict[str, Any]]
     ) -> AgentDecision:
         """Create a decision point.
 

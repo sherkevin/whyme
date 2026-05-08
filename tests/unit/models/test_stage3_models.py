@@ -1,11 +1,10 @@
 """Unit tests for Stage 3 models."""
 
-import pytest
 import uuid
-from datetime import datetime
-from sqlalchemy import select
 
-from agent_os.stage3.models import AgentDecision, Skill, TaskExecutionLog
+import pytest
+
+from agent_os.stage3.models import AgentDecision, Skill
 
 
 @pytest.mark.asyncio

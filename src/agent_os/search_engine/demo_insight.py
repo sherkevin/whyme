@@ -8,17 +8,15 @@ This demo shows:
 """
 
 import asyncio
-import uuid
 import time
+import uuid
 from datetime import datetime, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy import select, func
 
-from agent_os.search_engine.search_service import SearchService
-from agent_os.search_engine.insight_service import InsightService
-from agent_os.search_engine.models import SearchIndex, InsightCluster
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from agent_os.db.base import Base
-
+from agent_os.search_engine.insight_service import InsightService
+from agent_os.search_engine.search_service import SearchService
 
 # Create async engine for demo
 DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -109,14 +107,14 @@ async def demo_insight():
         print(f"    Name: {summary.name}")
         print(f"    Items analyzed: {summary.sample_count}")
         print(f"    Confidence: {summary.confidence}")
-        print(f"\n  Summary Statistics:")
+        print("\n  Summary Statistics:")
         print(f"    Total items: {summary.insight_data['total_items']}")
         print(f"    Unique tags: {summary.insight_data['unique_tags_count']}")
         print(f"    Avg content length: {summary.insight_data['avg_content_length']} chars")
-        print(f"\n  Key Topics:")
+        print("\n  Key Topics:")
         for topic in summary.insight_data['key_topics'][:5]:
             print(f"    - {topic}")
-        print(f"\n  Summary Text:")
+        print("\n  Summary Text:")
         print(f"    {summary.insight_data['summary_text']}")
 
         # =========================================================================
@@ -148,7 +146,7 @@ async def demo_insight():
         print(f"    Items analyzed: {trend.sample_count}")
         print(f"    Trend direction: {trend.insight_data['trend_direction']}")
         print(f"    Change: {trend.insight_data['change_percent']:.1f}%")
-        print(f"\n  Statistics:")
+        print("\n  Statistics:")
         print(f"    Average: {trend.insight_data['average']:.1f} items/period")
         print(f"    Min: {trend.insight_data['min']}, Max: {trend.insight_data['max']}")
         print(f"    Periods analyzed: {trend.insight_data['periods_analyzed']}")
@@ -195,7 +193,7 @@ async def demo_insight():
         print(f"    Name: {pattern.name}")
         print(f"    Pattern type: {pattern.insight_data['pattern_type']}")
         print(f"    Patterns found: {len(pattern.insight_data['patterns'])}")
-        print(f"\n  Detected Patterns:")
+        print("\n  Detected Patterns:")
         for p in pattern.insight_data['patterns']:
             print(f"    - {p['pattern_name']}: {p['description']}")
 
@@ -206,7 +204,7 @@ async def demo_insight():
             name="Content Length Pattern"
         )
 
-        print(f"\n  Content Length Pattern:")
+        print("\n  Content Length Pattern:")
         for p in pattern2.insight_data['patterns']:
             if p['pattern_name'] == 'average_content_length':
                 print(f"    Average: {p['value']:.0f} characters")

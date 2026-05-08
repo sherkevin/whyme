@@ -6,7 +6,6 @@ and FAISS for vector similarity search.
 
 from __future__ import annotations
 
-import os
 import uuid
 from datetime import datetime
 from pathlib import Path

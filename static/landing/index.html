@@ -1,0 +1,575 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Mydow 是面向个人与团队的 AI 知识工作台。一秒采集任意输入，自动整理为结构化知识，AI 围绕你的私域知识实时对话与协作。"
+    />
+    <meta name="theme-color" content="#758cff" />
+    <title>Mydow · 把灵感变成体系化知识</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%239fb1ff'/%3E%3Cstop offset='1' stop-color='%23758cff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='22' fill='url(%23g)'/%3E%3Cpath d='M28 64 L42 36 L50 56 L58 36 L72 64' stroke='white' stroke-width='8' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E"
+    />
+    <meta property="og:title" content="Mydow · 把灵感变成体系化的知识" />
+    <meta property="og:description" content="AI 知识工作台：采集 / 整理 / 对话 / 协作 一气呵成。" />
+    <meta property="og:type" content="website" />
+    <style>
+      :root {
+        --bg: #f7f9fd;
+        --panel: rgba(255, 255, 255, 0.86);
+        --ink: #1c2940;
+        --text: #35445d;
+        --muted: #7c8aa4;
+        --line: rgba(106, 122, 148, 0.18);
+        --accent: #9fb1ff;
+        --accent-deep: #758cff;
+        --accent-deeper: #4778f0;
+        --mint: #77cabd;
+        --gold: #f0bd6c;
+        --rose: #f59ea4;
+        --shadow-card: 0 24px 40px -28px rgba(31, 47, 78, 0.32);
+        --shadow-cta: 0 18px 36px -16px rgba(71, 120, 240, 0.44);
+        --radius-lg: 22px;
+        --radius-md: 14px;
+        --radius-sm: 10px;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Inter", "PingFang SC",
+          "Microsoft YaHei", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        -webkit-font-smoothing: antialiased;
+        line-height: 1.65;
+      }
+      a { color: inherit; text-decoration: none; }
+      img, svg { display: block; max-width: 100%; }
+
+      .nav {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        backdrop-filter: saturate(180%) blur(18px);
+        background: rgba(247, 249, 253, 0.86);
+        border-bottom: 1px solid var(--line);
+      }
+      .nav-inner {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 14px 28px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--ink);
+        font-weight: 700;
+        font-size: 18px;
+        letter-spacing: 0.4px;
+      }
+      .brand-mark {
+        width: 30px;
+        height: 30px;
+        border-radius: 9px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+        box-shadow: 0 8px 20px -8px rgba(117, 140, 255, 0.6);
+      }
+      .nav-links { display: flex; gap: 22px; flex: 1; padding-left: 16px; }
+      .nav-links a { color: var(--muted); font-size: 14px; transition: color .12s ease; }
+      .nav-links a:hover { color: var(--ink); }
+      .nav-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 18px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-deeper));
+        color: #fff !important;
+        font-size: 14px;
+        font-weight: 600;
+        box-shadow: var(--shadow-cta);
+        transition: transform .12s ease;
+      }
+      .nav-cta:hover { transform: translateY(-1px); }
+
+      .hero {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 96px 28px 80px;
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 64px;
+        align-items: center;
+      }
+      .hero h1 {
+        margin: 0 0 22px;
+        font-size: 56px;
+        line-height: 1.08;
+        color: var(--ink);
+        font-weight: 800;
+        letter-spacing: -0.5px;
+      }
+      .hero h1 em {
+        font-style: normal;
+        background: linear-gradient(120deg, var(--accent-deep), var(--mint));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .hero p.lead {
+        font-size: 19px;
+        color: var(--text);
+        max-width: 540px;
+        margin: 0 0 32px;
+      }
+      .cta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-bottom: 24px;
+      }
+      .btn-primary, .btn-ghost {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 26px;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 15px;
+        transition: transform .12s ease, box-shadow .12s ease;
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, var(--accent), var(--accent-deeper));
+        color: #fff !important;
+        box-shadow: var(--shadow-cta);
+      }
+      .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 22px 44px -16px rgba(71, 120, 240, 0.5); }
+      .btn-ghost {
+        background: var(--panel);
+        color: var(--ink);
+        border: 1px solid var(--line);
+      }
+      .btn-ghost:hover { border-color: var(--accent-deep); color: var(--accent-deeper); }
+      .trust-row {
+        display: flex;
+        gap: 24px;
+        flex-wrap: wrap;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .trust-row strong { color: var(--ink); }
+
+      .hero-card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        padding: 24px;
+        box-shadow: var(--shadow-card);
+        position: relative;
+        overflow: hidden;
+      }
+      .hero-card h3 {
+        margin: 0 0 16px;
+        color: var(--ink);
+        font-size: 16px;
+      }
+      .hero-card .pill {
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        padding: 5px 12px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, rgba(159, 177, 255, 0.18), rgba(119, 202, 189, 0.18));
+        color: var(--accent-deeper);
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 16px;
+      }
+      .feature-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .feature-tile {
+        padding: 14px;
+        border-radius: var(--radius-md);
+        background: rgba(247, 249, 253, 0.6);
+        border: 1px solid var(--line);
+      }
+      .feature-tile h4 {
+        margin: 0 0 4px;
+        color: var(--ink);
+        font-size: 14px;
+      }
+      .feature-tile p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12.5px;
+      }
+
+      section.modules {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 64px 28px;
+      }
+      section.modules h2 {
+        margin: 0 0 8px;
+        font-size: 32px;
+        color: var(--ink);
+        font-weight: 700;
+      }
+      section.modules p.section-lead {
+        color: var(--muted);
+        margin: 0 0 36px;
+      }
+      .module-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+      }
+      .module-card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        padding: 18px;
+        box-shadow: var(--shadow-card);
+      }
+      .module-card .dot {
+        width: 28px;
+        height: 28px;
+        border-radius: 9px;
+        margin-bottom: 12px;
+      }
+      .dot-a { background: linear-gradient(135deg, var(--accent), var(--accent-deep)); }
+      .dot-b { background: linear-gradient(135deg, var(--mint), #9be8d4); }
+      .dot-c { background: linear-gradient(135deg, var(--gold), #f5d28e); }
+      .dot-d { background: linear-gradient(135deg, var(--rose), #f7c0c5); }
+      .module-card h3 { margin: 0 0 6px; color: var(--ink); font-size: 16px; }
+      .module-card p { margin: 0; color: var(--muted); font-size: 13.5px; }
+
+      section.flow {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 32px 28px 72px;
+      }
+      .flow-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+      .flow-step {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        padding: 22px;
+      }
+      .flow-step .num {
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, var(--accent-deep), var(--accent-deeper));
+        color: #fff;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        margin-bottom: 12px;
+      }
+      .flow-step h3 { margin: 0 0 6px; color: var(--ink); font-size: 16px; }
+      .flow-step p { margin: 0; color: var(--muted); font-size: 13.5px; }
+
+      section.cta-band {
+        background: linear-gradient(135deg, #1c2940, #2a3a5e);
+        color: #fff;
+        text-align: center;
+        padding: 72px 28px;
+      }
+      section.cta-band h2 {
+        margin: 0 0 14px;
+        font-size: 30px;
+        color: #fff;
+        font-weight: 700;
+      }
+      section.cta-band p { margin: 0 0 28px; color: rgba(255, 255, 255, 0.75); }
+      section.cta-band .btn-primary {
+        background: #fff;
+        color: var(--accent-deeper) !important;
+        box-shadow: 0 20px 40px -18px rgba(0, 0, 0, 0.4);
+      }
+
+      footer.site-foot {
+        background: #fff;
+        border-top: 1px solid var(--line);
+        padding: 36px 28px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      footer.site-foot .inner {
+        max-width: 1180px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      footer.site-foot a { color: var(--muted); }
+      footer.site-foot a:hover { color: var(--ink); }
+
+      @media (max-width: 960px) {
+        .hero { grid-template-columns: 1fr; padding: 48px 22px; gap: 32px; }
+        .hero h1 { font-size: 40px; }
+        .module-grid { grid-template-columns: repeat(2, 1fr); }
+        .flow-row { grid-template-columns: 1fr; }
+        .nav-links { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="nav">
+      <div class="nav-inner">
+        <a class="brand" href="/" aria-label="Mydow 首页">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span>Mydow</span>
+        </a>
+        <div class="nav-links">
+          <a href="#modules">产品模块</a>
+          <a href="#flow">使用流程</a>
+          <a href="/docs" target="_blank" rel="noopener">API 文档</a>
+        </div>
+        <a class="nav-cta" href="/mydow/biz_v14/" data-cta="hero-nav">
+          开始体验
+          <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M5 12h14M13 5l7 7-7 7"
+              stroke="currentColor"
+              stroke-width="2.4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              fill="none"
+            />
+          </svg>
+        </a>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <h1>把灵感变成<em>体系化的知识</em></h1>
+          <p class="lead">
+            Mydow 是面向个人与团队的 AI 知识工作台：一秒采集任意输入（文本 / 链接 / 文件 /
+            语音 / 截图），自动整理为结构化知识，AI 围绕你的私域知识实时对话与协作。
+          </p>
+          <div class="cta-row">
+            <a class="btn-primary" href="/mydow/biz_v14/" data-cta="hero-primary">
+              立即体验 Demo
+              <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M5 12h14M13 5l7 7-7 7"
+                  stroke="currentColor"
+                  stroke-width="2.4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  fill="none"
+                />
+              </svg>
+            </a>
+            <a class="btn-ghost" href="/docs" target="_blank" rel="noopener">查看 API 文档</a>
+          </div>
+          <div class="trust-row">
+            <span><strong>350+</strong> 自动化测试</span>
+            <span><strong>0</strong> 假按钮</span>
+            <span><strong>11</strong> 模块端到端打通</span>
+            <span>SSE 实时 · Postgres 双引擎</span>
+          </div>
+        </div>
+        <aside class="hero-card" aria-label="产品截图占位">
+          <span class="pill">实时演示</span>
+          <h3>Mydow 工作台</h3>
+          <div class="feature-grid">
+            <div class="feature-tile">
+              <h4>灵感采集</h4>
+              <p>文本 / 链接 / 文件 / 语音 / 深度研究 5 种入口</p>
+            </div>
+            <div class="feature-tile">
+              <h4>知识库</h4>
+              <p>文件夹 + 文档 + 智能标签 + 自动归档</p>
+            </div>
+            <div class="feature-tile">
+              <h4>Mydow AI</h4>
+              <p>四种模型 + 高效/全能模式 + 上下文检索</p>
+            </div>
+            <div class="feature-tile">
+              <h4>数字花园</h4>
+              <p>知识图谱 + AI 洞察 + 自定义关联</p>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="modules" id="modules">
+        <h2>产品模块</h2>
+        <p class="section-lead">
+          投资人 30 秒可走完的端到端闭环，每个模块都接真实 PRD10 后端 API。
+        </p>
+        <div class="module-grid">
+          <article class="module-card">
+            <div class="dot dot-a"></div>
+            <h3>灵感采集</h3>
+            <p>主输入 + 上传 / 网页剪藏 / 语音 / 深度研究 4 个 modal，秒入库 + 异步 AI 整理。</p>
+          </article>
+          <article class="module-card">
+            <div class="dot dot-b"></div>
+            <h3>知识库</h3>
+            <p>6 文件夹 + 20 文档 demo seed，文档详情可编辑、移动、收藏、删除，AI 摘要按需触发。</p>
+          </article>
+          <article class="module-card">
+            <div class="dot dot-c"></div>
+            <h3>Mydow AI</h3>
+            <p>SSE 流式回复、4 模型选择器、对话历史、保存为文档 / 任务，完全打通。</p>
+          </article>
+          <article class="module-card">
+            <div class="dot dot-d"></div>
+            <h3>数字花园</h3>
+            <p>知识图谱节点 + 边 + AI 洞察卡，节点点击触发搜索高亮。</p>
+          </article>
+          <article class="module-card">
+            <div class="dot dot-a"></div>
+            <h3>Skills 广场</h3>
+            <p>5 个默认 Skill（周报 / 主题拓展 / 访谈洞察 / 评分 / Markdown 美化），运行真排队 Job。</p>
+          </article>
+          <article class="module-card">
+            <div class="dot dot-b"></div>
+            <h3>全局搜索</h3>
+            <p>Cmd/Ctrl+K 调起，按对象类型分组（卡片 / 文档 / 文件夹 / 任务 / Skill / 消息）实时高亮。</p>
+          </article>
+          <article class="module-card">
+            <div class="dot dot-c"></div>
+            <h3>通知中心</h3>
+            <p>分类 Tab、筛选下拉、行点已读、全部已读，AI 任务完成实时推送。</p>
+          </article>
+          <article class="module-card">
+            <div class="dot dot-d"></div>
+            <h3>洞察中心 / 个人中心</h3>
+            <p>4 metric tile + 报告列表 / 4 tab 设置（个人/安全/偏好/会员），所有 toggle 真发 PATCH /me。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="flow" id="flow">
+        <h2 style="margin: 0 0 8px; font-size: 28px; color: var(--ink); font-weight: 700;">
+          30 秒走完端到端
+        </h2>
+        <p style="color: var(--muted); margin: 0 0 28px;">
+          投资人 demo 标准动线，按 Enter 即用。
+        </p>
+        <div class="flow-row">
+          <div class="flow-step">
+            <div class="num">1</div>
+            <h3>采集一条灵感</h3>
+            <p>首页输入区记下任意想法或粘贴链接 / 拖入文件，点发送即异步整理为卡片。</p>
+          </div>
+          <div class="flow-step">
+            <div class="num">2</div>
+            <h3>问 Mydow AI</h3>
+            <p>切到 AI 工作台，问"帮我总结今天的笔记"，SSE 流式回复 + 引用真实笔记。</p>
+          </div>
+          <div class="flow-step">
+            <div class="num">3</div>
+            <h3>保存为知识 / 任务</h3>
+            <p>AI 回复气泡下点保存到 KB 或新建任务，立刻在知识库 / 任务页可见。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="modules" id="pricing">
+        <h2>订阅</h2>
+        <p class="section-lead">个人版按月订阅，团队版按席位计费，均含核心 AI 能力。</p>
+        <div
+          style="display:grid; grid-template-columns: 1fr 1fr; gap: 18px; max-width: 800px; margin: 0 auto;"
+          class="pricing-grid"
+        >
+          <article
+            class="module-card"
+            data-tier="personal"
+            style="text-align:center; padding: 28px;"
+          >
+            <h3 style="margin-bottom: 4px;">个人 Pro</h3>
+            <p style="color: var(--muted); margin-bottom: 12px;">个人创作者 / 研究者首选</p>
+            <p style="color: var(--ink); font-size: 32px; font-weight: 800; margin: 8px 0;">
+              ¥39 <span style="font-size: 14px; color: var(--muted); font-weight: 400;">/ 月</span>
+            </p>
+            <ul style="text-align:left; padding-left: 18px; color: var(--text); font-size: 14px;">
+              <li>无限灵感采集与知识库容量</li>
+              <li>Mydow AI 流式对话 + 上下文检索</li>
+              <li>数字花园 / Skills / 洞察中心 全开</li>
+            </ul>
+            <a class="pricing-cta primary btn-primary" style="margin-top: 16px; width: 100%; justify-content: center;" href="/mydow/biz_v14/" data-cta="pricing-personal">立即体验 →</a>
+          </article>
+          <article
+            class="module-card"
+            data-tier="team"
+            data-featured="true"
+            style="text-align:center; padding: 28px; border: 2px solid var(--accent-deep); position: relative;"
+          >
+            <span
+              style="position:absolute; top:-12px; right: 16px; background: linear-gradient(135deg, var(--accent), var(--accent-deeper)); color: #fff; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;"
+              >最受欢迎</span
+            >
+            <h3 style="margin-bottom: 4px;">团队 License</h3>
+            <p style="color: var(--muted); margin-bottom: 12px;">10 人以下小团队 / 工作室</p>
+            <p style="color: var(--ink); font-size: 32px; font-weight: 800; margin: 8px 0;">
+              ¥199 <span style="font-size: 14px; color: var(--muted); font-weight: 400;">/ 席位 / 月</span>
+            </p>
+            <ul style="text-align:left; padding-left: 18px; color: var(--text); font-size: 14px;">
+              <li>团队共享知识库 / 协作权限 / 审计</li>
+              <li>SSO 单点登录 / 私有部署可选</li>
+              <li>专属客户经理 + SLA 99.9%</li>
+            </ul>
+            <a class="pricing-cta primary btn-primary" style="margin-top: 16px; width: 100%; justify-content: center;" href="mailto:sales@mydow.example?subject=Team%20License%20Inquiry" data-cta="pricing-team">联系销售 →</a>
+          </article>
+        </div>
+      </section>
+
+      <section class="cta-band">
+        <h2>现在就走完一遍</h2>
+        <p>免登录 demo 已就绪 · 默认账号 demo@mydow.example · 数据每日重置</p>
+        <a class="btn-primary" href="/mydow/biz_v14/" data-cta="final-primary">
+          打开 Mydow Demo
+          <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M5 12h14M13 5l7 7-7 7"
+              stroke="currentColor"
+              stroke-width="2.4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              fill="none"
+            />
+          </svg>
+        </a>
+      </section>
+    </main>
+
+    <footer class="site-foot">
+      <div class="inner">
+        <span>© 2026 Mydow · 把灵感变成体系化的知识</span>
+        <span>
+          <a href="/legal/privacy.html">隐私</a> ·
+          <a href="/legal/terms.html">条款</a> ·
+          <a href="/docs" target="_blank" rel="noopener">API 文档</a> ·
+          <a href="/openapi.json">OpenAPI</a> ·
+          <a href="/health">健康检查</a> ·
+          <a href="/mydow/spa/">SPA Fallback</a>
+        </span>
+      </div>
+    </footer>
+  </body>
+</html>

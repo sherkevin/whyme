@@ -3,27 +3,20 @@
 Exports all authentication models and security utilities.
 """
 
-from agent_os.auth.models import (
-    User,
-    APIKey,
-    Session,
-    Role,
-    UserRole,
-    AuditLog
-)
+from agent_os.auth.models import APIKey, AuditLog, Role, Session, User, UserRole
 from agent_os.auth.security import (
-    verify_password,
-    get_password_hash,
+    DEFAULT_PERMISSIONS,
+    check_permission,
     create_access_token,
     create_refresh_token,
     decode_token,
-    hash_token,
     generate_api_key,
     get_api_key_prefix,
-    hash_api_key,
-    check_permission,
+    get_password_hash,
     has_workspace_access,
-    DEFAULT_PERMISSIONS
+    hash_api_key,
+    hash_token,
+    verify_password,
 )
 
 __all__ = [

@@ -1,8 +1,8 @@
 """Observability Schemas - Request/Response Models for API."""
 
-from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
+from pydantic import BaseModel, Field
 
 # ============================================================================
 # Metrics Schemas
@@ -25,7 +25,7 @@ class MetricsResponse(BaseModel):
     avg_response_time: float = Field(..., description="平均响应时间 (秒)")
     p95_response_time: float = Field(..., description="P95 响应时间 (秒)")
     p99_response_time: float = Field(..., description="P99 响应时间 (秒)")
-    endpoint_stats: List[EndpointStats] = Field(default_factory=list, description="端点统计")
+    endpoint_stats: list[EndpointStats] = Field(default_factory=list, description="端点统计")
 
 
 # ============================================================================
@@ -35,13 +35,13 @@ class MetricsResponse(BaseModel):
 class HealthCheck(BaseModel):
     """单个健康检查结果"""
     status: str = Field(..., description="状态: healthy, unhealthy")
-    message: Optional[str] = Field(None, description="消息")
+    message: str | None = Field(None, description="消息")
 
 
 class HealthCheckResponse(BaseModel):
     """健康检查响应"""
     status: str = Field(..., description="整体状态: healthy, unhealthy")
-    checks: Dict[str, HealthCheck] = Field(default_factory=dict, description="各项检查结果")
+    checks: dict[str, HealthCheck] = Field(default_factory=dict, description="各项检查结果")
     timestamp: float = Field(..., description="检查时间戳")
 
 
@@ -60,5 +60,5 @@ class SystemInfo(BaseModel):
     service: str = Field(..., description="服务名称")
     version: str = Field(..., description="版本号")
     environment: str = Field(..., description="运行环境")
-    system: Dict[str, Any] = Field(default_factory=dict, description="系统资源")
+    system: dict[str, Any] = Field(default_factory=dict, description="系统资源")
     timestamp: float = Field(..., description="时间戳")

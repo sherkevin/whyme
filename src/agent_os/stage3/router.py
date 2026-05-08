@@ -1,42 +1,43 @@
 """FastAPI router for Stage 3 - Multi-step Agent Flows."""
 
 from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_os.db.base import get_db
 from agent_os.auth.dependencies import get_current_user
 from agent_os.auth.models import User
+from agent_os.db.base import get_db
 
 # Import services
 from agent_os.stage3.flow_engine import FlowEngine
-from agent_os.stage3.skill_service import SkillService
+
+# Import models
+from agent_os.stage3.models import AgentDecision, TaskExecutionLog
 
 # Import schemas
 from agent_os.stage3.schema import (
+    DecisionConfirm,
     # Decision schemas
     DecisionResponse,
-    DecisionConfirm,
-    # Skill schemas
-    SkillCreate,
-    SkillUpdate,
-    SkillResponse,
-    SkillRecommendRequest,
-    SkillRecommendation,
+    # Log schemas
+    ExecutionLogResponse,
+    FlowContinueRequest,
+    FlowPauseResponse,
+    FlowResumeResponse,
     # Flow schemas
     FlowStartRequest,
     FlowStartResponse,
     FlowStatusResponse,
-    FlowContinueRequest,
-    FlowPauseResponse,
-    FlowResumeResponse,
-    # Log schemas
-    ExecutionLogResponse
+    # Skill schemas
+    SkillCreate,
+    SkillRecommendation,
+    SkillRecommendRequest,
+    SkillResponse,
+    SkillUpdate,
 )
-
-# Import models
-from agent_os.stage3.models import AgentDecision, TaskExecutionLog
-from sqlalchemy import select
+from agent_os.stage3.skill_service import SkillService
 
 # =============================================================================
 # Router Setup
@@ -290,7 +291,7 @@ async def confirm_decision(
     return DecisionResponse.model_validate(decision)
 
 
-@router.get("/tasks/{task_id}/decisions", response_model=List[DecisionResponse])
+@router.get("/tasks/{task_id}/decisions", response_model=list[DecisionResponse])
 async def get_task_decisions(
     task_id: str,
     db: AsyncSession = Depends(get_db),
@@ -355,7 +356,7 @@ async def create_skill(
     return SkillResponse.model_validate(skill)
 
 
-@router.get("/skills", response_model=List[SkillResponse])
+@router.get("/skills", response_model=list[SkillResponse])
 async def list_skills(
     category: str = Query(None, description="Filter by category"),
     limit: int = Query(100, ge=1, le=200),
@@ -472,7 +473,7 @@ async def delete_skill(
         raise HTTPException(status_code=404, detail="Skill not found")
 
 
-@router.post("/skills/recommend", response_model=List[SkillRecommendation])
+@router.post("/skills/recommend", response_model=list[SkillRecommendation])
 async def recommend_skills(
     request: SkillRecommendRequest,
     db: AsyncSession = Depends(get_db),
@@ -513,7 +514,7 @@ async def recommend_skills(
 # Execution Log Endpoints
 # =============================================================================
 
-@router.get("/tasks/{task_id}/execution-logs", response_model=List[ExecutionLogResponse])
+@router.get("/tasks/{task_id}/execution-logs", response_model=list[ExecutionLogResponse])
 async def get_execution_logs(
     task_id: str,
     limit: int = Query(100, ge=1, le=500),

@@ -1,32 +1,47 @@
 """Garden & Today API Integration Tests - PRD9 Module 3.
 
-Tests cover all 5 required API endpoints:
-1. GET /api/v1/auth/me (with stats)
-2. GET /api/v1/garden/nodes (node list with pagination/filtering)
-3. POST /api/v1/garden/edges/batch (batch edge query)
-4. GET /api/v1/garden/nodes/{id} (node detail with connected nodes)
-5. GET /api/v1/today/insight (insight with required fields)
+PRD10 NOTICE
+============
 
-Test categories:
-1. Schema validation (422 errors for invalid input)
-2. Backward compatibility (auth/me returns all original fields)
-3. Pagination and filtering (date_range, types, limit)
-4. Detail and sorting (connected_nodes sorted by strength, max 5)
+This file targets the PRD9 garden router (``/api/v1/garden/nodes``,
+``/api/v1/garden/edges/batch``, ``/api/v1/garden/nodes/{id}`` and the legacy
+``/api/v1/today/insight``). PRD10 replaced that surface with
+``/api/v1/garden/overview`` + ``/api/v1/garden/graph`` (covered by
+``tests/integration/api/test_prd10_garden_api.py``) and a new
+``/api/v1/today`` aggregator (covered by
+``tests/integration/api/prd10/test_prd10_today_api.py``).
+
+Additional incompatibilities:
+
+* ``httpx 0.28`` removed ``TestClient(app=app)``-style construction; the file
+  uses ``data=`` form-login while PRD10's auth router requires JSON bodies.
+* The PRD9 garden_router is no longer mounted under ``app`` because the PRD10
+  router takes its place at the same prefix.
+
+The whole module is skipped at collection time. Re-enable only if the PRD9
+garden surface is intentionally restored alongside the PRD10 one.
 """
 
 import pytest
+
+pytest.skip(
+    "Legacy PRD9 garden tests; superseded by PRD10 garden + today tests.",
+    allow_module_level=True,
+)
+
 import uuid
-from datetime import datetime, timedelta, timezone
-from httpx import AsyncClient, ASGITransport
+from datetime import UTC, datetime, timedelta
+
+import pytest
+from httpx import ASGITransport, AsyncClient
 
 from agent_os.auth.models import User
-from agent_os.items.models import Item, Workspace
-from agent_os.garden.models import KnowledgeCardLink, DailyInsight
 from agent_os.auth.security import get_password_hash
-from agent_os.server.app import app
 from agent_os.db import base as db_base
 from agent_os.db.session import get_db as session_get_db
-
+from agent_os.garden.models import DailyInsight, KnowledgeCardLink
+from agent_os.items.models import Item, Workspace
+from agent_os.server.app import app
 
 # ============================================================================
 # Test Fixtures
@@ -88,7 +103,7 @@ async def test_workspace(db_session, auth_test_user):
 async def test_items(db_session, test_workspace, auth_test_user, count=15):
     """Create test items (nodes)."""
     items = []
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     for i in range(count):
         item = Item(
@@ -162,7 +177,7 @@ async def test_edges(db_session, test_workspace, test_items):
 async def test_insights(db_session, test_workspace, auth_test_user):
     """Create test insights with various statuses and levels."""
     insights = []
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     today = now.date()
 
     insights_data = [
@@ -176,7 +191,7 @@ async def test_insights(db_session, test_workspace, auth_test_user):
     ]
 
     for title, status, level, days_offset, canonical_hash in insights_data:
-        created_at = datetime.combine(today + timedelta(days=days_offset), datetime.min.time(), tzinfo=timezone.utc)
+        created_at = datetime.combine(today + timedelta(days=days_offset), datetime.min.time(), tzinfo=UTC)
         insight = DailyInsight(
             workspace_id=test_workspace.id,
             user_id=auth_test_user.id,
@@ -547,7 +562,7 @@ class TestTodayInsight:
         """Test that insight response contains required fields."""
         token = await get_auth_token(http_client, auth_test_user.username, "test_pass_123")
 
-        today = datetime.now(timezone.utc).date().isoformat()
+        today = datetime.now(UTC).date().isoformat()
         response = await http_client.get(
             "/api/v1/today/insight",
             headers={"Authorization": f"Bearer {token}"},
@@ -577,7 +592,7 @@ class TestTodayInsight:
         """Test that only stable insights with level >= 2 are returned."""
         token = await get_auth_token(http_client, auth_test_user.username, "test_pass_123")
 
-        today = datetime.now(timezone.utc).date().isoformat()
+        today = datetime.now(UTC).date().isoformat()
         response = await http_client.get(
             "/api/v1/today/insight",
             headers={"Authorization": f"Bearer {token}"},

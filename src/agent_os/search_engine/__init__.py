@@ -7,14 +7,14 @@ This module adds:
 - Insight generation and aggregation
 """
 
-from agent_os.search_engine.models import SearchIndex, IngestionJob, InsightCluster
-from agent_os.search_engine.search_service import SearchService
-from agent_os.search_engine.search_engine import SearchEngine
 from agent_os.search_engine.content_fetcher import ContentFetcher
-from agent_os.search_engine.text_chunker import TextChunker
-from agent_os.search_engine.ingestion_pipeline import IngestionPipeline, IngestionService
 from agent_os.search_engine.embedding_service import EmbeddingService, get_embedding_service
+from agent_os.search_engine.ingestion_pipeline import IngestionPipeline, IngestionService
 from agent_os.search_engine.insight_service import InsightService
+from agent_os.search_engine.models import IngestionJob, InsightCluster, SearchIndex
+from agent_os.search_engine.search_engine import SearchEngine
+from agent_os.search_engine.search_service import SearchService
+from agent_os.search_engine.text_chunker import TextChunker
 
 __all__ = [
     "SearchIndex",

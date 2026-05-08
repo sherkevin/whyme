@@ -1,10 +1,12 @@
 """Test high priority fixes for WebSocketIO, Diff confirmation, and Aider integration."""
 
 import asyncio
+
 import pytest
-from agent_os.server.websocket_io import WebSocketIO
-from agent_os.server.diff_service import DiffService
+
 from agent_os.capabilities.coding.aider_integration import AiderCoderIntegration
+from agent_os.server.diff_service import DiffService
+from agent_os.server.websocket_io import WebSocketIO
 
 
 class TestWebSocketIOConfirmAsk:
@@ -171,9 +173,10 @@ class TestAiderIntegration:
     @pytest.mark.asyncio
     async def test_aider_agent_sets_websocket_params(self):
         """Test that AiderAgent can be configured with WebSocket parameters."""
+        import tempfile
+
         from agent_os.agent_aider import AiderAgent
         from agent_os.core.config import load_config
-        import tempfile
 
         with tempfile.TemporaryDirectory() as tmpdir:
             agent = AiderAgent(

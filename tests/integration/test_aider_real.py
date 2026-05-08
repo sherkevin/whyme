@@ -3,6 +3,7 @@
 import asyncio
 import json
 import sys
+
 import websockets
 
 # Use the session with snake game
@@ -19,7 +20,7 @@ async def test_aider_snake_optimization():
         message = "继续完善贪吃蛇游戏，优化UI界面，添加颜色和更好的视觉效果"
         print(f"\nSending: {message}")
         print(f"Session: {SESSION_ID}")
-        print(f"This will use REAL aider Coder!")
+        print("This will use REAL aider Coder!")
 
         await ws.send(json.dumps({
             "type": "input",
@@ -62,7 +63,7 @@ async def test_aider_snake_optimization():
                         print("(Waiting for any file updates...)")
                         await asyncio.sleep(2)
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 break
 
         print(f"\n{'='*80}")
@@ -75,7 +76,7 @@ async def test_aider_snake_optimization():
         print("\nChecking snake_game.py...")
         try:
             snake_path = "D:/Codes/whyme/data/workspaces/my_first_project_b9bffa2c/snake_game.py"
-            with open(snake_path, "r", encoding="utf-8") as f:
+            with open(snake_path, encoding="utf-8") as f:
                 content = f.read()
 
             # Check for UI improvements

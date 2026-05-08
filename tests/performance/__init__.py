@@ -1,13 +1,14 @@
 """Performance test utilities and helpers."""
 
 import asyncio
+import uuid
 from datetime import datetime
 from typing import List
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_os.search_engine.models import SearchIndex
 from agent_os.search_engine.search_service import SearchService
-import uuid
 
 
 async def seed_test_data(db: AsyncSession, num_items: int = 200):

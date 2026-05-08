@@ -1,21 +1,22 @@
 """Unit tests for Knowledge management schemas (Inbox and Cards)."""
 
-import pytest
 from datetime import datetime
-from agent_os.knowledge.schema import (
-    InboxItemCreate,
-    InboxItemUpdate,
-    InboxItemResponse,
-    InboxItemList,
-    CardCreate,
-    CardUpdate,
-    CardResponse,
-    CardList,
-    SearchResultItem,
-    SearchResponse,
-    KnowledgeContextResponse,
-)
 
+import pytest
+
+from agent_os.knowledge.schema import (
+    CardCreate,
+    CardList,
+    CardResponse,
+    CardUpdate,
+    InboxItemCreate,
+    InboxItemList,
+    InboxItemResponse,
+    InboxItemUpdate,
+    KnowledgeContextResponse,
+    SearchResponse,
+    SearchResultItem,
+)
 
 # =============================================================================
 # Inbox Schema Tests

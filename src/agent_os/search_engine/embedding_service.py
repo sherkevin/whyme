@@ -7,11 +7,11 @@ This module provides a simple, fast local embedding solution:
 - Can be replaced with proper embeddings later
 """
 
-import re
-import math
 import logging
-from typing import List, Dict, Tuple
+import math
+import re
 from collections import Counter
+from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ class SimpleEmbedding:
         self.word_count = Counter()
         self.num_documents = 0
 
-    def _tokenize(self, text: str) -> List[str]:
+    def _tokenize(self, text: str) -> list[str]:
         """Tokenize text into words.
 
         Args:
@@ -48,7 +48,7 @@ class SimpleEmbedding:
         words = re.findall(r'\b\w+\b', text)
         return words
 
-    def _build_vocab(self, texts: List[str]):
+    def _build_vocab(self, texts: list[str]):
         """Build vocabulary from texts.
 
         Args:
@@ -64,7 +64,7 @@ class SimpleEmbedding:
         common_words = self.word_count.most_common(vocab_size)
         self.vocab = {word: idx for idx, (word, _) in enumerate(common_words)}
 
-    def _get_tfidf_vector(self, text: str) -> List[float]:
+    def _get_tfidf_vector(self, text: str) -> list[float]:
         """Generate TF-IDF-like vector.
 
         Args:
@@ -97,7 +97,7 @@ class SimpleEmbedding:
 
         return scores
 
-    def fit(self, texts: List[str]):
+    def fit(self, texts: list[str]):
         """Fit the embedding model on texts.
 
         Args:
@@ -107,7 +107,7 @@ class SimpleEmbedding:
         self.num_documents = len(texts)
         logger.info(f"Fitted embedding model on {self.num_documents} documents, vocab size: {len(self.vocab)}")
 
-    def encode(self, text: str) -> List[float]:
+    def encode(self, text: str) -> list[float]:
         """Encode text to embedding vector.
 
         Args:
@@ -118,7 +118,7 @@ class SimpleEmbedding:
         """
         return self._get_tfidf_vector(text)
 
-    def encode_batch(self, texts: List[str]) -> List[List[float]]:
+    def encode_batch(self, texts: list[str]) -> list[list[float]]:
         """Encode multiple texts.
 
         Args:
@@ -143,7 +143,7 @@ class EmbeddingService:
         self.model = SimpleEmbedding(embedding_dim)
         self._fitted = False
 
-    async def generate_embedding(self, text: str) -> List[float]:
+    async def generate_embedding(self, text: str) -> list[float]:
         """Generate embedding for text.
 
         Args:
@@ -166,7 +166,7 @@ class EmbeddingService:
 
         return self.model.encode(text)
 
-    async def generate_embeddings_batch(self, texts: List[str]) -> List[List[float]]:
+    async def generate_embeddings_batch(self, texts: list[str]) -> list[list[float]]:
         """Generate embeddings for multiple texts.
 
         Args:
@@ -182,7 +182,7 @@ class EmbeddingService:
 
         return self.model.encode_batch(texts)
 
-    def cosine_similarity(self, vec1: List[float], vec2: List[float]) -> float:
+    def cosine_similarity(self, vec1: list[float], vec2: list[float]) -> float:
         """Calculate cosine similarity between two vectors.
 
         Args:

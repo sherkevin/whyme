@@ -5,16 +5,16 @@ Provides:
 - Insight aggregation worker for status transitions and deduplication
 """
 
-import uuid
 import hashlib
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional, Tuple
+import uuid
+from datetime import datetime
+from typing import Any, Dict, List
+
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, or_, update
-from sqlalchemy.sql import select as sql_select
 
 from agent_os.core.config import get_garden_strong_edge_threshold
-from agent_os.garden.models import KnowledgeCardLink, DailyInsight, InsightStatus
+from agent_os.garden.models import DailyInsight, KnowledgeCardLink
 from agent_os.items.models import Item
 
 
@@ -35,7 +35,7 @@ class ClusterService:
 
     async def compute_cluster_strength(
         self,
-        node_ids: List[str],
+        node_ids: list[str],
         workspace_id: str
     ) -> float:
         """Compute cluster strength for a set of nodes.
@@ -136,7 +136,7 @@ class ClusterService:
 
     async def _compute_single_node_strength(
         self,
-        node_ids: List[uuid.UUID],
+        node_ids: list[uuid.UUID],
         workspace_id: uuid.UUID
     ) -> float:
         """Compute strength for single node or empty cluster."""
@@ -148,8 +148,8 @@ class ClusterService:
 
     async def _calculate_avg_days_between_nodes(
         self,
-        node_ids: List[uuid.UUID],
-        edge_dates: List[datetime]
+        node_ids: list[uuid.UUID],
+        edge_dates: list[datetime]
     ) -> float:
         """Calculate average days between node connections.
 
@@ -203,9 +203,9 @@ class InsightWorker:
     async def process_candidate_insight(
         self,
         insight_id: str,
-        source_item_ids: List[str],
+        source_item_ids: list[str],
         workspace_id: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Process a candidate insight and potentially transition to stable.
 
         Args:
@@ -257,9 +257,9 @@ class InsightWorker:
 
     async def _check_trigger_conditions(
         self,
-        source_item_ids: List[str],
+        source_item_ids: list[str],
         workspace_id: uuid.UUID
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Check if trigger conditions are met.
 
         Conditions:
@@ -322,9 +322,9 @@ class InsightWorker:
         canonical_hash: str,
         title: str,
         content: str,
-        source_item_ids: List[str],
+        source_item_ids: list[str],
         level: int = 1
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create or update insight with deduplication by canonical_hash.
 
         If an insight with the same canonical_hash exists:
@@ -372,8 +372,8 @@ class InsightWorker:
     async def _update_existing_insight(
         self,
         insight: DailyInsight,
-        new_source_item_ids: List[str]
-    ) -> Dict[str, Any]:
+        new_source_item_ids: list[str]
+    ) -> dict[str, Any]:
         """Update existing insight with new evidence.
 
         Args:
@@ -420,9 +420,9 @@ class InsightWorker:
         canonical_hash: str,
         title: str,
         content: str,
-        source_item_ids: List[str],
+        source_item_ids: list[str],
         level: int
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create new insight record.
 
         Args:

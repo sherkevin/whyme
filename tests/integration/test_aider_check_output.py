@@ -2,10 +2,13 @@
 
 import asyncio
 import sys
+
 sys.path.insert(0, "src")
 
-from agent_os.agent_aider import AiderAgent
 from pathlib import Path
+
+from agent_os.agent_aider import AiderAgent
+
 
 async def test_output():
     """Test what's in output buffer."""
@@ -24,16 +27,16 @@ async def test_output():
     # Get the aider integration
     aider = await agent._get_aider()
 
-    print(f"\nOutput buffer contents:")
+    print("\nOutput buffer contents:")
     for i, (msg_type, msg) in enumerate(aider.io.output_buffer):
         print(f"{i+1}. [{msg_type}] {msg[:100] if len(msg) > 100 else msg}")
 
-    print(f"\nCoder attributes:")
+    print("\nCoder attributes:")
     print(f"  abs_fnames: {aider.coder.abs_fnames if aider.coder else 'No coder'}")
     if hasattr(aider.coder, 'partial_response_content'):
         print(f"  partial_response_content: {aider.coder.partial_response_content[:200] if aider.coder.partial_response_content else 'None'}")
 
-    print(f"\nWorkspace files:")
+    print("\nWorkspace files:")
     for f in workspace.rglob("*"):
         if f.is_file():
             print(f"  {f.name}: {f.stat().st_size} bytes")

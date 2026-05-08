@@ -4,15 +4,15 @@ This document lists all available tools in the toolkit.
 
 ## 📦 Skills (Local Python Scripts)
 
-### weather
-- **Path**: `bins/weather.py`
-- **Description**: Weather Skill - 获取天气信息
-- **Usage**: `/run python bins/weather.py <args>`
-
 ### calculator
-- **Path**: `bins/calculator.py`
+- **Path**: `bins\calculator.py`
 - **Description**: Calculator Skill - 安全的数学计算器
-- **Usage**: `/run python bins/calculator.py <args>`
+- **Usage**: `/run python bins\calculator.py <args>`
+
+### weather
+- **Path**: `bins\weather.py`
+- **Description**: Weather Skill - 获取天气信息
+- **Usage**: `/run python bins\weather.py <args>`
 
 ## 🌐 MCP Servers (Remote Tools)
 

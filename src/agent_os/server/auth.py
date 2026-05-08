@@ -1,18 +1,17 @@
 """
 User authentication and management module for AgentOS.
 """
-import os
-import json
 import hashlib
-import hmac
+import json
+import os
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
-from typing import Optional, Dict, List
-from dataclasses import dataclass, asdict
-import jwt
+from typing import Optional
 
-from fastapi import HTTPException, Security, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import bcrypt
+import jwt
+from fastapi import HTTPException, Security, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 # Configuration
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
@@ -80,7 +79,7 @@ class UserManager:
     def _load_users(self):
         """Load users from file."""
         if os.path.exists(self.users_file):
-            with open(self.users_file, 'r') as f:
+            with open(self.users_file) as f:
                 self.users = json.load(f)
         else:
             self.users = {}
@@ -108,14 +107,14 @@ class UserManager:
             password_bytes = password_bytes[:72]
         return bcrypt.checkpw(password_bytes, hashed_password.encode('utf-8'))
 
-    def get_user(self, username: str) -> Optional[UserInDB]:
+    def get_user(self, username: str) -> UserInDB | None:
         """Get user by username."""
         user_data = self.users.get(username)
         if user_data:
             return UserInDB(**user_data)
         return None
 
-    def get_user_by_id(self, user_id: str) -> Optional[User]:
+    def get_user_by_id(self, user_id: str) -> User | None:
         """Get user by ID."""
         for user_data in self.users.values():
             if user_data.get('id') == user_id:
@@ -162,7 +161,7 @@ class UserManager:
             created_at=user.created_at
         )
 
-    def authenticate_user(self, username: str, password: str) -> Optional[User]:
+    def authenticate_user(self, username: str, password: str) -> User | None:
         """Authenticate user with username and password."""
         user = self.get_user(username)
         if not user:
@@ -189,7 +188,7 @@ class UserManager:
         encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
         return encoded_jwt
 
-    def verify_token(self, token: str) -> Optional[User]:
+    def verify_token(self, token: str) -> User | None:
         """Verify JWT token and return user."""
         try:
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])

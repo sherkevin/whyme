@@ -2,10 +2,13 @@
 
 import asyncio
 import sys
+
 sys.path.insert(0, "src")
 
-from agent_os.agent_aider import AiderAgent
 from pathlib import Path
+
+from agent_os.agent_aider import AiderAgent
+
 
 async def test_verbose():
     """Test AiderAgent with verbose output."""
@@ -35,10 +38,10 @@ async def test_verbose():
     # Check file
     hello_file = workspace / "hello_verbose.py"
     if hello_file.exists():
-        print(f"\n[SUCCESS] File created!")
+        print("\n[SUCCESS] File created!")
         print(hello_file.read_text(encoding='utf-8'))
     else:
-        print(f"\n[FAIL] File not created")
+        print("\n[FAIL] File not created")
         print(f"Workspace contents: {list(workspace.iterdir())}")
 
 if __name__ == "__main__":

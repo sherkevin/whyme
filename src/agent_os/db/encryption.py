@@ -16,8 +16,8 @@ Usage:
 """
 
 import os
-import base64
 from typing import Optional
+
 from cryptography.fernet import Fernet, InvalidToken
 
 
@@ -28,7 +28,7 @@ class FieldEncryption:
     Uses Fernet (symmetric encryption) with AES-128-CBC.
     """
 
-    def __init__(self, encryption_key: Optional[str] = None):
+    def __init__(self, encryption_key: str | None = None):
         """Initialize encryption.
 
         Args:
@@ -54,7 +54,7 @@ class FieldEncryption:
         except Exception as e:
             raise ValueError(f"Invalid encryption key: {e}")
 
-    def encrypt(self, plaintext: Optional[str]) -> Optional[str]:
+    def encrypt(self, plaintext: str | None) -> str | None:
         """Encrypt a plaintext string.
 
         Args:
@@ -79,7 +79,7 @@ class FieldEncryption:
         encrypted_bytes = self.cipher.encrypt(plaintext.encode())
         return encrypted_bytes.decode()
 
-    def decrypt(self, ciphertext: Optional[str]) -> Optional[str]:
+    def decrypt(self, ciphertext: str | None) -> str | None:
         """Decrypt an encrypted string.
 
         Args:
@@ -191,12 +191,12 @@ class EncryptedField:
     """
 
     @staticmethod
-    def encrypt(plaintext: Optional[str]) -> Optional[str]:
+    def encrypt(plaintext: str | None) -> str | None:
         """Encrypt field value."""
         return field_encryptor.encrypt(plaintext)
 
     @staticmethod
-    def decrypt(ciphertext: Optional[str]) -> Optional[str]:
+    def decrypt(ciphertext: str | None) -> str | None:
         """Decrypt field value."""
         return field_encryptor.decrypt(ciphertext)
 

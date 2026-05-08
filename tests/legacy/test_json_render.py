@@ -4,12 +4,10 @@ import pytest
 
 from agent_os.server.json_render import (
     JSONRenderProtocol,
-    RenderType,
-    ChartType,
-    render_json_text,
-    create_table,
     create_chart,
+    create_table,
     create_tree,
+    render_json_text,
 )
 
 

@@ -11,7 +11,7 @@ from typing import Optional
 def generate_title(
     content: str,
     max_length: int = 200,
-    existing_title: Optional[str] = None
+    existing_title: str | None = None
 ) -> str:
     """从内容生成标题.
 

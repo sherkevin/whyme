@@ -3,11 +3,10 @@
 import asyncio
 import threading
 import time
-from typing import Any
 
 import pytest
 
-from agent_os.server.websocket_io import WebSocketIO, AiderExecutor
+from agent_os.server.websocket_io import WebSocketIO
 
 
 class TestWebSocketIOThreadSafety:
@@ -81,7 +80,7 @@ class TestWebSocketIOThreadSafety:
                 received.append(event)
                 if len(received) >= 5:
                     break
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass
 
         # At least some events should have been received
@@ -119,7 +118,7 @@ class TestWebSocketIOThreadSafety:
                 )
                 if event["payload"]["action"] == "request_input":
                     request_ids.append(event["payload"]["data"]["request_id"])
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 break
 
         # Provide inputs to unblock threads (using request_ids)
@@ -205,7 +204,7 @@ class TestWebSocketIOThreadSafety:
                     asyncio.wait_for(output_queue.get(), timeout=1.0)
                 )
                 events.append(event)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass
 
         # All events should have been sent
@@ -238,7 +237,7 @@ class TestWebSocketIOThreadSafety:
             if event["payload"]["action"] == "request_input":
                 request_id = event["payload"]["data"]["request_id"]
                 request_id_collected.append(request_id)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass
 
         # Send error
@@ -289,7 +288,7 @@ class TestWebSocketIOThreadSafety:
                     confirm_id = event["payload"]["data"]["confirm_id"]
                     # Respond with alternating yes/no
                     ws_io.receive_confirm_response(confirm_id, i % 2 == 0)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 break
 
         # Wait for all threads
@@ -359,7 +358,7 @@ class TestWebSocketIOIntegration:
                     if len(events) >= 4:
                         break
 
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     break
 
         finally:

@@ -2,14 +2,11 @@
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from tests.test_app import test_app as app
 
 from agent_os.db.base import Base
 from agent_os.db.session import get_db
-from agent_os.auth.models import User, UserSettings
-from agent_os.tasks.models import Task  # Import Task to avoid relationship errors
-from tests.test_app import test_app as app
-
 
 # =============================================================================
 # Test Fixtures

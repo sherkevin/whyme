@@ -7,16 +7,15 @@ This test file validates the complete workflows:
 4. Complete API workflows
 """
 
-import pytest
 import uuid
 from datetime import datetime, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_os.search_engine.search_service import SearchService
-from agent_os.search_engine.search_engine import SearchEngine, SearchQuery
+import pytest
+
 from agent_os.search_engine.ingestion_pipeline import IngestionService
 from agent_os.search_engine.insight_service import InsightService
-from agent_os.search_engine.models import SearchIndex, IngestionJob, InsightCluster
+from agent_os.search_engine.search_engine import SearchEngine, SearchQuery
+from agent_os.search_engine.search_service import SearchService
 
 
 @pytest.mark.asyncio
@@ -115,7 +114,7 @@ class TestStage4Integration:
         assert result.total >= 3
         assert all(r.item_type == "task" for r in result.results)
 
-        print(f"✅ Type filtering works correctly")
+        print("✅ Type filtering works correctly")
 
     async def test_search_with_tag_filtering(self, db_session):
         """Test searching with tag filters."""
@@ -165,7 +164,7 @@ class TestStage4Integration:
         assert result.total >= 1, f"Expected at least 1 result, got {result.total}"
         assert all("python" in r.tags for r in result.results)
 
-        print(f"✅ Tag filtering works correctly")
+        print("✅ Tag filtering works correctly")
 
     async def test_ingestion_to_search_workflow(self, db_session):
         """Test complete ingestion workflow: ingest -> index -> search."""
@@ -206,7 +205,7 @@ class TestStage4Integration:
         assert result.total >= 1
         assert any("ingested" in r.tags for r in result.results)
 
-        print(f"✅ Ingestion to search workflow works")
+        print("✅ Ingestion to search workflow works")
 
     async def test_insight_on_real_data(self, db_session):
         """Test insight generation on real indexed data."""
@@ -244,7 +243,7 @@ class TestStage4Integration:
         assert topics_insight.cluster_type == "topic"
         assert len(topics_insight.insight_data["topics"]) <= 3
 
-        print(f"✅ Insight generation on real data works")
+        print("✅ Insight generation on real data works")
 
     async def test_pagination_and_sorting(self, db_session):
         """Test pagination and sorting functionality."""
@@ -293,7 +292,7 @@ class TestStage4Integration:
             dates = [r.created_at for r in result.results]
             assert dates == sorted(dates, reverse=True)
 
-        print(f"✅ Pagination and sorting work correctly")
+        print("✅ Pagination and sorting work correctly")
 
     async def test_update_and_delete_workflow(self, db_session):
         """Test update and delete operations."""
@@ -346,7 +345,7 @@ class TestStage4Integration:
         result = await engine.search(query)
         assert not any(r.item_id == item_id for r in result.results)
 
-        print(f"✅ Update and delete workflow works")
+        print("✅ Update and delete workflow works")
 
     async def test_bulk_operations(self, db_session):
         """Test bulk indexing operations."""
@@ -374,7 +373,7 @@ class TestStage4Integration:
 
         assert result.total >= 10
 
-        print(f"✅ Bulk operations work correctly")
+        print("✅ Bulk operations work correctly")
 
     async def test_cross_module_data_flow(self, db_session):
         """Test data flow across Search, Ingestion, and Insight modules."""
@@ -424,7 +423,7 @@ class TestStage4Integration:
         # Just verify topics are generated (may not be "ingested" due to frequency)
         assert len(topics.insight_data["topics"]) <= 3
 
-        print(f"✅ Cross-module data flow works correctly")
+        print("✅ Cross-module data flow works correctly")
 
     async def test_error_handling_and_recovery(self, db_session):
         """Test error handling and recovery."""
@@ -453,7 +452,7 @@ class TestStage4Integration:
         assert result.total == 0
         assert len(result.results) == 0
 
-        print(f"✅ Error handling works correctly")
+        print("✅ Error handling works correctly")
 
     async def test_performance_with_large_dataset(self, db_session):
         """Test performance with larger dataset."""
@@ -497,7 +496,7 @@ class TestStage4Integration:
         assert summary.sample_count >= 100
         assert insight_time < 500  # Should be fast
 
-        print(f"✅ Performance test passed:")
+        print("✅ Performance test passed:")
         print(f"    Indexed 100 items in {indexing_time:.2f}s")
         print(f"    Search in {search_time:.2f}ms")
         print(f"    Insight in {insight_time:.2f}ms")
@@ -546,7 +545,7 @@ class TestStage4APIWorkflows:
             assert hasattr(r, 'score')
             assert hasattr(r, 'tags')
 
-        print(f"✅ Search API workflow works")
+        print("✅ Search API workflow works")
 
     async def test_insight_api_workflow(self, db_session):
         """Test insight API workflow."""
@@ -583,7 +582,7 @@ class TestStage4APIWorkflows:
         retrieved = await insight_service.get_insight(str(summary.id))
         assert retrieved.id == summary.id
 
-        print(f"✅ Insight API workflow works")
+        print("✅ Insight API workflow works")
 
     async def test_date_range_filtering(self, db_session):
         """Test date range filtering in searches and insights."""
@@ -616,7 +615,7 @@ class TestStage4APIWorkflows:
         assert summary.sample_count >= 1
         assert "date_range" in summary.insight_data
 
-        print(f"✅ Date range filtering works")
+        print("✅ Date range filtering works")
 
 
 if __name__ == "__main__":

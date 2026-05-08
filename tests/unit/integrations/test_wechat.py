@@ -1,14 +1,11 @@
 """Tests for WeChat integration components."""
 
-import pytest
 import os
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
-from agent_os.integrations.wechat import (
-    WeChatWebhookReceiver,
-    WeChatMessageSender,
-    WeChatService
-)
+import pytest
+
+from agent_os.integrations.wechat import WeChatMessageSender, WeChatService, WeChatWebhookReceiver
 
 
 class TestWeChatWebhookReceiver:

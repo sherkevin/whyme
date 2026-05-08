@@ -6,16 +6,15 @@ Tests:
 - generated_insights: Stable insights with level >= 2, deduplicated by canonical_hash
 """
 
-import pytest
 import uuid
-from datetime import datetime
-from typing import List
+
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_os.garden.stats_service import GardenStatsService
-from agent_os.garden.models import KnowledgeCardLink, DailyInsight
-from agent_os.items.models import Item, Workspace
 from agent_os.auth.models import User
+from agent_os.garden.models import DailyInsight, KnowledgeCardLink
+from agent_os.garden.stats_service import GardenStatsService
+from agent_os.items.models import Item, Workspace
 
 
 @pytest.fixture
@@ -53,7 +52,7 @@ async def test_items(
     test_workspace: Workspace,
     test_user: User,
     count: int = 5
-) -> List[Item]:
+) -> list[Item]:
     """Create test items."""
     items = []
     for i in range(count):
@@ -79,7 +78,7 @@ class TestGardenStatsService:
         db_session: AsyncSession,
         test_workspace: Workspace,
         test_user: User,
-        test_items: List[Item]
+        test_items: list[Item]
     ):
         """Test total_notes counts active items correctly."""
         service = GardenStatsService(db_session)

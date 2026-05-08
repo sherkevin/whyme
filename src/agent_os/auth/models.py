@@ -4,15 +4,12 @@ User management, API keys, sessions, and role-based access control.
 """
 
 import uuid
-import secrets
-from datetime import datetime, timedelta
-from typing import Optional, List
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Text, Index, CheckConstraint, UUID, JSON
+
+from sqlalchemy import JSON, UUID, Boolean, Column, DateTime, ForeignKey, Index, String, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from agent_os.db.base import Base
-
 
 # ============================================================================
 # User Model
@@ -223,6 +220,53 @@ class UserRole(Base):
 # ============================================================================
 # Audit Log Model
 # ============================================================================
+
+class UserSettings(Base):
+    """Per-user persisted settings.
+
+    PRD10's `User` model already carries a JSON `settings` column on the row
+    itself. Some legacy auth tests still expect a dedicated `user_settings`
+    table; this minimal ORM model satisfies that contract without removing the
+    canonical JSON column. New PRD10 endpoints should keep using
+    `User.settings` until/unless we migrate fully to this table.
+    """
+
+    __tablename__ = "user_settings"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+
+    theme = Column(String(50), default="light", nullable=False)
+    language = Column(String(20), default="en", nullable=False)
+    timezone = Column(String(50), default="UTC", nullable=False)
+    email_notifications = Column(Boolean, default=True, nullable=False)
+    desktop_notifications = Column(Boolean, default=True, nullable=False)
+
+    extra = Column(JSON, default=dict, nullable=False)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    user = relationship("User", backref="user_settings", uselist=False)
+
+    __table_args__ = (
+        Index('idx_user_settings_user', 'user_id'),
+    )
+
+    def __repr__(self):
+        return f"<UserSettings(user_id={self.user_id}, theme={self.theme})>"
+
 
 class AuditLog(Base):
     """Audit log for security events."""

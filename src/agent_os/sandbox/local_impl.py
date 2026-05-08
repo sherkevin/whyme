@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import os
 import shutil
 import tempfile
 from pathlib import Path
@@ -11,9 +10,9 @@ from typing import Optional
 
 from agent_os.core.interfaces import ExecutionEnvironment
 from agent_os.server.security import (
+    sanitize_path,
     validate_command,
     validate_file_size,
-    sanitize_path,
 )
 
 
@@ -22,7 +21,7 @@ class LocalSandbox(ExecutionEnvironment):
 
     def __init__(self, image: str = "", workspace: str = "") -> None:
         # image arg is ignored for local
-        self.workspace_root: Optional[Path] = None
+        self.workspace_root: Path | None = None
         self._custom_workspace = workspace if workspace and workspace != "/workspace" else None
 
     async def start(self) -> None:

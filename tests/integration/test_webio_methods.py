@@ -2,9 +2,11 @@
 
 import asyncio
 import sys
+
 sys.path.insert(0, "src")
 
 from agent_os.capabilities.coding.aider_integration import AiderCoderIntegration
+
 
 async def test_webio_methods():
     """Test that WebIO has all required methods."""

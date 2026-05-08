@@ -1,16 +1,13 @@
 """Unit tests for Stage 3 router components (without full integration)."""
 
-import pytest
 import uuid
+
+import pytest
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_os.stage3.router import router
 from agent_os.stage3.models import Skill
-from agent_os.auth.models import User
-from agent_os.auth.security import create_access_token
-
+from agent_os.stage3.router import router
 
 # Create a test app with the Stage 3 router
 test_app = FastAPI()
@@ -80,7 +77,7 @@ class TestSkillServiceDirect:
         retrieved = await service.get_skill(str(skill.id))
         assert retrieved is not None
         assert retrieved.name == "Workflow Test Skill"
-        print(f"✅ Step 2: Retrieved skill")
+        print("✅ Step 2: Retrieved skill")
 
         # List skills
         skills = await service.list_skills(category="decision")
@@ -93,7 +90,7 @@ class TestSkillServiceDirect:
             description="Updated description"
         )
         assert updated.description == "Updated description"
-        print(f"✅ Step 4: Updated skill")
+        print("✅ Step 4: Updated skill")
 
         # Recommend skills
         recommendations = await service.recommend_skills(
@@ -109,7 +106,7 @@ class TestSkillServiceDirect:
         stats = await service.get_skill_stats(str(skill.id))
         assert stats is not None
         assert stats["name"] == "Workflow Test Skill"
-        print(f"✅ Step 6: Got skill stats")
+        print("✅ Step 6: Got skill stats")
 
         # Create version
         v2 = await service.create_skill_version(
@@ -130,12 +127,12 @@ class TestSkillServiceDirect:
         # Delete (soft delete)
         deleted = await service.delete_skill(str(skill.id))
         assert deleted is True
-        print(f"✅ Step 9: Soft deleted skill")
+        print("✅ Step 9: Soft deleted skill")
 
         # Verify it's deleted
         retrieved_after = await service.get_skill(str(skill.id))
         assert retrieved_after is None  # Should not return inactive skills
-        print(f"✅ Step 10: Verified soft delete")
+        print("✅ Step 10: Verified soft delete")
 
 
 @pytest.mark.asyncio
@@ -194,6 +191,7 @@ class TestFlowEngineDirect:
         if status["status"] in ["running", "completed"]:
             # Get latest log and manually set to running for pause test
             from sqlalchemy import select
+
             from agent_os.stage3.models import TaskExecutionLog
 
             stmt = select(TaskExecutionLog).where(
@@ -210,12 +208,12 @@ class TestFlowEngineDirect:
                 # Pause
                 paused = await engine.pause_flow(task_id)
                 assert paused is True
-                print(f"✅ Step 3: Paused flow")
+                print("✅ Step 3: Paused flow")
 
                 # Resume
                 resumed = await engine.resume_flow(task_id)
                 assert resumed is not None
-                print(f"✅ Step 4: Resumed flow")
+                print("✅ Step 4: Resumed flow")
 
 
 if __name__ == "__main__":

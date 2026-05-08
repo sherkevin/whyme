@@ -3,8 +3,9 @@
 import asyncio
 import json
 import sys
-import websockets
 from datetime import datetime
+
+import websockets
 
 SESSION_ID = "f99eedc7-7016-404f-9166-08d0087f162f"
 WS_URL = f"ws://127.0.0.1:8000/ws/chat/{SESSION_ID}"
@@ -97,7 +98,7 @@ async def send_message_and_wait(ws, message, timeout=30):
                     await asyncio.sleep(1)
                     break
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             continue
         except Exception as e:
             print_error(f"Error receiving: {e}")
@@ -197,7 +198,7 @@ async def verify_file_modification():
     print_section("TEST 4: Verify File Content")
 
     try:
-        with open("D:/Codes/whyme/data/workspaces/test-python-app/guess_number.py", "r", encoding="utf-8") as f:
+        with open("D:/Codes/whyme/data/workspaces/test-python-app/guess_number.py", encoding="utf-8") as f:
             content = f.read()
 
         # Check if the modification is present
@@ -263,7 +264,7 @@ async def main():
     print(f"\n{Colors.BOLD}Total: {passed}/{total} tests passed{Colors.ENDC}")
 
     if passed == total:
-        print_success(f"\n✓ All tests passed!")
+        print_success("\n✓ All tests passed!")
         return 0
     else:
         print_error(f"\n✗ {total - passed} test(s) failed")

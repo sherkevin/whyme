@@ -1,6 +1,7 @@
 """Test FastAPI application configuration for API integration testing."""
 
 from fastapi import FastAPI
+
 # Import router instances, not modules
 from agent_os.auth.router import router as auth_router
 from agent_os.knowledge.router import router as knowledge_router

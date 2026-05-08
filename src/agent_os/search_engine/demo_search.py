@@ -10,13 +10,13 @@ This demo shows:
 
 import asyncio
 import uuid
-from datetime import datetime, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from datetime import datetime
 
-from agent_os.search_engine.search_service import SearchService
-from agent_os.search_engine.search_engine import SearchEngine, SearchQuery
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from agent_os.db.base import Base
-
+from agent_os.search_engine.search_engine import SearchEngine, SearchQuery
+from agent_os.search_engine.search_service import SearchService
 
 # Create async engine for demo
 DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -242,7 +242,7 @@ async def demo_search():
         print("\n[9] Search index statistics...")
         stats = await service.get_index_stats()
         print(f"  Total indices: {stats['total']}")
-        print(f"  By type:")
+        print("  By type:")
         for item_type, count in stats['by_type'].items():
             print(f"    - {item_type}: {count}")
 

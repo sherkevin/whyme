@@ -4,12 +4,10 @@ IMPORTANT: These tests MUST NOT require any external dependencies like PostgreSQ
 All tests use pure Python mocks and validate model definitions only.
 """
 
-import pytest
-from unittest.mock import Mock
-from datetime import datetime, date
+from datetime import date, datetime
 
 from agent_os.auth.models import User, UserSettings
-from agent_os.knowledge.models import InboxItem, Card
+from agent_os.knowledge.models import Card, InboxItem
 from agent_os.tasks.models import Task
 
 

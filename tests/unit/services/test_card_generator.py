@@ -6,16 +6,14 @@ Tests the InboxItem → Card conversion logic.
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_os.items.models import Item, ItemStatus, ItemType, Workspace
 from agent_os.auth.models import User
+from agent_os.items.models import Item, ItemStatus, ItemType, Workspace
 from agent_os.knowledge.card_generator import (
-    generate_card_from_item,
-    _map_item_type_to_para_type,
     _extract_tags,
-    check_card_exists
+    _map_item_type_to_para_type,
+    check_card_exists,
+    generate_card_from_item,
 )
-from agent_os.knowledge.models import Card
-
 
 # ============================================================================
 # Test Fixtures
@@ -25,6 +23,7 @@ from agent_os.knowledge.models import Card
 async def test_user_with_workspace(db_session: AsyncSession):
     """Create a test user with workspace."""
     import uuid
+
     from agent_os.auth.security import get_password_hash
 
     user_id = uuid.uuid4()
@@ -254,7 +253,7 @@ class TestGenerateCardFromItem:
         assert card.para_type == "concept"  # NOTE -> concept
         assert "note" in card.tags
 
-        print(f"✅ Generated concept card from note item")
+        print("✅ Generated concept card from note item")
 
     async def test_generate_card_for_reference_item(self, db_session, test_user_with_workspace):
         """验证从 RESOURCE Item 生成 reference Card"""
@@ -282,7 +281,7 @@ class TestGenerateCardFromItem:
         assert card.para_type == "reference"  # RESOURCE -> reference
         assert "resource" in card.tags
 
-        print(f"✅ Generated reference card from resource item")
+        print("✅ Generated reference card from resource item")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Legal · Mydow</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 80px 24px;
+      background: #0c0e14;
+      color: #e6e8ef;
+      font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Microsoft YaHei", Roboto, sans-serif;
+      display: flex;
+      justify-content: center;
+    }
+    main {
+      max-width: 640px;
+      width: 100%;
+    }
+    h1 { font-size: 28px; letter-spacing: -0.02em; }
+    p { color: #a8b0c2; line-height: 1.7; }
+    .links {
+      display: grid;
+      gap: 12px;
+      margin-top: 32px;
+    }
+    a.card {
+      display: block;
+      padding: 18px 20px;
+      background: #161924;
+      border: 1px solid #2a2f3d;
+      border-radius: 12px;
+      color: #e6e8ef;
+      text-decoration: none;
+      transition: border-color 120ms ease, transform 120ms ease;
+    }
+    a.card:hover {
+      border-color: #7c5cff;
+      transform: translateY(-1px);
+    }
+    a.card strong { display: block; margin-bottom: 4px; }
+    a.card span { color: #a8b0c2; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Mydow · Legal</h1>
+    <p>
+      合规与法律相关文档 — Compliance and legal documents for Mydow users
+      and partners.
+    </p>
+    <nav class="links">
+      <a class="card" href="/legal/privacy.html">
+        <strong>隐私政策 · Privacy Policy</strong>
+        <span>How we collect, use, store, and delete your data.</span>
+      </a>
+      <a class="card" href="/legal/terms.html">
+        <strong>服务条款 · Terms of Service</strong>
+        <span>Rules, subscription, liability and termination.</span>
+      </a>
+      <a class="card" href="/api/v1/me/export">
+        <strong>数据导出 API · Data Export</strong>
+        <span>GET /api/v1/me/export — JSON dump of all your owned data.</span>
+      </a>
+    </nav>
+  </main>
+</body>
+</html>

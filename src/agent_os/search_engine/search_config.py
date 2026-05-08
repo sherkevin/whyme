@@ -176,7 +176,7 @@ def create_migration_script() -> str:
     Returns:
         SQL migration script
     """
-    return f"""
+    return """
 
 -- Migration: Add full-text search support for Stage 4
 -- Date: 2026-02-07

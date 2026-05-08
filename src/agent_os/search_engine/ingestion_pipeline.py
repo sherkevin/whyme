@@ -11,13 +11,14 @@ import logging
 import traceback
 import uuid
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_os.search_engine.models import IngestionJob
 from agent_os.search_engine.content_fetcher import ContentFetcher
-from agent_os.search_engine.text_chunker import TextChunker
+from agent_os.search_engine.models import IngestionJob
 from agent_os.search_engine.search_service import SearchService
+from agent_os.search_engine.text_chunker import TextChunker
 
 # Import Card model (assuming it exists in cards module)
 try:
@@ -370,7 +371,7 @@ class IngestionService:
         # Run job (this will update status)
         return await self.pipeline.run_job(job_id)
 
-    async def get_job_status(self, job_id: str) -> Dict:
+    async def get_job_status(self, job_id: str) -> dict:
         """Get job status and details.
 
         Args:
@@ -413,7 +414,7 @@ class IngestionService:
         created_by: str = None,
         limit: int = 50,
         offset: int = 0
-    ) -> List[IngestionJob]:
+    ) -> list[IngestionJob]:
         """List ingestion jobs.
 
         Args:

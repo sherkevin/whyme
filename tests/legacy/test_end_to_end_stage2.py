@@ -7,16 +7,15 @@ Tests the complete flow:
 4. Today API returns processed items
 """
 
-import pytest
 import uuid
+
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from agent_os.items.models import Item, ItemStatus, ItemType, Workspace
-from agent_os.auth.models import User
-from agent_os.agent.router import router as agent_router
 from tests.test_app import test_app as app
 
+from agent_os.auth.models import User
+from agent_os.items.models import Item, ItemStatus, ItemType, Workspace
 
 # =============================================================================
 # Test Fixtures
@@ -170,8 +169,9 @@ class TestEndToEndStage2:
         print(f"✅ Step 5: Agent status shows {status['processed_count']} processed items")
 
         # 步骤 6: 验证 Cards 已生成
-        from agent_os.knowledge.models import Card
         from sqlalchemy import select
+
+        from agent_os.knowledge.models import Card
 
         card_count = 0
         for item in raw_items:

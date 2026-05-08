@@ -10,22 +10,15 @@ Tests cover:
 4. Index existence (structural verification)
 """
 
-import pytest
 import uuid
-from datetime import datetime
-from sqlalchemy import inspect
+
+import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_os.garden.models import (
-    KnowledgeCardLink,
-    DailyInsight,
-    RelationType,
-    InsightStatus
-)
-from agent_os.items.models import Workspace, Item
 from agent_os.auth.models import User
-
+from agent_os.garden.models import DailyInsight, InsightStatus, KnowledgeCardLink, RelationType
+from agent_os.items.models import Item, Workspace
 
 # ============================================================================
 # Fixtures for Garden Tests

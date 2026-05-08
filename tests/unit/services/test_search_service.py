@@ -1,13 +1,11 @@
 """Unit tests for Stage 4 SearchService and SearchEngine."""
 
-import pytest
 import uuid
-from datetime import datetime
-from sqlalchemy import select
 
+import pytest
+
+from agent_os.search_engine.search_engine import SearchEngine, SearchQuery
 from agent_os.search_engine.search_service import SearchService
-from agent_os.search_engine.search_engine import SearchEngine, SearchQuery, SearchResult
-from agent_os.search_engine.models import SearchIndex
 
 
 @pytest.mark.asyncio
@@ -276,7 +274,7 @@ class TestSearchEngine:
 
         assert result.total >= 1
         assert any("timeline" in r.content_snippet.lower() for r in result.results)
-        print(f"✅ Search found content match")
+        print("✅ Search found content match")
 
     async def test_search_with_type_filter(self, db_session):
         """Test search with item type filter."""
@@ -380,7 +378,7 @@ class TestSearchEngine:
         # Most recent first
         if len(result.results) >= 2:
             assert result.results[0].created_at >= result.results[1].created_at
-        print(f"✅ Search sorted by -date (newest first)")
+        print("✅ Search sorted by -date (newest first)")
 
     async def test_search_snippet_generation(self, db_session):
         """Test content snippet generation."""
@@ -455,7 +453,7 @@ class TestSearchEngine:
         # Verify deletion
         index = await service.get_index("card", str(item_id))
         assert index is None
-        print(f"✅ Deleted index via SearchEngine")
+        print("✅ Deleted index via SearchEngine")
 
 
 @pytest.mark.asyncio

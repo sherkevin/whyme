@@ -7,12 +7,10 @@ Provides Redis-based caching for frequently accessed data:
 - Query result caching
 """
 
-import os
 import json
-import hashlib
-from typing import Optional, Any, List
-from datetime import timedelta
+import os
 from functools import wraps
+from typing import Any, List, Optional
 
 try:
     import redis.asyncio as redis
@@ -43,7 +41,7 @@ class CacheManager:
             socket_timeout=5,
         )
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """Get value from cache.
 
         Args:
@@ -270,25 +268,25 @@ class UserCache:
     """Cache helpers for user-specific data."""
 
     @staticmethod
-    async def get_cards(org_id: int, user_id: int) -> Optional[List]:
+    async def get_cards(org_id: int, user_id: int) -> list | None:
         """Get cached cards for user."""
         key = f"org:{org_id}:user:{user_id}:cards"
         return await cache_manager.get(key)
 
     @staticmethod
-    async def set_cards(org_id: int, user_id: int, cards: List, ttl: int = 300):
+    async def set_cards(org_id: int, user_id: int, cards: list, ttl: int = 300):
         """Cache cards for user."""
         key = f"org:{org_id}:user:{user_id}:cards"
         await cache_manager.set(key, cards, ttl=ttl)
 
     @staticmethod
-    async def get_tasks(org_id: int, user_id: int) -> Optional[List]:
+    async def get_tasks(org_id: int, user_id: int) -> list | None:
         """Get cached tasks for user."""
         key = f"org:{org_id}:user:{user_id}:tasks"
         return await cache_manager.get(key)
 
     @staticmethod
-    async def set_tasks(org_id: int, user_id: int, tasks: List, ttl: int = 300):
+    async def set_tasks(org_id: int, user_id: int, tasks: list, ttl: int = 300):
         """Cache tasks for user."""
         key = f"org:{org_id}:user:{user_id}:tasks"
         await cache_manager.set(key, tasks, ttl=ttl)
@@ -303,7 +301,7 @@ class OrganizationCache:
     """Cache helpers for organization-specific data."""
 
     @staticmethod
-    async def get_settings(org_id: int) -> Optional[dict]:
+    async def get_settings(org_id: int) -> dict | None:
         """Get cached organization settings."""
         key = f"org:{org_id}:settings"
         return await cache_manager.get(key)

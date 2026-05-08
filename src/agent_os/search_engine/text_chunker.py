@@ -8,7 +8,7 @@ This module provides functionality for:
 
 import logging
 import re
-from typing import List, Tuple
+from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ class TextChunker:
         self,
         chunk_size: int = 1000,
         overlap: int = 200,
-        separators: List[str] = None
+        separators: list[str] = None
     ):
         """Initialize text chunker.
 
@@ -53,7 +53,7 @@ class TextChunker:
         text: str,
         chunk_size: int = None,
         overlap: int = None
-    ) -> List[str]:
+    ) -> list[str]:
         """Split text into chunks.
 
         Args:
@@ -82,7 +82,7 @@ class TextChunker:
         text: str,
         chunk_size: int,
         overlap: int
-    ) -> List[str]:
+    ) -> list[str]:
         """Recursively chunk text while preserving boundaries.
 
         Args:
@@ -139,7 +139,7 @@ class TextChunker:
         # No separator found, split at chunk size
         return len(text)
 
-    def chunk_markdown(self, text: str, chunk_size: int = None) -> List[str]:
+    def chunk_markdown(self, text: str, chunk_size: int = None) -> list[str]:
         """Chunk Markdown content while preserving structure.
 
         Args:
@@ -181,7 +181,7 @@ class TextChunker:
 
         return chunks
 
-    def _split_markdown_sections(self, text: str) -> List[str]:
+    def _split_markdown_sections(self, text: str) -> list[str]:
         """Split markdown by headers.
 
         Args:
@@ -196,7 +196,7 @@ class TextChunker:
         # Filter out empty sections
         return [s.strip() for s in sections if s.strip()]
 
-    def chunk_code(self, text: str, language: str = None) -> List[str]:
+    def chunk_code(self, text: str, language: str = None) -> list[str]:
         """Chunk code content while preserving logic.
 
         Args:
@@ -260,7 +260,7 @@ class TextChunker:
             "ends_with_sentence": any(chunk.rstrip().endswith(end) for end in ['.', '!', '?', '...']) if chunk else False
         }
 
-    def merge_chunks(self, chunks: List[str], overlap: int = None) -> str:
+    def merge_chunks(self, chunks: list[str], overlap: int = None) -> str:
         """Merge chunks back into text.
 
         Args:
@@ -302,7 +302,7 @@ class ChunkResult:
 
     def __init__(
         self,
-        chunks: List[str],
+        chunks: list[str],
         original_length: int,
         chunk_count: int,
         metadata: dict = None

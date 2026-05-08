@@ -1,0 +1,315 @@
+# ─── Mydow PRD10 V1 一键部署栈 ────────────────────────────────────────────
+#
+# 任务来源：todo-tasks.md 11.1（Owner: Agent 3 @ 2026-05-05）。
+#
+# 用法：
+#   1. 复制并修改环境变量：
+#        cp .env.example .env
+#        编辑 .env：至少改 SECRET_KEY / JWT_SECRET_KEY / DEEPSEEK_API_KEY
+#   2. 启动：
+#        docker compose -f docker-compose.prd10.yml up -d
+#   3. seed demo 数据（可选）：
+#        docker compose -f docker-compose.prd10.yml exec app python scripts/seed_prd10.py --reset
+#   4. 浏览器访问：
+#        http://localhost:8000/mydow/      （直连 FastAPI）
+#        http://localhost/mydow/           （走 nginx，需 --profile nginx）
+#
+# 服务：
+#   app       — FastAPI + 静态前端（PRD10 V1）
+#   postgres  — Postgres 16
+#   redis     — Redis 7（限流/SSE pubsub/邮箱验证码 TTL）
+#   nginx     — 反向代理（默认不起，需 --profile nginx）
+#
+# 可选 profile：
+#   nginx     — 启用 nginx 反代 + HTTPS 终结
+#   pgadmin   — 启用 pgAdmin 管理 DB
+# ──────────────────────────────────────────────────────────────────────────
+
+name: mydow-prd10
+
+services:
+
+  # ─── 主应用：FastAPI + 静态前端 ─────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.prd10
+    image: mydow-app:prd10
+    container_name: mydow-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # 数据库：在 Postgres 适配 legacy conversations.user_id INTEGER→UUID
+      # 之前（§2.22 / §6.9 类似工作未完成），临时使用 SQLite 落库；持久化到
+      # ``app-sqlite`` named volume。可通过传入 ``DATABASE_URL`` 覆盖到真
+      # Postgres（FK 修好后）。
+      DATABASE_URL: ${DATABASE_URL:-sqlite+aiosqlite:////app/data/mydow.db}
+      # Redis：限流/SSE/验证码
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis123}@redis:6379/0
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis123}
+      # PRD10 行为开关
+      AGENTOS_PRD10_WORKER: ${AGENTOS_PRD10_WORKER:-on}
+      AGENTOS_PRD10_WORKER_INTERVAL: ${AGENTOS_PRD10_WORKER_INTERVAL:-2}
+      AGENTOS_DEMO_MODE: ${AGENTOS_DEMO_MODE:-on}
+      # 默认 on：与业务「真实 LLM 落库」一致；CI / 离线 pytest 请显式设 off。
+      AGENTOS_AI_LLM: ${AGENTOS_AI_LLM:-on}
+      AGENTOS_AI_TEMPERATURE: ${AGENTOS_AI_TEMPERATURE:-0.3}
+      AGENTOS_AI_MAX_TOKENS: ${AGENTOS_AI_MAX_TOKENS:-1000}
+      # LLM provider — paratera OpenAI-compatible endpoint by default
+      # (litellm_impl reads API_KEY + API_BASE + MODEL).
+      API_KEY: ${API_KEY:-}
+      API_BASE: ${API_BASE:-}
+      MODEL: ${MODEL:-}
+      MODEL_FALLBACK: ${MODEL_FALLBACK:-GLM-4-Flash}
+      # §16.1 — capture 结构化整理默认用非 reasoning 模型（见 llm_pipeline 兜底）
+      CAPTURE_ENRICH_MODEL: ${CAPTURE_ENRICH_MODEL:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_OPENAI_BASE_URL: ${DEEPSEEK_OPENAI_BASE_URL:-https://api.deepseek.com/v1}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # 安全（必填；未设时 docker compose 拒绝启动）
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY required - see .env.example}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY required - see .env.example}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-60}
+      FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:-}
+      # 应用
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      BASE_URL: ${BASE_URL:-http://localhost:8000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8000,http://localhost}
+      PRD10_UPLOADS_BASE: /app/data/uploads
+      # 邮件验证码（可选）
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@example.com}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+      # Sentry（可选）
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    volumes:
+      # 持久化用户上传文件
+      - app-uploads:/app/data/uploads
+      # 持久化 sqlite fallback（如果 DATABASE_URL 切到 sqlite）
+      - app-sqlite:/app/data
+      # 应用日志
+      - app-logs:/app/logs
+      # 配置（可热改）
+      - ./config.yaml:/app/config.yaml:ro
+      # §15.43+ — 把源代码 + 静态资源 bind-mount 进容器，方便联调
+      # 每次修改 src/ 或 static/mydow/biz_v14/ 后只需 `docker compose
+      # restart app`（或 uvicorn --reload）即可生效，不需要重建镜像。
+      - ./src:/app/src
+      - ./static:/app/static
+      - ./scripts:/app/scripts
+      - ./docs:/app/docs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - mydow-net
+
+  # ─── Postgres 16 ────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: mydow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-agentos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agentos}
+      POSTGRES_DB: ${POSTGRES_DB:-agentos_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agentos} -d ${POSTGRES_DB:-agentos_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mydow-net
+
+  # ─── Redis 7 ────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: mydow-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-redis123}"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis123}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mydow-net
+
+  # ─── nginx 反代（profile: nginx）──────────────────────────────────────
+  # §11.3 — HTTPS-ready：
+  #   • mydow.conf 提供 :80 + :443 server 块
+  #   • locations.conf.inc 共享 location 块（cache / SSE / WebSocket / 限流）
+  #   • entrypoint.sh 在没找到 ssl/fullchain.pem 时自动禁用 :443 server
+  #   • acme-webroot 给 Let's Encrypt webroot 模式做 HTTP-01 challenge
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: mydow-nginx
+    restart: unless-stopped
+    entrypoint: ["/docker-entrypoint.d/40-mydow-tls.sh"]
+    command: ["nginx", "-g", "daemon off;"]
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./docker/nginx/mydow.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/nginx/locations.conf.inc:/etc/nginx/conf.d/locations.conf.inc:ro
+      - ./docker/nginx/entrypoint.sh:/docker-entrypoint.d/40-mydow-tls.sh:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+      - nginx-acme:/var/www/certbot
+      - nginx-logs:/var/log/nginx
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - mydow-net
+    profiles:
+      - nginx
+
+  # ─── Production seed（profile: seed）────────────────────────────────
+  # §11.9 一次性 oneshot 服务：上线 / 重置环境时跑一次，幂等保证
+  # demo 账号 + 默认 Skill 存在；不破坏真实用户数据。
+  #
+  # 用法：
+  #   1. 首次部署（空库）：
+  #        AGENTOS_PROD_SEED_ON_BOOT=on \
+  #          docker compose -f docker-compose.prd10.yml --profile seed run --rm seed
+  #
+  #   2. 干跑（仅打印决策，不写库）：
+  #        AGENTOS_PROD_SEED_ON_BOOT=on \
+  #          docker compose -f docker-compose.prd10.yml --profile seed run --rm \
+  #          seed python scripts/production_seed.py --dry-run -v
+  #
+  #   3. 强制覆盖真实用户（仅 staging / 紧急回滚）：
+  #        AGENTOS_PROD_SEED_ON_BOOT=on AGENTOS_PROD_SEED_FORCE=1 \
+  #          docker compose -f docker-compose.prd10.yml --profile seed run --rm seed
+  seed:
+    image: mydow-app:prd10
+    container_name: mydow-seed
+    profiles:
+      - seed
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-agentos}:${POSTGRES_PASSWORD:-agentos}@postgres:5432/${POSTGRES_DB:-agentos_db}
+      AGENTOS_PROD_SEED_ON_BOOT: ${AGENTOS_PROD_SEED_ON_BOOT:-on}
+      AGENTOS_PROD_SEED_FORCE: ${AGENTOS_PROD_SEED_FORCE:-}
+      AGENTOS_PROD_SEED_EMAIL: ${AGENTOS_PROD_SEED_EMAIL:-demo@whyme.local}
+      AGENTOS_PROD_SEED_PASSWORD: ${AGENTOS_PROD_SEED_PASSWORD:-demo-password-123}
+      AGENTOS_PROD_SEED_FULLNAME: ${AGENTOS_PROD_SEED_FULLNAME:-Demo User}
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY required - see .env.example}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY required - see .env.example}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    command: ["python", "scripts/production_seed.py"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mydow-net
+    restart: "no"
+
+  # ─── pgAdmin（profile: pgadmin）───────────────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: mydow-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@mydow.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - mydow-net
+    profiles:
+      - pgadmin
+
+  # ─── 备份（profile: backup）─────────────────────────────────────────────
+  # §11.7 — 一次性 oneshot 容器，跑 pg_dump + tar uploads，退出码即结果。
+  # 调度交给宿主机：cron / Kubernetes CronJob / Windows 任务计划。
+  #
+  #   docker compose -f docker-compose.prd10.yml --profile backup run --rm backup
+  #
+  # 详细策略 / 演练 SOP / S3 集成见 docs/11-deployment/backup.md。
+  backup:
+    image: postgres:16-alpine
+    container_name: mydow-backup
+    profiles:
+      - backup
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-agentos}:${POSTGRES_PASSWORD:-agentos}@postgres:5432/${POSTGRES_DB:-agentos_db}
+      BACKUP_DIR: /var/backups/mydow
+      PRD10_UPLOADS_BASE: /data/uploads
+      AGENTOS_BACKUP_RETENTION_DAYS: ${AGENTOS_BACKUP_RETENTION_DAYS:-14}
+      AGENTOS_BACKUP_S3_BUCKET: ${AGENTOS_BACKUP_S3_BUCKET:-}
+      AGENTOS_BACKUP_S3_PREFIX: ${AGENTOS_BACKUP_S3_PREFIX:-mydow}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+    volumes:
+      - ./scripts/backup:/scripts:ro
+      - mydow-backups:/var/backups/mydow
+      - app-uploads:/data/uploads:ro
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        apk add --no-cache bash gzip findutils tar coreutils >/dev/null
+        if [ -n "${AGENTOS_BACKUP_S3_BUCKET:-}" ]; then
+          apk add --no-cache aws-cli >/dev/null || pip install --break-system-packages awscli >/dev/null 2>&1 || true
+        fi
+        bash /scripts/backup_postgres.sh
+        bash /scripts/snapshot_uploads.sh
+    networks:
+      - mydow-net
+
+volumes:
+  postgres-data:
+  redis-data:
+  app-uploads:
+  app-sqlite:
+  app-logs:
+  nginx-logs:
+  nginx-acme:
+  pgadmin-data:
+  mydow-backups:
+
+networks:
+  mydow-net:
+    driver: bridge

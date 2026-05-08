@@ -5,22 +5,22 @@ This module provides specialized CRUD operations for inbox management.
 """
 
 import uuid
-from typing import Optional, List, Dict, Any
-from sqlalchemy import select, and_, or_
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from typing import Any, Dict, List, Optional
 
-from agent_os.items.models import Item, Workspace
+from sqlalchemy import and_, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from agent_os.items.models import Item
 
 
 async def create_inbox_item(
     db: AsyncSession,
     workspace_id: uuid.UUID,
     creator_id: uuid.UUID,
-    title: Optional[str],
-    content: Optional[str],
+    title: str | None,
+    content: str | None,
     source_type: str = "manual",
-    source_meta: Dict[str, Any] = None,
+    source_meta: dict[str, Any] = None,
     item_type: str = "note"
 ) -> Item:
     """Create a new inbox item.
@@ -63,7 +63,7 @@ async def get_inbox_item(
     db: AsyncSession,
     item_id: uuid.UUID,
     workspace_id: uuid.UUID
-) -> Optional[Item]:
+) -> Item | None:
     """Get an inbox item by ID.
 
     Args:
@@ -89,13 +89,13 @@ async def get_inbox_item(
 async def list_inbox_items(
     db: AsyncSession,
     workspace_id: uuid.UUID,
-    status: Optional[str] = None,
-    item_type: Optional[str] = None,
-    source_type: Optional[str] = None,
-    search: Optional[str] = None,
+    status: str | None = None,
+    item_type: str | None = None,
+    source_type: str | None = None,
+    search: str | None = None,
     limit: int = 20,
     offset: int = 0
-) -> tuple[List[Item], int]:
+) -> tuple[list[Item], int]:
     """List inbox items with filters.
 
     Args:
@@ -156,10 +156,10 @@ async def update_inbox_item(
     db: AsyncSession,
     item_id: uuid.UUID,
     workspace_id: uuid.UUID,
-    title: Optional[str] = None,
-    content: Optional[str] = None,
-    item_type: Optional[str] = None
-) -> Optional[Item]:
+    title: str | None = None,
+    content: str | None = None,
+    item_type: str | None = None
+) -> Item | None:
     """Update an inbox item.
 
     Args:
@@ -197,7 +197,7 @@ async def update_inbox_item_status(
     item_id: uuid.UUID,
     workspace_id: uuid.UUID,
     status: str
-) -> Optional[Item]:
+) -> Item | None:
     """Update inbox item status.
 
     Args:

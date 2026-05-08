@@ -2,10 +2,13 @@
 
 import asyncio
 import sys
+
 sys.path.insert(0, "src")
 
-from agent_os.agent_aider import AiderAgent
 from pathlib import Path
+
+from agent_os.agent_aider import AiderAgent
+
 
 async def test_python_workflow():
     """Test creating and modifying Python code."""
@@ -29,10 +32,10 @@ async def test_python_workflow():
     # Check file
     calc_file = workspace / "calculator.py"
     if calc_file.exists():
-        print(f"\n[SUCCESS] calculator.py created!")
+        print("\n[SUCCESS] calculator.py created!")
         print(f"Content:\n{calc_file.read_text(encoding='utf-8')}")
     else:
-        print(f"\n[FAIL] calculator.py not created")
+        print("\n[FAIL] calculator.py not created")
         return
 
     print("\n" + "="*80)
@@ -50,11 +53,11 @@ async def test_python_workflow():
         print(f"\nUpdated content:\n{content}")
 
         if 'power' in content.lower() or 'def power' in content:
-            print(f"\n[SUCCESS] Power function added!")
+            print("\n[SUCCESS] Power function added!")
         else:
-            print(f"\n[UNCERTAIN] Power function not found")
+            print("\n[UNCERTAIN] Power function not found")
     else:
-        print(f"\n[FAIL] calculator.py disappeared")
+        print("\n[FAIL] calculator.py disappeared")
 
     print("\n" + "="*80)
     print("STEP 3: Test the calculator by adding a main block")
@@ -71,9 +74,9 @@ async def test_python_workflow():
         print(f"\nFinal content:\n{content}")
 
         if '__main__' in content or 'if __name__' in content:
-            print(f"\n[SUCCESS] Main block added!")
+            print("\n[SUCCESS] Main block added!")
         else:
-            print(f"\n[UNCERTAIN] Main block not found")
+            print("\n[UNCERTAIN] Main block not found")
 
     print("\n" + "="*80)
     print("WORKFLOW COMPLETE")

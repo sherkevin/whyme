@@ -1,12 +1,12 @@
 """Unit tests for Stage 4 data models."""
 
-import pytest
 import uuid
 from datetime import datetime
-from sqlalchemy import select
+
+import pytest
 from sqlalchemy.exc import IntegrityError
 
-from agent_os.search_engine.models import SearchIndex, IngestionJob, InsightCluster
+from agent_os.search_engine.models import IngestionJob, InsightCluster, SearchIndex
 
 
 @pytest.mark.asyncio
@@ -53,7 +53,7 @@ class TestSearchIndexModel:
         assert index.search_metadata == {}
         assert index.embedding is None
         assert index.created_at is not None
-        print(f"✅ Default values verified for SearchIndex")
+        print("✅ Default values verified for SearchIndex")
 
     async def test_search_index_with_embedding(self, db_session):
         """Test search index with vector embedding."""
@@ -70,7 +70,7 @@ class TestSearchIndexModel:
 
         assert index.embedding is not None
         assert len(index.embedding) == 5
-        print(f"✅ SearchIndex with embedding created")
+        print("✅ SearchIndex with embedding created")
 
 
 @pytest.mark.asyncio
@@ -148,7 +148,7 @@ class TestIngestionJobModel:
         assert job.completed_at is not None
         assert job.items_created == 5
         assert len(job.item_ids) == 5
-        print(f"✅ Status transition verified: pending -> running -> completed")
+        print("✅ Status transition verified: pending -> running -> completed")
 
     async def test_ingestion_job_error_tracking(self, db_session):
         """Test error tracking in ingestion jobs."""
@@ -170,7 +170,7 @@ class TestIngestionJobModel:
         assert job.status == "failed"
         assert job.error_message == "Connection timeout"
         assert job.error_stack is not None
-        print(f"✅ Error tracking verified")
+        print("✅ Error tracking verified")
 
 
 @pytest.mark.asyncio
@@ -279,7 +279,7 @@ class TestInsightClusterModel:
 
         assert insight.expires_at is not None
         assert insight.expires_at > datetime.utcnow()
-        print(f"✅ Insight with expiration created")
+        print("✅ Insight with expiration created")
 
 
 @pytest.mark.asyncio
@@ -298,7 +298,7 @@ class TestModelConstraints:
             await db_session.commit()
 
         assert "check_search_item_type" in str(exc_info.value)
-        print(f"✅ Item type constraint enforced")
+        print("✅ Item type constraint enforced")
 
     async def test_ingestion_job_status_constraint(self, db_session):
         """Test that only valid statuses are allowed."""
@@ -311,7 +311,7 @@ class TestModelConstraints:
             await db_session.commit()
 
         assert "check_ingestion_status" in str(exc_info.value)
-        print(f"✅ Status constraint enforced")
+        print("✅ Status constraint enforced")
 
     async def test_ingestion_job_source_type_constraint(self, db_session):
         """Test that only valid source types are allowed."""
@@ -323,7 +323,7 @@ class TestModelConstraints:
             await db_session.commit()
 
         assert "check_ingestion_source_type" in str(exc_info.value)
-        print(f"✅ Source type constraint enforced")
+        print("✅ Source type constraint enforced")
 
     async def test_insight_cluster_type_constraint(self, db_session):
         """Test that only valid cluster types are allowed."""
@@ -336,7 +336,7 @@ class TestModelConstraints:
             await db_session.commit()
 
         assert "check_insight_cluster_type" in str(exc_info.value)
-        print(f"✅ Cluster type constraint enforced")
+        print("✅ Cluster type constraint enforced")
 
 
 if __name__ == "__main__":

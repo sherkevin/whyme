@@ -1,27 +1,27 @@
 """FastAPI router for Task management."""
 
-from datetime import date, datetime
-from typing import Optional, List
+from datetime import date
+from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_os.db.base import get_db
 from agent_os.auth.dependencies import get_current_user
 from agent_os.auth.models import User
+from agent_os.db.base import get_db
 from agent_os.tasks import crud
 from agent_os.tasks.models import Task
 from agent_os.tasks.schema import (
-    TaskCreate,
-    TaskUpdate,
-    TaskResponse,
-    TaskList,
-    TaskStatusUpdate,
-    TodayTasksResponse,
-    TaskStats,
     TaskBatchCreate,
     TaskBatchUpdate,
+    TaskCreate,
+    TaskList,
+    TaskResponse,
+    TaskStats,
+    TaskStatusUpdate,
+    TaskUpdate,
+    TodayTasksResponse,
 )
-
 
 # =============================================================================
 # Router Setup
@@ -96,8 +96,8 @@ async def get_task_stats(
     *,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    date_from: Optional[date] = Query(None, description="Filter from date"),
-    date_to: Optional[date] = Query(None, description="Filter to date")
+    date_from: date | None = Query(None, description="Filter from date"),
+    date_to: date | None = Query(None, description="Filter to date")
 ) -> dict:
     """Get task statistics."""
     # Use today as default if no date range specified
@@ -211,7 +211,7 @@ async def delete_tasks_batch(
     *,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    task_ids: List[int] = Query(..., description="List of task IDs to delete")
+    task_ids: list[int] = Query(..., description="List of task IDs to delete")
 ) -> dict:
     """Delete multiple tasks in batch."""
     deleted_count = await crud.delete_tasks_batch(
@@ -262,13 +262,13 @@ async def list_tasks(
     *,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    status: Optional[str] = Query(None, description="Filter by status"),
-    type: Optional[str] = Query(None, alias="type", description="Filter by type"),
-    priority_min: Optional[int] = Query(None, ge=1, le=10, description="Minimum priority"),
-    priority_max: Optional[int] = Query(None, ge=1, le=10, description="Maximum priority"),
-    date_from: Optional[date] = Query(None, description="Filter by scheduled date from"),
-    date_to: Optional[date] = Query(None, description="Filter by scheduled date to"),
-    scheduled_date: Optional[date] = Query(None, description="Filter by exact scheduled date"),
+    status: str | None = Query(None, description="Filter by status"),
+    type: str | None = Query(None, alias="type", description="Filter by type"),
+    priority_min: int | None = Query(None, ge=1, le=10, description="Minimum priority"),
+    priority_max: int | None = Query(None, ge=1, le=10, description="Maximum priority"),
+    date_from: date | None = Query(None, description="Filter by scheduled date from"),
+    date_to: date | None = Query(None, description="Filter by scheduled date to"),
+    scheduled_date: date | None = Query(None, description="Filter by exact scheduled date"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
     sort_by: str = Query("created_at", description="Field to sort by"),

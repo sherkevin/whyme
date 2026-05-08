@@ -5,11 +5,12 @@ This is a simple implementation that returns active items from the workspace.
 """
 
 import uuid
-from typing import List, Dict, Any
-from sqlalchemy import select, and_, desc
+from typing import Any, Dict, List
+
+from sqlalchemy import and_, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_os.items.models import Item, Workspace
+from agent_os.items.models import Item
 
 
 async def get_today_view(
@@ -17,7 +18,7 @@ async def get_today_view(
     workspace_id: uuid.UUID,
     user_id: uuid.UUID,
     limit: int = 50
-) -> tuple[List[Item], Dict[str, Any]]:
+) -> tuple[list[Item], dict[str, Any]]:
     """Get items for the Today view.
 
     PA 1.0 Stage 2: Returns PROCESSED items from Agent processing.
@@ -31,8 +32,9 @@ async def get_today_view(
     Returns:
         Tuple of (items list, summary statistics)
     """
-    from agent_os.items.models import ItemStatus
     from datetime import datetime, timedelta
+
+    from agent_os.items.models import ItemStatus
 
     # Get PROCESSED items from the workspace
     # Stage 2 requirement: Return items that have been processed by the Agent

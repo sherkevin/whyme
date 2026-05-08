@@ -6,16 +6,15 @@ These tests simulate real-world user scenarios:
 3. Complete workflow from ingestion to insight generation
 """
 
-import pytest
 import uuid
 from datetime import datetime, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_os.search_engine.search_service import SearchService
-from agent_os.search_engine.search_engine import SearchEngine, SearchQuery
+import pytest
+
 from agent_os.search_engine.ingestion_pipeline import IngestionService
 from agent_os.search_engine.insight_service import InsightService
-from agent_os.search_engine.models import SearchIndex, IngestionJob, InsightCluster
+from agent_os.search_engine.search_engine import SearchEngine, SearchQuery
+from agent_os.search_engine.search_service import SearchService
 
 
 @pytest.mark.asyncio
@@ -363,8 +362,8 @@ class TestE2EScenarios:
         retrieved = await insight_service.get_insight(str(summary.id))
         assert retrieved is None
 
-        print(f"✅ Full lifecycle: Created 3 items, searched, " +
-              f"generated 4 insights, managed insights lifecycle")
+        print("✅ Full lifecycle: Created 3 items, searched, " +
+              "generated 4 insights, managed insights lifecycle")
 
 
 @pytest.mark.asyncio
@@ -501,7 +500,7 @@ class TestErrorRecoveryScenarios:
         assert result.page == 1
         assert result.page_size == 20  # Default
 
-        print(f"✅ Empty search handled gracefully")
+        print("✅ Empty search handled gracefully")
 
     async def test_insight_with_empty_data(self, db_session):
         """Scenario: Generate insights when no data exists."""
@@ -510,7 +509,7 @@ class TestErrorRecoveryScenarios:
         with pytest.raises(ValueError, match="No.*items found"):
             await insight_service.generate_summary(item_type="nonexistent")
 
-        print(f"✅ Empty data error handled correctly")
+        print("✅ Empty data error handled correctly")
 
     async def test_malformed_search_queries(self, db_session):
         """Scenario: User enters various search query formats."""
@@ -545,7 +544,7 @@ class TestErrorRecoveryScenarios:
         result = await engine.search(query)
         assert result.total >= 0  # Should not crash
 
-        print(f"✅ Malformed queries handled gracefully")
+        print("✅ Malformed queries handled gracefully")
 
     async def test_partial_failure_recovery(self, db_session):
         """Scenario: System handles partial failures gracefully."""
@@ -577,7 +576,7 @@ class TestErrorRecoveryScenarios:
         result = await insight_service.get_insight(str(fake_id))
         assert result is None
 
-        print(f"✅ Partial failure recovery works correctly")
+        print("✅ Partial failure recovery works correctly")
 
 
 if __name__ == "__main__":

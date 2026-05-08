@@ -17,13 +17,14 @@ a structured 8-step process:
 
 import asyncio
 import uuid
-from typing import Dict, Any, List
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy import select
+from typing import Any, Dict
 
-from agent_os.stage3.models import Skill, AgentDecision, TaskExecutionLog
-from agent_os.stage3.skill_service import SkillService
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from agent_os.stage3.flow_engine import FlowEngine
+from agent_os.stage3.models import AgentDecision, Skill, TaskExecutionLog
+from agent_os.stage3.skill_service import SkillService
 
 
 class CareerDecisionAssistant:
@@ -124,8 +125,8 @@ class CareerDecisionAssistant:
     async def run_demo(
         self,
         user_query: str,
-        task_context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        task_context: dict[str, Any]
+    ) -> dict[str, Any]:
         """Run the Career Decision Assistant demo.
 
         Args:
@@ -183,7 +184,7 @@ class CareerDecisionAssistant:
                 decision = result.scalar_one_or_none()
 
                 if decision:
-                    print(f"\n📋 Generated Options:")
+                    print("\n📋 Generated Options:")
                     for i, option in enumerate(decision.options, 1):
                         print(f"\n   Option {i}: {option['title']}")
                         print(f"   └─ Description: {option['description']}")
@@ -311,7 +312,7 @@ async def main():
         print("\n\n" + "="*80)
         print("📊 DEMO SUMMARY")
         print("="*80)
-        print(f"\n✅ Completed 3 scenarios")
+        print("\n✅ Completed 3 scenarios")
         print(f"✅ Skill Version: {assistant.skill.version}")
         print(f"✅ Total Steps in Flow: {len(assistant.skill.steps)}")
         print("\n💡 This demonstrates the complete Stage 3 multi-step Agent Flow system:")

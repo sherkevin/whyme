@@ -1,18 +1,18 @@
 """CRUD operations for Knowledge management (Cards)."""
 
-from typing import List, Optional, Dict, Any
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func
 import uuid
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import and_, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_os.knowledge.models import Card
-
 
 # =============================================================================
 # Card CRUD Operations
 # =============================================================================
 
-async def create_card(db: AsyncSession, *, user_id: uuid.UUID, workspace_id: uuid.UUID, obj_in: Dict[str, Any]) -> Card:
+async def create_card(db: AsyncSession, *, user_id: uuid.UUID, workspace_id: uuid.UUID, obj_in: dict[str, Any]) -> Card:
     """Create a new card.
 
     Args:
@@ -39,7 +39,7 @@ async def create_card(db: AsyncSession, *, user_id: uuid.UUID, workspace_id: uui
     return db_obj
 
 
-async def get_card(db: AsyncSession, *, card_id: uuid.UUID, user_id: uuid.UUID) -> Optional[Card]:
+async def get_card(db: AsyncSession, *, card_id: uuid.UUID, user_id: uuid.UUID) -> Card | None:
     """Get card by ID.
 
     Args:
@@ -63,11 +63,11 @@ async def get_cards(
     *,
     workspace_id: uuid.UUID,
     user_id: uuid.UUID,
-    para_type: Optional[str] = None,
-    tags: Optional[List[str]] = None,
+    para_type: str | None = None,
+    tags: list[str] | None = None,
     skip: int = 0,
     limit: int = 100,
-) -> tuple[List[Card], int]:
+) -> tuple[list[Card], int]:
     """Get cards with filtering and pagination.
 
     Args:
@@ -115,7 +115,7 @@ async def update_card(
     db: AsyncSession,
     *,
     db_obj: Card,
-    obj_in: Dict[str, Any],
+    obj_in: dict[str, Any],
 ) -> Card:
     """Update a card.
 
@@ -163,7 +163,7 @@ async def get_cards_by_inbox_source(
     workspace_id: uuid.UUID,
     user_id: uuid.UUID,
     inbox_item_id: uuid.UUID,
-) -> List[Card]:
+) -> list[Card]:
     """Get all cards that originated from a specific inbox item.
 
     Args:

@@ -3,22 +3,14 @@
 Complete integration tests for WeChat webhook, crawler, and resource creation.
 """
 
-import pytest
 import uuid
-from datetime import datetime
 
-from agent_os.integrations.wechat import WeChatWebhookReceiver, LinkExtractor
-from agent_os.integrations.crawler import WebCrawler, crawl_url
-from agent_os.integrations.schema import (
-    WebhookVerifyRequest,
-    ProcessWeChatMessageRequest,
-    CrawlURLRequest,
-    ExtractLinksRequest,
-    CreateResourceFromURL
-)
-from agent_os.items.crud import create_workspace, create_item, get_item
-from agent_os.items.schema import WorkspaceCreate, ItemCreate
+import pytest
 
+from agent_os.integrations.crawler import WebCrawler
+from agent_os.integrations.wechat import LinkExtractor, WeChatWebhookReceiver
+from agent_os.items.crud import create_workspace, get_item
+from agent_os.items.schema import WorkspaceCreate
 
 # ============================================================================
 # WeChat Webhook Tests

@@ -4,14 +4,15 @@ Tests for the summarizer.py module that generates summaries from content.
 """
 
 import pytest
+
 from agent_os.agent.summarizer import (
-    generate_summary,
-    extract_sentences,
-    truncate_text,
+    calculate_summary_quality,
     clean_text,
     extract_key_points,
+    extract_sentences,
+    generate_summary,
     generate_summary_from_key_points,
-    calculate_summary_quality
+    truncate_text,
 )
 
 

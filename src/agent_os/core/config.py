@@ -8,11 +8,13 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel
 from dotenv import load_dotenv
+from pydantic import BaseModel
 
-# Load environment variables from .env file
+# Load environment variables from .env first, then allow local developer
+# overrides from .env.local. The latter is gitignored and may contain secrets.
 load_dotenv()
+load_dotenv(".env.local", override=True)
 
 
 class AgentConfig(BaseModel):
@@ -29,11 +31,22 @@ class LLMConfig(BaseModel):
 
     def get_api_key(self) -> str | None:
         """Get API key from environment or config."""
-        return os.getenv("API_KEY") or os.getenv("LITELLM_API_KEY") or self.config.get("api_key")
+        return (
+            os.getenv("API_KEY")
+            or os.getenv("LITELLM_API_KEY")
+            or os.getenv("DEEPSEEK_API_KEY")
+            or os.getenv("OPENAI_API_KEY")
+            or self.config.get("api_key")
+        )
 
     def get_api_base(self) -> str | None:
         """Get API base URL from environment or config."""
-        return os.getenv("BASE_URL") or os.getenv("API_BASE") or self.config.get("api_base")
+        return (
+            os.getenv("BASE_URL")
+            or os.getenv("API_BASE")
+            or os.getenv("DEEPSEEK_OPENAI_BASE_URL")
+            or self.config.get("api_base")
+        )
 
 
 class MemoryConfig(BaseModel):

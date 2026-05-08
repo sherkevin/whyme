@@ -88,7 +88,7 @@ class DiffService:
         try:
             response = await self._wait_for_response(diff_id, timeout=300)
             return response == "approve"
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # Timeout means reject
             return False
 
@@ -130,7 +130,7 @@ class DiffService:
         # Clean up
         del self._pending_diffs[diff_id]
 
-    def handle_user_response(self, response: str, diff_id: Optional[str] = None) -> None:
+    def handle_user_response(self, response: str, diff_id: str | None = None) -> None:
         """Handle user response from WebSocket.
 
         Args:
@@ -213,7 +213,7 @@ class DiffService:
 
             # Check timeout
             if asyncio.get_event_loop().time() - start_time > timeout:
-                raise asyncio.TimeoutError(f"Timeout waiting for response to diff {diff_id}")
+                raise TimeoutError(f"Timeout waiting for response to diff {diff_id}")
 
             # Wait a bit before polling again
             await asyncio.sleep(0.1)
@@ -319,7 +319,7 @@ class DiffAwareAiderAdapter:
             }
         })
 
-    def handle_diff_response(self, response: str, diff_id: Optional[str] = None) -> None:
+    def handle_diff_response(self, response: str, diff_id: str | None = None) -> None:
         """Handle user response to diff confirmation.
 
         This is called from the WebSocket handler when user clicks

@@ -4,15 +4,15 @@ Monitoring, logging, and performance tracking.
 """
 
 from agent_os.observability.middleware import (
-    RequestIDMiddleware,
-    PerformanceMiddleware,
-    PerformanceMetrics,
-    performance_metrics,
-    configure_logging,
-    monitor_performance,
     HealthChecker,
+    PerformanceMetrics,
+    PerformanceMiddleware,
+    RequestIDMiddleware,
+    configure_logging,
     health_checker,
-    log_context
+    log_context,
+    monitor_performance,
+    performance_metrics,
 )
 
 __all__ = [

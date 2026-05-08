@@ -2,10 +2,13 @@
 
 import asyncio
 import sys
+
 sys.path.insert(0, "src")
 
-from agent_os.agent_aider import AiderAgent
 from pathlib import Path
+
+from agent_os.agent_aider import AiderAgent
+
 
 async def test_files():
     """Test what files aider creates."""
@@ -32,7 +35,7 @@ async def test_files():
     print(f"\nCoder abs_fnames: {aider.coder.abs_fnames if aider.coder else 'No coder'}")
 
     # Check workspace contents
-    print(f"\nWorkspace contents:")
+    print("\nWorkspace contents:")
     for item in workspace.iterdir():
         print(f"  - {item.name}")
 

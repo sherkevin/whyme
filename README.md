@@ -1,17 +1,264 @@
-# AgentOS Core
-
 <div align="center">
 
-**模块化的 AI 代理内核** | 微内核 + 插件架构
+# Mydow
+
+**让灵感不再溜走的 AI 工作台**
+
+灵感采集 · 知识库 · Mydow AI 对话 · Skills 广场 · 数字花园 · 全局搜索
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![PRD10 V1](https://img.shields.io/badge/PRD10-V1%20MVP-2546d8.svg)](docs/01-prd/PRD10.md)
+[![Tests](https://img.shields.io/badge/tests-260%2B%20passed-16a34a.svg)](#-测试与质量)
 
-[功能特性](#功能特性) • [快速开始](#快速开始) • [文档](#文档) • [开发计划](#开发计划)
+[**🚀 5 分钟体验**](#-5-分钟体验) ·
+[产品介绍](#-产品介绍) ·
+[技术架构](#-技术架构) ·
+[商业模式](#-商业模式) ·
+[路线图](#-路线图产品视角) ·
+[团队](#-团队) ·
+[投资材料](#-投资材料) ·
+[联系我们](#-联系我们)
 
 </div>
 
 ---
+
+## 💡 产品介绍
+
+**Mydow 是一个把"灵感 → 整理 → AI 协作 → 知识资产"端到端打通的个人工作台。**
+
+| 痛点 | 现状（碎片化工具）| Mydow 解法 |
+|---|---|---|
+| 灵感记下了找不回来 | 备忘录 / Notion / 微信收藏散落各处 | 统一收件箱 + 异步整理成卡片 + 全局搜索 |
+| AI 对话历史是孤岛 | ChatGPT 没有你的知识库上下文 | AI 对话直接引用知识库内容 + 一键存为文档 / 任务 |
+| 知识库不会"长大" | 文档堆积无关联 | 数字花园：卡片 / 文档 / 主题之间自动建立 connection |
+| 重复工作占满时间 | 写周报、写纪要、做总结都靠手 | Skills 广场：可调用、可组合、可保存的工作流 |
+
+**面向人群**：研究者 / 知识工作者 / 内容创作者 / 产品经理 / 创业者。
+
+**当前状态**：PRD10 V1 后端 + SPA 已跑通最小闭环（采集 → 整理 → 提问 → 回答 → 保存为文档），260+ 集成测试绿。
+
+---
+
+## 🚀 5 分钟体验
+
+### 一键起本地（开发者）
+
+```powershell
+# 1. 克隆 + 安装依赖
+git clone https://github.com/yourusername/whyme.git
+cd whyme
+pip install -e .
+
+# 2. 配 .env（最少改 SECRET_KEY 和 DEEPSEEK_API_KEY，其他默认即可）
+cp .env.example .env
+
+# 3. 种子数据 + 启动
+python scripts/seed_prd10.py --email demo@mydow.example --password demo123 --reset
+python -m uvicorn agent_os.server.app:app --host 127.0.0.1 --port 8000
+
+# 4. 浏览器打开
+#    http://127.0.0.1:8000/mydow/  → 直接进 demo 主界面
+#    http://127.0.0.1:8000/docs    → 完整 API 文档（Swagger）
+```
+
+### 看核心闭环（PRD10 §30）
+
+1. 顶部输入框敲 `今天产品评审决定 V1 必须打通最小闭环` → 回车
+2. **2 秒**后首页内容流多出一张卡片（异步整理完成）
+3. 切到 **Mydow AI** → 新对话 → 问 `本周关于 V1 我有什么想法？`
+4. AI 引用刚才的卡片回答（开 `AGENTOS_AI_LLM=on` 是真 LLM；否则是 placeholder）
+5. 点回答右下角 **保存为文档** → 选文件夹 → 提交
+6. 切到 **知识库** → 看到这份 AI 生成的文档
+7. 顶部 **通知** 看到「文件解析完成 / AI 报告生成完成」
+
+详细演示脚本：[`docs/demo-script.md`](docs/demo-script.md)（30 秒 / 2 分钟 / 5 分钟三档）。
+
+---
+
+## 🏗️ 技术架构
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                       Mydow Web SPA                      │
+│    static/mydow/{index.html, app.js, style.css}          │
+│           原生 ESM · 无 React/Vue 依赖                    │
+└────────────────────────┬─────────────────────────────────┘
+                         │  /api/v1/*
+┌────────────────────────▼─────────────────────────────────┐
+│              FastAPI · agent_os.server.app                │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │   PRD10 §6 envelope · RequestId · 限流 · 鉴权      │  │
+│  ├────────────────────────────────────────────────────┤  │
+│  │  Capture · Feed · KB · Today · Notifications · AI │  │
+│  │  Skills · Garden · Search · Insights · Jobs · Auth │  │
+│  └────────────────────────────────────────────────────┘  │
+└─────┬────────────┬──────────┬──────────────────┬─────────┘
+      │            │          │                  │
+   ┌──▼──┐   ┌────▼────┐  ┌──▼──┐         ┌─────▼─────┐
+   │ PG  │   │  Redis  │  │ S3/ │         │  LLM      │
+   │16   │   │ 缓存+SSE│  │ 本地│         │ (DeepSeek/│
+   │     │   │         │  │ 存储│         │  OpenAI/  │
+   └─────┘   └─────────┘  └─────┘         │  Claude)  │
+                                          └───────────┘
+                  Job 消费 worker（ai_chat / parse_file /
+              generate_report / skill_run 异步消化）
+```
+
+**关键技术决策**：
+
+- **PRD10 envelope** 全栈统一，每个响应都带 `success` / `data` / `request_id`，错误带 `code` 枚举。
+- **异步先行**：所有可能慢的操作（解析、AI、Skill）都返回 `Job`，前端轮 `/jobs/{id}` 看进度。
+- **SSE 而非 WebSocket**：通知 + AI 流式回答都走 `text/event-stream`，更易跨代理稳定。
+- **Pluggable LLM**：通过 LiteLLM 一行切 DeepSeek / OpenAI / Anthropic。`AGENTOS_AI_LLM=off` 时走 placeholder，开发离线友好。
+
+---
+
+## 📚 文档
+
+| 文档 | 受众 | 用途 |
+|---|---|---|
+| [PRD10](docs/01-prd/PRD10.md) | 产品 / 投资人 / 工程 | 产品 V1 完整需求规格 |
+| [API Reference](docs/11-deployment/api-reference.md) | 后端 / SDK / 第三方 | 600+ 行 curl 示例集合 |
+| [环境变量手册](docs/11-deployment/env-vars.md) | 运维 / 部署 | `.env.example` 逐字段说明 |
+| [Demo 演示脚本](docs/demo-script.md) | 投资人 / 销售 | 30s / 2m / 5m 三档动线 |
+| [SPA 接入手册](docs/agent-2-spa-binding-guide.md) | 前端工程师 | SPA 与后端契约 |
+| [todo-tasks.md](todo-tasks.md) | 全员 | 任务池总表（唯一来源） |
+| [progress report](agent-progress-report.md) | 全员 | 滚动 milestone 日志 |
+
+---
+
+## ✅ 测试与质量
+
+```powershell
+# PRD10 V1 验收（260+ 通过）
+python -m pytest tests/integration/api/test_prd10_*.py tests/integration/api/prd10/ -q
+
+# 全仓回归（已 ignore 外部依赖测试）
+python -m pytest -q
+```
+
+最近一次测试基线：`.tmp/baseline-tests.txt`（187+ 单元 + 集成测试）。
+
+---
+
+## 💼 商业模式
+
+Mydow 提供 **4 条商业化路径**，覆盖个人 → 团队 → 平台三层；首年聚焦「个人订阅 PMF + 团队 License 早期客户」，不烧钱补贴：
+
+| 路径 | 目标用户 | 定价 | 核心价值 | 收入特性 |
+|---|---|---|---|---|
+| **个人订阅（Pro）** | 知识工作者 / 研究者 / 创作者 / 产品经理 | ¥39 / 月 ｜ ¥399 / 年 | 无限灵感采集 · 高级 AI 模型（DeepSeek/Claude/GPT）· 知识库无上限 · 数字花园全图 · 定制 Skills | SaaS 月度循环；预期 LTV ≥ 12× ARPU |
+| **团队 License** | 5–50 人产品 / 研究 / 咨询 / 投研团队 | ¥199 / 席位 / 月 起 | 多 workspace · 文档共享 · Skills 私有部署 · SSO · 审计日志 · 自定义品牌 | 年度合同 + per-seat；目标 LTV/CAC ≥ 4 |
+| **API 调用** | 开发者 / 第三方 SaaS / Agent 平台 | 按 1K tokens 计费（输入 ¥0.5 / 输出 ¥1.5） | `/api/v1/*` 全接口对外 · Webhook · Skills SDK · `Job` 异步 worker | Pay-as-you-go；毛利 60–70% |
+| **Skills 市场分成** | Skill 开发者 / MCP 作者 | 70% 给作者 / 30% 平台 | 上架 · 评论 · 订阅 · 一键安装 · 跨工作台分发 | 平台撮合 + 复购率高 |
+
+**首年（2026）目标**：
+
+- Q2：100 paying user · Pre-A 意向 · ARR 触底 ¥0.5M
+- Q3：5 个团队签约 · DAU 1k · ARR ¥1.5M
+- Q4：API 月调用 1M+ · Skills 上架 50+ · ARR ¥3M+
+- 毛利 60% 起步、目标 65%+；获客主要来自 PRD10 demo 直接转化 + 内容社区。
+
+---
+
+## 🗺️ 路线图（产品视角）
+
+> 每季度 demo 节奏：季度末公开 30 秒 video + release notes；季度内 2 周一次 minor release，月 / 周固定 demo day。所有里程碑都对应 `todo-tasks.md` 章节，可被外部跟踪。
+
+| 季度 | 主题 | 关键交付 | 商业里程碑 |
+|---|---|---|---|
+| **2026 Q2（当前）** | **V1 GA · 投资人就绪版** | PRD10 §26 全验收（已绿，见 [`docs/14.2-prd10-acceptance-checklist.md`](docs/14.2-prd10-acceptance-checklist.md)）· SPA 全 nav sweep 0 issue · 部署一键（[`docs/11-deployment/docker.md`](docs/11-deployment/docker.md)）· 移动端最低可用 · Demo 公开 | 100 paying user · Pre-A 意向 · ARR ¥0.5M |
+| **2026 Q3** | V1.2 协作 + 移动端 | 多 workspace（PRD10 B-17）· 团队邀请 · 评论 · iOS PWA · Notion / 飞书 / 微信收藏导入 · 暗色模式 · 国际化 zh/en | 团队 License 首批 5 单 · DAU 1k · ARR ¥1.5M |
+| **2026 Q4** | V2 智能化 | 语义搜索（B-13）· Insights AI 主动推（PRD10 §12）· Skills 市场公开（B-19）· 富媒体 Artifact · 模型自动路由 | API 月调用 1M+ · Skills 上架 50+ · ARR ¥3M+ |
+| **2027 Q1** | V2.5 平台化 | 计费 / Subscription（B-18）· 多语言（5 种）· 企业 SSO / SAML · 行业定制版（学术 / 律师 / 投研 / 销售）· 数据导出与合规审计 | ARR ¥6M+ · 毛利 65%+ · A 轮启动 |
+| **2027 H2 (远期视野)** | V3 智能体协作 | Agent 编排（多 Agent 任务流）· 跨域知识图谱（联通个人 / 团队 / 公开 KB）· 行业 AI 模型 fine-tune · 收购 / 整合社区 Skills | 服务 ≥ 10k 团队 / ≥ 100k 个人 · ARR ¥30M+ |
+
+**已交付的产品里程碑（截至 2026-05-05）**：
+
+- PRD10 V1 P0 后端 MVP（capture / feed / KB / AI / search / skills / garden / notifications）已端到端跑通（`agent-progress-report.md` Milestones 1–24）
+- Mydow Web SPA 重写完成（原生 ESM；8 个一级 view + 12 个 modal/抽屉）
+- 真实 LLM provider（DeepSeek via litellm）+ AI 流式 SSE
+- 双引擎绿章：SQLite + Postgres 16 (Docker) 71/71 PRD10 dedicated suite
+- Chrome MCP 投资人 demo 闭环脚本（[`scripts/chrome-mcp-smoke.ps1`](scripts/chrome-mcp-smoke.ps1)，12 步 26s 自动化）
+
+---
+
+## 👥 团队
+
+> Mydow 由一支「小而精的工程 × 产品 × AI」复合团队驱动；当前正在为 V1 GA 与 Pre-A 扩募首批早期工程合伙人。
+
+| 角色 | 状态 | 联系 |
+|---|---|---|
+| 创始人 · 产品 + 技术 | 在岗 | 见下方 [📬 联系我们](#-联系我们) |
+| 多 Agent 工程团队 | 在岗 · 4 路并行 | Agent 1（协调 + 后端基础）/ Agent 2（产品数据 + SPA）/ Agent 3（智能后端 + 部署）/ Agent 4（前端 E2E + 验收）；详见 [`agent-collaboration.md`](agent-collaboration.md) |
+| 全栈 / 前端工程师 | **招募中** | `careers@mydow.example` · 期望 3+ 年 React/Vue 或原生 ESM SPA 经验 |
+| AI / Search 工程师 | **招募中** | `careers@mydow.example` · 期望熟悉 LiteLLM / 向量检索 / RAG |
+| DevOps / SRE | **招募中** | `careers@mydow.example` · 期望熟悉 Docker / Postgres / SSE / 监控 |
+| 增长 / 内容合伙人 | **招募中** | `growth@mydow.example` · 期望有 SaaS 0→1 经验 |
+| 顾问 / 投资伙伴 | **招募中** | `invest@mydow.example` |
+
+**协作模式**：本仓库由多 Agent（人类 + AI 工程师）并行开发，遵循以下强一致协议：
+
+- 唯一任务池：[`todo-tasks.md`](todo-tasks.md)（`open` / `doing` / `done` / `blocked` 四态机）
+- 协作规则：[`.cursor/rules/whyme-multiagent-workflow.mdc`](.cursor/rules/whyme-multiagent-workflow.mdc)
+- 滚动 milestone：[`agent-progress-report.md`](agent-progress-report.md)
+- 全部交付都必须有 **Chrome MCP 真浏览器证据 + 可重现测试基线**，不允许「toast 闪一下、状态没动」类伪交付
+
+---
+
+## 💰 投资材料
+
+| 资料 | 路径 |
+|---|---|
+| 产品介绍 | 本 README + [`docs/01-prd/PRD10.md`](docs/01-prd/PRD10.md) |
+| 30 秒 / 2 分钟 / 5 分钟 演示动线 | [`docs/demo-script.md`](docs/demo-script.md) |
+| **PRD10 §26 验收清单**（投资 review 必读） | [`docs/14.2-prd10-acceptance-checklist.md`](docs/14.2-prd10-acceptance-checklist.md) |
+| 截图 / 录屏 | `.tmp/screenshots/`（Chrome MCP 自动化产出） |
+| Chrome MCP demo 闭环脚本 | [`scripts/chrome-mcp-smoke.ps1`](scripts/chrome-mcp-smoke.ps1)（12 步 26s 全绿） |
+| API 参考（600+ 行 curl 示例） | [`docs/11-deployment/api-reference.md`](docs/11-deployment/api-reference.md) |
+| 部署手册 | [`docs/11-deployment/docker.md`](docs/11-deployment/docker.md) |
+| 商业模式 / 路线图 / 团队 | 本 README §[商业模式](#-商业模式) · [路线图](#-路线图产品视角) · [团队](#-团队) |
+| Pitch deck（投资人 1-pager + 完整 deck） | 见 [`todo-tasks.md`](todo-tasks.md) §13.4（在做） |
+
+> **想要 30 分钟现场 demo？** 邮件 `invest@mydow.example` 或参考下方 [📬 联系我们](#-联系我们)；72 小时内回复，可线上 / 线下任选。
+
+---
+
+## 📬 联系我们
+
+| 用途 | 联系方式 | 回复 SLA |
+|---|---|---|
+| **投资 / 战略合作** | `invest@mydow.example` | 72 小时内回复 + 主动约 30 分钟 demo & Q&A |
+| **企业试用 / 团队 License** | `sales@mydow.example` | 14 天免费试用；可定制 demo 数据 + 私有部署 PoC |
+| **Skill 上架 / 开发者** | `developers@mydow.example` | Skills SDK 在 Q3 开放；可提前申请预览 |
+| **媒体 / 内容合作** | `press@mydow.example` | 一周内回复 |
+| **求职 / 加入团队** | `careers@mydow.example` | 一周内回复 + 异步小作业 + 现场 / 远程面试 |
+| **Demo 预约** | 邮件以上任一地址，附场景 + 期望时段 | — |
+| **Bug / Feature 反馈** | [GitHub Issues](https://github.com/yourusername/whyme/issues) | 工作日 48 小时内 triage |
+| **Twitter / X · 微信公众号** | 待开通 — 关注 [github.com/yourusername/whyme](https://github.com/yourusername/whyme) 获取首发 | — |
+
+> **隐私声明**：上述邮箱（`*.mydow.example`）为占位地址，生产联系方式将在 V1 公开后通过 [github.com/yourusername/whyme](https://github.com/yourusername/whyme) 与官网（待发布）同步公布。如需现在直接联系，请在 GitHub Issue 中 @ 维护者或在 [`agent-collaboration.md`](agent-collaboration.md) 内的协调通道留言。
+
+---
+
+## 🤝 贡献
+
+本项目采用**多 Agent 并行协作**模式：
+
+- **唯一任务池**：[`todo-tasks.md`](todo-tasks.md)（`open` / `doing` / `done` / `blocked`）
+- **协作规则**：[`.cursor/rules/whyme-multiagent-workflow.mdc`](.cursor/rules/whyme-multiagent-workflow.mdc)
+- **滚动日志**：[`agent-progress-report.md`](agent-progress-report.md)
+
+新加任务请直接编辑 `todo-tasks.md`，从 `open` 起，认领时改 `doing` + 写 Owner。
+
+---
+
+<details>
+<summary><b>📖 旧版 AgentOS Core 文档（Mydow 之前的微内核架构）</b></summary>
+
+下面保留 Mydow 之前的 AgentOS Core 微内核架构说明，部分能力（沙箱、Skills、Aider 集成）在 Mydow 内部继续使用。
 
 ## 项目简介
 
@@ -392,12 +639,14 @@ class CodingCapability(ABC):
 - [FastAPI](https://fastapi.tiangolo.com/) - 现代 Web 框架
 - [LangGraph](https://github.com/langchain-ai/langgraph) - LLM 应用框架
 
+</details>
+
 ---
 
 <div align="center">
 
-**[⬆ 返回顶部](#agentos-core)**
+**[⬆ 返回顶部](#mydow)**
 
-Made with ❤️ by the AgentOS Team
+Made with ❤️ by the Mydow / WhyMe Team — 2026
 
 </div>

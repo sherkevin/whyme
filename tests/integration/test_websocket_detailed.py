@@ -1,9 +1,11 @@
 """Detailed WebSocket test to see what's happening."""
 
 import asyncio
-import websockets
 import json
 from pathlib import Path
+
+import websockets
+
 
 async def test_detailed():
     """Test WebSocket with detailed output."""
@@ -58,7 +60,7 @@ async def test_detailed():
                     if data.get('type') == 'done':
                         break
 
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     print("\nTimeout - no more responses")
                     break
 
@@ -72,7 +74,7 @@ async def test_detailed():
 
     # Check workspace
     workspace = Path("data/workspaces/my_first_project_b9bffa2c")
-    print(f"\nWorkspace contents:")
+    print("\nWorkspace contents:")
     if workspace.exists():
         for f in workspace.iterdir():
             if f.is_file():

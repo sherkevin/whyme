@@ -6,7 +6,7 @@ This module uses LiteLLM to call LLM APIs for intelligent content processing.
 import json
 import logging
 import os
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List
 
 from agent_os.llm.litellm_impl import LiteLLMProvider
 
@@ -20,10 +20,19 @@ logger = logging.getLogger(__name__)
 def get_llm_provider() -> LiteLLMProvider:
     """Get configured LLM provider from environment variables."""
     api_key = os.getenv("DEEPSEEK_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("API_KEY")
-    base_url = os.getenv("BASE_URL", "https://api.deepseek.com/v1")
+    base_url = (
+        os.getenv("BASE_URL")
+        or os.getenv("API_BASE")
+        or os.getenv("DEEPSEEK_OPENAI_BASE_URL")
+        or "https://api.deepseek.com"
+    )
 
-    # Use deepseek provider prefix for litellm
-    model = os.getenv("LLM_MODEL", "deepseek/deepseek-chat")
+    model = (
+        os.getenv("LLM_MODEL")
+        or os.getenv("MODEL")
+        or os.getenv("DEEPSEEK_MODEL")
+        or "deepseek-v4-flash"
+    )
 
     return LiteLLMProvider(
         model=model,
@@ -126,7 +135,7 @@ async def generate_summary_llm(content: str, max_length: int = 500) -> str:
         raise e
 
 
-async def generate_tags_llm(content: str, max_tags: int = 8) -> List[str]:
+async def generate_tags_llm(content: str, max_tags: int = 8) -> list[str]:
     """Generate tags/keywords using LLM.
 
     Args:
@@ -167,7 +176,7 @@ async def generate_tags_llm(content: str, max_tags: int = 8) -> List[str]:
         raise e
 
 
-async def generate_summary_and_tags_llm(content: str, max_length: int = 500, max_tags: int = 8) -> Dict[str, Any]:
+async def generate_summary_and_tags_llm(content: str, max_length: int = 500, max_tags: int = 8) -> dict[str, Any]:
     """Generate both summary and tags using LLM in a single call.
 
     Args:
@@ -212,7 +221,7 @@ async def generate_summary_and_tags_llm(content: str, max_length: int = 500, max
 # Helper Functions
 # ============================================================================
 
-def parse_tags_from_response(response_text: str, max_tags: int = 8) -> List[str]:
+def parse_tags_from_response(response_text: str, max_tags: int = 8) -> list[str]:
     """Parse tags from LLM response text.
 
     Args:
@@ -250,7 +259,7 @@ def parse_tags_from_response(response_text: str, max_tags: int = 8) -> List[str]
     return tags[:max_tags]
 
 
-def parse_combined_response(response_text: str, max_length: int = 500, max_tags: int = 8) -> Dict[str, Any]:
+def parse_combined_response(response_text: str, max_length: int = 500, max_tags: int = 8) -> dict[str, Any]:
     """Parse combined summary+tags response from LLM.
 
     Args:

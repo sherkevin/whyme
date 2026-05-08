@@ -5,7 +5,8 @@ This module contains database models for tracking agent processing events.
 
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, JSON, Integer, ForeignKey, Text
+
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from agent_os.db.base import Base

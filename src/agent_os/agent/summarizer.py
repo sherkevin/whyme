@@ -5,7 +5,6 @@ Part of PA 1.0 Stage 2 implementation.
 """
 
 import re
-from typing import Optional
 
 
 def generate_summary(

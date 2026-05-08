@@ -1,12 +1,12 @@
 """Demo test for Career Decision Assistant."""
 
+
 import pytest
-import uuid
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_os.stage3.demo_career_assistant import CareerDecisionAssistant
 from agent_os.stage3.models import AgentDecision
-from sqlalchemy import select
 
 
 @pytest.mark.asyncio
@@ -43,7 +43,7 @@ class TestCareerDecisionAssistantDemo:
         assert result["task_id"] is not None
         assert result["status"] in ["completed", "waiting_confirmation", "running"]
         assert result["total_steps"] > 0
-        print(f"✅ Demo executed successfully")
+        print("✅ Demo executed successfully")
         print(f"   Execution ID: {result['execution_id']}")
         print(f"   Status: {result['status']}")
         print(f"   Steps: {result['total_steps']}")
@@ -79,7 +79,7 @@ class TestCareerDecisionAssistantDemo:
                 for option in decision.options:
                     print(f"      - {option['title']}")
         else:
-            print(f"ℹ️  Demo completed without waiting for confirmation")
+            print("ℹ️  Demo completed without waiting for confirmation")
 
 
 if __name__ == "__main__":

@@ -1,10 +1,11 @@
 """Unified Items Schemas - PRD4 API contracts."""
 
-from datetime import datetime
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, field_validator
-from enum import Enum
 import uuid
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class ItemType(str, Enum):
@@ -53,7 +54,7 @@ class RelationType(str, Enum):
 class WorkspaceBase(BaseModel):
     """Workspace 基础 Schema"""
     name: str = Field(..., max_length=200)
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class WorkspaceCreate(WorkspaceBase):
@@ -79,10 +80,10 @@ class WorkspaceResponse(WorkspaceBase):
 class AreaBase(BaseModel):
     """Area 基础 Schema"""
     name: str = Field(..., max_length=100)
-    description: Optional[str] = None
-    color: Optional[str] = Field(None, max_length=7, pattern=r'^#[0-9A-Fa-f]{6}$')
-    icon: Optional[str] = Field(None, max_length=50)
-    parent_id: Optional[uuid.UUID] = None
+    description: str | None = None
+    color: str | None = Field(None, max_length=7, pattern=r'^#[0-9A-Fa-f]{6}$')
+    icon: str | None = Field(None, max_length=50)
+    parent_id: uuid.UUID | None = None
     sort_order: int = 0
 
 
@@ -109,11 +110,11 @@ class AreaResponse(AreaBase):
 class ProjectBase(BaseModel):
     """Project 基础 Schema"""
     name: str = Field(..., max_length=100)
-    description: Optional[str] = None
+    description: str | None = None
     status: str = "active"
-    area_id: Optional[uuid.UUID] = None
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
+    area_id: uuid.UUID | None = None
+    start_date: datetime | None = None
+    end_date: datetime | None = None
 
 
 class ProjectCreate(ProjectBase):
@@ -139,13 +140,13 @@ class ProjectResponse(ProjectBase):
 class ItemBase(BaseModel):
     """Item 基础 Schema"""
     type: ItemType
-    title: Optional[str] = None
-    content: Optional[str] = None
-    summary: Optional[str] = None
-    area_id: Optional[uuid.UUID] = None
-    project_id: Optional[uuid.UUID] = None
-    source_type: Optional[str] = None
-    source_meta: Dict[str, Any] = Field(default_factory=dict)
+    title: str | None = None
+    content: str | None = None
+    summary: str | None = None
+    area_id: uuid.UUID | None = None
+    project_id: uuid.UUID | None = None
+    source_type: str | None = None
+    source_meta: dict[str, Any] = Field(default_factory=dict)
     status: ItemStatus = ItemStatus.ACTIVE
 
 
@@ -157,12 +158,12 @@ class ItemCreate(ItemBase):
 
 class ItemUpdate(BaseModel):
     """更新 Item"""
-    title: Optional[str] = None
-    content: Optional[str] = None
-    summary: Optional[str] = None
-    area_id: Optional[uuid.UUID] = None
-    project_id: Optional[uuid.UUID] = None
-    status: Optional[ItemStatus] = None
+    title: str | None = None
+    content: str | None = None
+    summary: str | None = None
+    area_id: uuid.UUID | None = None
+    project_id: uuid.UUID | None = None
+    status: ItemStatus | None = None
 
 
 class ItemResponse(ItemBase):
@@ -179,7 +180,7 @@ class ItemResponse(ItemBase):
 
 class ItemListResponse(BaseModel):
     """Item 列表响应"""
-    items: List[ItemResponse]
+    items: list[ItemResponse]
     total: int
     page: int
     page_size: int
@@ -191,8 +192,8 @@ class ItemListResponse(BaseModel):
 
 class TaskExtensionBase(BaseModel):
     """Task Extension 基础 Schema"""
-    goal: Optional[str] = None
-    constraints: Optional[str] = None
+    goal: str | None = None
+    constraints: str | None = None
     risk_level: RiskLevel = RiskLevel.LOW
     execution_status: ExecutionStatus = ExecutionStatus.DRAFT
 
@@ -221,7 +222,7 @@ class DecisionPointBase(BaseModel):
     """Decision Point 基础 Schema"""
     task_id: uuid.UUID
     type: str = Field(..., pattern=r'^(selection|info|boundary)$')
-    options: List[Dict[str, Any]] = Field(default_factory=list)
+    options: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class DecisionPointCreate(DecisionPointBase):
@@ -232,8 +233,8 @@ class DecisionPointCreate(DecisionPointBase):
 class DecisionPointResponse(DecisionPointBase):
     """Decision Point 响应"""
     id: uuid.UUID
-    user_choice: Optional[uuid.UUID] = None
-    confirmed_at: Optional[datetime] = None
+    user_choice: uuid.UUID | None = None
+    confirmed_at: datetime | None = None
     created_at: datetime
 
     class Config:
@@ -253,7 +254,7 @@ class LedgerEventBase(BaseModel):
     """Ledger Event 基础 Schema"""
     task_id: uuid.UUID
     event_type: str = Field(..., pattern=r'^(agent_suggested|user_confirmed|deliverable_generated)$')
-    snapshot: Dict[str, Any] = Field(default_factory=dict)
+    snapshot: dict[str, Any] = Field(default_factory=dict)
 
 
 class LedgerEventCreate(LedgerEventBase):
@@ -300,7 +301,7 @@ class GraphEdgeResponse(GraphEdgeBase):
 class GraphConnectionResponse(BaseModel):
     """连接查询响应"""
     node_id: uuid.UUID
-    connections: List[GraphEdgeResponse]
+    connections: list[GraphEdgeResponse]
     strong_count: int
 
 
@@ -308,5 +309,5 @@ class GraphPathResponse(BaseModel):
     """路径查询响应"""
     from_node_id: uuid.UUID
     to_node_id: uuid.UUID
-    path: List[uuid.UUID]
+    path: list[uuid.UUID]
     length: int

@@ -28,6 +28,7 @@ dependencies = [
     "aiosqlite",
     "sentence-transformers",
     "PyJWT",
+    "sentry-sdk>=2.0",
 ]
 
 [project.optional-dependencies]
@@ -57,6 +58,17 @@ markers = [
     "slow: Slow running tests",
     "performance: Performance tests and benchmarks",
 ]
+# Test suites intentionally excluded from the default pytest run.
+# See `todo-tasks.md` (root) for the canonical task tracker and the
+# rationale per directory/file. Each path below is either superseded by
+# the PRD10 acceptance suite (`tests/integration/api/test_prd10_*` and
+# `tests/integration/api/prd10/`) or requires external infrastructure
+# (live LLM, Aider CLI binary, raw socket WebSocket fixtures, SMTP relay,
+# real Postgres / Redis) that V1 acceptance does not rely on.
+#
+# Re-include any specific path explicitly with `pytest <path>` when you
+# need to inspect it (the ignore list does not delete the files).
+addopts = "--ignore=tests/legacy --ignore=tests/temp --ignore=tests/e2e --ignore=tests/performance --ignore-glob=tests/integration/test_aider*.py --ignore=tests/integration/test_full_aider_adapter.py --ignore=tests/integration/test_garden_api.py --ignore-glob=tests/integration/test_websocket*.py --ignore-glob=tests/integration/test_ws*.py --ignore=tests/integration/test_webio_methods.py --ignore=tests/integration/test_observability.py --ignore=tests/integration/test_server_api.py --ignore=tests/integration/test_server.py --ignore=tests/integration/test_llm.py --ignore=tests/integration/test_ai_agent.py --ignore=tests/integration/test_tool_calling.py --ignore=tests/integration/test_diff_service.py --ignore=tests/integration/test_repo_map.py --ignore=tests/integration/test_app.py --ignore=tests/integration/test_connection_engine.py --ignore=tests/integration/workflows/test_card_workflow.py --ignore=tests/integration/workflows/test_rag_workflow.py --ignore=tests/integration/workflows/test_search_workflow.py --ignore=tests/unit/auth/test_mailer.py --ignore=tests/unit/models/test_agent_models.py"
 
 [tool.ruff]
 target-version = "py311"

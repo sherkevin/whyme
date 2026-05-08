@@ -1,9 +1,10 @@
 """Unit tests for Agent Flow Execution Engine."""
 
-import pytest
 import uuid
-from sqlalchemy.ext.asyncio import AsyncSession
+
+import pytest
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_os.stage3.flow_engine import FlowEngine
 from agent_os.stage3.models import AgentDecision, Skill, TaskExecutionLog

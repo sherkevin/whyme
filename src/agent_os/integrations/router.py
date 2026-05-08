@@ -1,34 +1,37 @@
 """Integrations API Router - WeChat Webhook and Crawler Endpoints."""
 
-import uuid
 import logging
 import os
+import uuid
 from typing import Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import PlainTextResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_os.integrations.wechat import WeChatWebhookReceiver, process_wechat_message, WeChatService
-from agent_os.integrations.crawler import WebCrawler, crawl_url, LinkExtractor
+from agent_os.db.base import get_db
+from agent_os.integrations.crawler import LinkExtractor, WebCrawler
 from agent_os.integrations.schema import (
-    WebhookVerifyRequest,
-    ProcessWeChatMessageRequest,
-    ProcessWeChatMessageResponse,
-    WebhookHealthResponse,
     CrawlURLRequest,
     CrawlURLResponse,
+    CreateResourceFromURL,
     ExtractLinksRequest,
     ExtractLinksResponse,
-    CreateResourceFromURL,
-    SendTextMessageRequest,
-    SendNewsMessageRequest,
+    ProcessWeChatMessageRequest,
+    ProcessWeChatMessageResponse,
     SendCardMessageRequest,
-    SendMessageResponse
+    SendMessageResponse,
+    SendNewsMessageRequest,
+    SendTextMessageRequest,
+    WebhookHealthResponse,
+)
+from agent_os.integrations.wechat import (
+    WeChatService,
+    WeChatWebhookReceiver,
+    process_wechat_message,
 )
 from agent_os.items.crud import create_item, create_workspace
 from agent_os.items.schema import ItemCreate, WorkspaceCreate
-from agent_os.db.base import get_db
 
 logger = logging.getLogger(__name__)
 
@@ -212,7 +215,7 @@ async def wechat_webhook_health():
 # ============================================================================
 
 # Global WeChat service instance for sending messages
-_wechat_service: Optional[WeChatService] = None
+_wechat_service: WeChatService | None = None
 
 
 def get_wechat_service() -> WeChatService:

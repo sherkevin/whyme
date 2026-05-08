@@ -3,7 +3,6 @@
 import asyncio
 import threading
 import time
-from typing import Any
 
 import pytest
 
@@ -250,7 +249,6 @@ class TestDiffConfirmation:
 
     def test_diff_timeout(self, ws_io, event_loop):
         """Test diff timeout handling."""
-        import pytest
 
         # We need a separate ws_io with shorter timeout for this test
         # But since timeout is hardcoded, we'll just test that it works

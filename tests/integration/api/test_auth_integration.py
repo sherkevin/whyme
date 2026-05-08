@@ -8,24 +8,24 @@ Comprehensive tests for:
 - Authentication middleware
 """
 
-import pytest
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
+
+import pytest
 
 from agent_os.auth.security import (
-    verify_password,
-    get_password_hash,
+    DEFAULT_PERMISSIONS,
+    check_permission,
     create_access_token,
     create_refresh_token,
     decode_token,
-    hash_token,
     generate_api_key,
     get_api_key_prefix,
+    get_password_hash,
     hash_api_key,
-    check_permission,
-    DEFAULT_PERMISSIONS
+    hash_token,
+    verify_password,
 )
-
 
 # ============================================================================
 # Password Hashing Tests
@@ -127,9 +127,8 @@ def test_create_access_token_with_custom_expiration():
     assert "exp" in payload
 
     # 验证过期时间在未来
-    from datetime import timezone
-    exp_dt = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
-    now_dt = datetime.now(tz=timezone.utc)
+    exp_dt = datetime.fromtimestamp(payload["exp"], tz=UTC)
+    now_dt = datetime.now(tz=UTC)
     assert exp_dt > now_dt
 
     # 验证过期时间大约在 1 小时后（允许 10 分钟误差）

@@ -5,11 +5,10 @@ Tests:
 - get_garden_config: Returns complete config dict
 """
 
-import pytest
 import os
 from unittest.mock import patch
 
-from agent_os.core.config import get_garden_strong_edge_threshold, get_garden_config
+from agent_os.core.config import get_garden_config, get_garden_strong_edge_threshold
 
 
 class TestGardenConfig:

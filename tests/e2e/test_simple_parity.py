@@ -2,10 +2,13 @@
 
 import asyncio
 import sys
+
 sys.path.insert(0, "src")
 
-from agent_os.agent_aider import AiderAgent
 from pathlib import Path
+
+from agent_os.agent_aider import AiderAgent
+
 
 async def simple_test():
     """Test core aider functionality"""
@@ -24,7 +27,7 @@ async def simple_test():
     if f1.exists():
         print(f"[PASS] File created: {f1.read_text()}")
     else:
-        print(f"[FAIL] File not created")
+        print("[FAIL] File not created")
         return False
 
     print("\nTest 2: Modify file")
@@ -43,9 +46,9 @@ async def simple_test():
     r3 = await agent.chat("Create test.txt with: Test Content")
     f2 = workspace / "test.txt"
     if f2.exists():
-        print(f"[PASS] Second file created")
+        print("[PASS] Second file created")
     else:
-        print(f"[FAIL] Second file not created")
+        print("[FAIL] Second file not created")
         return False
 
     print("\nTest 4: Check workspace")

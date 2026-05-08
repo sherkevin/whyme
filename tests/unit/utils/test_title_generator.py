@@ -4,10 +4,11 @@ Tests for the title_generator.py module that generates titles from content.
 """
 
 import pytest
+
 from agent_os.agent.title_generator import (
+    extract_keywords,
     generate_title,
     generate_title_from_metadata,
-    extract_keywords
 )
 
 

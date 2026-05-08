@@ -3,8 +3,9 @@
 Tests for the AgentProcessEvent model.
 """
 
-import pytest
 from datetime import datetime
+
+import pytest
 from sqlalchemy import select
 
 from agent_os.agent.models import AgentProcessEvent

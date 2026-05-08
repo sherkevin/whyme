@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Dict
+from typing import Any, Dict, List
 
 from agent_os.capabilities.coding._vendor.repo_map import RepoMap
 from agent_os.core.interfaces import CodingCapability
@@ -12,7 +12,7 @@ from agent_os.core.types import RuntimeContext
 class AiderAdapter(CodingCapability):
     """Adapter for Aider coding capability."""
 
-    async def get_tool_definitions(self) -> List[Dict[str, Any]]:
+    async def get_tool_definitions(self) -> list[dict[str, Any]]:
         return [
             {
                 "type": "function",
@@ -84,11 +84,11 @@ class AiderAdapter(CodingCapability):
         
         return await self._execute_tool(ctx, "run_command", {"command": f"echo 'Use specific tools instead: {instructions}'"})
 
-    async def execute_tool(self, ctx: RuntimeContext, name: str, args: Dict[str, Any]) -> str:
+    async def execute_tool(self, ctx: RuntimeContext, name: str, args: dict[str, Any]) -> str:
         """Execute a tool provided by this capability."""
         return await self._execute_tool(ctx, name, args)
 
-    async def _execute_tool(self, ctx: RuntimeContext, name: str, args: Dict[str, Any]) -> str:
+    async def _execute_tool(self, ctx: RuntimeContext, name: str, args: dict[str, Any]) -> str:
         from agent_os.server.app import _session_manager
         
         if not ctx.session_id:

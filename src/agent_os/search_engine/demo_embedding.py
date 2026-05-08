@@ -8,16 +8,16 @@ This demo shows:
 """
 
 import asyncio
-import uuid
 import time
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+import uuid
 
-from agent_os.search_engine.search_service import SearchService
-from agent_os.search_engine.search_engine import SearchEngine, SearchQuery
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from agent_os.db.base import Base
 from agent_os.search_engine.embedding_service import EmbeddingService
 from agent_os.search_engine.models import SearchIndex
-from agent_os.db.base import Base
-
+from agent_os.search_engine.search_engine import SearchEngine, SearchQuery
+from agent_os.search_engine.search_service import SearchService
 
 # Create async engine for demo
 DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -83,7 +83,7 @@ async def demo_embedding():
         vec2 = embeddings[3]  # "FastAPI is a Python web framework"
 
         similarity = embedding_service.cosine_similarity(vec1, vec2)
-        print(f"\n  Comparing:")
+        print("\n  Comparing:")
         print(f"    Text 1: '{texts[0]}'")
         print(f"    Text 2: '{texts[3]}'")
         print(f"    Cosine Similarity: {similarity:.4f}")
@@ -92,7 +92,7 @@ async def demo_embedding():
         # Different texts
         vec3 = embeddings[1]  # "JavaScript..."
         similarity2 = embedding_service.cosine_similarity(vec1, vec3)
-        print(f"\n  Comparing:")
+        print("\n  Comparing:")
         print(f"    Text 1: '{texts[0]}'")
         print(f"    Text 3: '{texts[1]}'")
         print(f"    Cosine Similarity: {similarity2:.4f}")
@@ -216,12 +216,12 @@ async def demo_embedding():
 
         # Get index stats
         stats = await search_service.get_index_stats()
-        print(f"\n  Search Index Statistics:")
+        print("\n  Search Index Statistics:")
         print(f"    Total indices: {stats['total']}")
         print(f"    By type: {stats['by_type']}")
 
         # Count indices with embeddings
-        from sqlalchemy import select, func
+        from sqlalchemy import func, select
         stmt = select(func.count(SearchIndex.id)).where(SearchIndex.embedding.isnot(None))
         result = await db.execute(stmt)
         with_embeddings = result.scalar() or 0

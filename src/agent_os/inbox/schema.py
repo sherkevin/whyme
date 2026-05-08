@@ -1,10 +1,10 @@
 """Inbox module schemas for API requests and responses."""
 
 import uuid
-from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, Dict, Any
 from datetime import datetime
+from typing import Any, Dict, Optional
 
+from pydantic import BaseModel, ConfigDict, Field
 
 # ============== Request Schemas ==============
 
@@ -15,13 +15,13 @@ class InboxItemCreate(BaseModel):
     They can be notes, tasks, or resources collected from various sources.
     """
     workspace_id: uuid.UUID = Field(..., description="Workspace ID")
-    title: Optional[str] = Field(None, max_length=500, description="Item title")
-    content: Optional[str] = Field(None, description="Item content/description")
+    title: str | None = Field(None, max_length=500, description="Item title")
+    content: str | None = Field(None, description="Item content/description")
     source_type: str = Field(
         default="manual",
         description="Source type: manual, wechat, chrome_extension, etc."
     )
-    source_meta: Dict[str, Any] = Field(
+    source_meta: dict[str, Any] = Field(
         default_factory=dict,
         description="Source metadata (URL, sender, etc.)"
     )
@@ -33,9 +33,9 @@ class InboxItemCreate(BaseModel):
 
 class InboxItemUpdate(BaseModel):
     """Update an inbox item."""
-    title: Optional[str] = Field(None, max_length=500)
-    content: Optional[str] = None
-    type: Optional[str] = None
+    title: str | None = Field(None, max_length=500)
+    content: str | None = None
+    type: str | None = None
 
 
 class InboxItemStatusUpdate(BaseModel):
@@ -57,11 +57,11 @@ class InboxItemResponse(BaseModel):
     workspace_id: uuid.UUID
     creator_id: uuid.UUID
     type: str
-    title: Optional[str]
-    content: Optional[str]
-    summary: Optional[str]
-    source_type: Optional[str]
-    source_meta: Dict[str, Any]
+    title: str | None
+    content: str | None
+    summary: str | None
+    source_type: str | None
+    source_meta: dict[str, Any]
     status: str
     created_at: datetime
     updated_at: datetime
@@ -82,12 +82,12 @@ class InboxItemListResponse(BaseModel):
 
 class InboxItemListParams(BaseModel):
     """Query parameters for inbox item list."""
-    status: Optional[str] = Field(None, description="Filter by status")
-    type: Optional[str] = Field(None, description="Filter by type")
-    source_type: Optional[str] = Field(None, description="Filter by source type")
+    status: str | None = Field(None, description="Filter by status")
+    type: str | None = Field(None, description="Filter by type")
+    source_type: str | None = Field(None, description="Filter by source type")
     page: int = Field(1, ge=1, description="Page number")
     page_size: int = Field(20, ge=1, le=100, description="Items per page")
-    search: Optional[str] = Field(None, description="Search in title and content")
+    search: str | None = Field(None, description="Search in title and content")
 
 
 # ============== Error Schemas ==============
@@ -95,4 +95,4 @@ class InboxItemListParams(BaseModel):
 class InboxErrorResponse(BaseModel):
     """Error response."""
     detail: str = Field(..., description="Error message")
-    error_code: Optional[str] = Field(None, description="Application-specific error code")
+    error_code: str | None = Field(None, description="Application-specific error code")

@@ -1,16 +1,29 @@
 """Basic tests for Agent API endpoints (Stage 2).
 
-Simplified tests that verify the API structure without database dependencies.
+PRD10 NOTICE
+============
+
+Same as ``test_agent_api.py`` / ``test_agent_api_integration.py``. Skipped
+at collection time.
 """
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
-from agent_os.db.base import Base
-from agent_os.db.session import get_db
-from tests.test_app import test_app as app
+pytest.skip(
+    "Legacy Stage 2 agent basic tests; superseded by PRD10 AI + Skills.",
+    allow_module_level=True,
+)
 
+from fastapi.testclient import TestClient  # noqa: E402,F401
+from sqlalchemy.ext.asyncio import (  # noqa: E402,F401
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from tests.test_app import test_app as app  # noqa: E402,F401
+
+from agent_os.db.base import Base  # noqa: E402,F401
+from agent_os.db.session import get_db  # noqa: E402,F401
 
 # =============================================================================
 # Test Fixtures

@@ -1,8 +1,8 @@
 """Integration Schemas - Request/Response Models for Webhooks."""
 
-from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
+from pydantic import BaseModel, Field
 
 # ============================================================================
 # WeChat Webhook Schemas
@@ -31,22 +31,22 @@ class WebhookVerifyRequest(BaseModel):
     signature: str = Field(..., description="微信签名")
     timestamp: str = Field(..., description="时间戳")
     nonce: str = Field(..., description="随机数")
-    echostr: Optional[str] = Field(None, description="验证返回字符串")
+    echostr: str | None = Field(None, description="验证返回字符串")
 
 
 class ProcessWeChatMessageRequest(BaseModel):
     """处理微信消息请求"""
     workspace_id: str = Field(..., description="工作空间ID")
     creator_id: str = Field(..., description="创建者ID")
-    default_area_id: Optional[str] = Field(None, description="默认区域ID")
+    default_area_id: str | None = Field(None, description="默认区域ID")
     xml_data: str = Field(..., description="微信XML数据")
 
 
 class ProcessWeChatMessageResponse(BaseModel):
     """处理微信消息响应"""
     status: str = Field(..., description="处理状态: success, error")
-    result: Optional[Dict[str, Any]] = Field(None, description="处理结果")
-    error: Optional[str] = Field(None, description="错误信息")
+    result: dict[str, Any] | None = Field(None, description="处理结果")
+    error: str | None = Field(None, description="错误信息")
 
 
 class WebhookHealthResponse(BaseModel):
@@ -68,8 +68,8 @@ class CrawlURLRequest(BaseModel):
 class CrawlURLResponse(BaseModel):
     """爬取URL响应"""
     url: str = Field(..., description="URL")
-    title: Optional[str] = Field(None, description="页面标题")
-    description: Optional[str] = Field(None, description="页面描述")
+    title: str | None = Field(None, description="页面标题")
+    description: str | None = Field(None, description="页面描述")
     content: str = Field("", description="页面内容")
     links: list = Field([], description="页面链接")
     content_type: str = Field(..., description="内容类型")
@@ -96,8 +96,8 @@ class CreateResourceFromURL(BaseModel):
     workspace_id: str = Field(..., description="工作空间ID")
     creator_id: str = Field(..., description="创建者ID")
     url: str = Field(..., description="URL")
-    default_area_id: Optional[str] = Field(None, description="默认区域ID")
-    title: Optional[str] = Field(None, description="标题(可选)")
+    default_area_id: str | None = Field(None, description="默认区域ID")
+    title: str | None = Field(None, description="标题(可选)")
 
 
 # ============================================================================
@@ -123,12 +123,12 @@ class SendCardMessageRequest(BaseModel):
     title: str = Field(..., description="标题")
     description: str = Field(..., description="描述")
     url: str = Field(..., description="跳转URL")
-    image_url: Optional[str] = Field(None, description="图片URL")
+    image_url: str | None = Field(None, description="图片URL")
 
 
 class SendMessageResponse(BaseModel):
     """发送消息响应"""
     status: str = Field(..., description="发送状态: success, error")
-    errcode: Optional[int] = Field(None, description="错误码")
-    errmsg: Optional[str] = Field(None, description="错误信息")
-    msgid: Optional[str] = Field(None, description="消息ID")
+    errcode: int | None = Field(None, description="错误码")
+    errmsg: str | None = Field(None, description="错误信息")
+    msgid: str | None = Field(None, description="消息ID")

@@ -1,8 +1,7 @@
 """Test password hashing and verification."""
 
-import pytest
 
-from agent_os.auth.security import verify_password, get_password_hash
+from agent_os.auth.security import get_password_hash, verify_password
 
 
 class TestPasswordHashing:
@@ -15,8 +14,12 @@ class TestPasswordHashing:
 
         assert isinstance(hashed, str)
         assert len(hashed) > 0
-        # Argon2 hashes start with $argon2id$
-        assert hashed.startswith("$argon2id$")
+        # PRD10/V1 ``get_password_hash`` returns ``salt$hash`` where both
+        # halves are 64 hex chars (SHA-256 + 16-byte salt). See
+        # ``agent_os.auth.security.get_password_hash``.
+        assert "$" in hashed
+        salt, body = hashed.split("$", 1)
+        assert len(salt) == 32 and len(body) == 64
 
     def test_hash_same_password_different_hashes(self):
         """Test hashing same password twice gives different hashes (salt)."""
@@ -24,11 +27,10 @@ class TestPasswordHashing:
         hash1 = get_password_hash(password)
         hash2 = get_password_hash(password)
 
-        # Hashes should be different due to salt
+        # Hashes should be different due to salt.
         assert hash1 != hash2
-        # But both should start with $argon2id$
-        assert hash1.startswith("$argon2id$")
-        assert hash2.startswith("$argon2id$")
+        # Both still match the salt$hash format.
+        assert hash1.count("$") >= 1 and hash2.count("$") >= 1
 
     def test_verify_correct_password(self):
         """Test verifying correct password returns True."""

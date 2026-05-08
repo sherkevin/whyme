@@ -1,9 +1,10 @@
 """Real Aider Coder integration - wraps the actual aider Coder class."""
 
-import sys
 import os
+import sys
 from pathlib import Path
-from typing import Any, List, Dict
+from typing import Any, Dict, List
+
 from agent_os.core.interfaces import CodingCapability
 from agent_os.core.types import RuntimeContext
 
@@ -14,9 +15,7 @@ if str(aider_path) not in sys.path:
 
 from aider.coders import Coder
 from aider.models import Model
-from aider.io import InputOutput
 from aider.repo import GitRepo
-from aider.args import get_parser
 
 
 class AiderCoderIntegration(CodingCapability):
@@ -34,8 +33,6 @@ class AiderCoderIntegration(CodingCapability):
 
     async def initialize(self):
         """Initialize the aider Coder instance."""
-        import os
-        import shutil
 
         # Change to workspace directory BEFORE creating Coder
         self.original_cwd = os.getcwd()
@@ -50,13 +47,12 @@ class AiderCoderIntegration(CodingCapability):
                 loop=self._event_loop,
                 pretty=True
             )
-            print(f"[DEBUG] WebSocketIO initialized for Aider")
+            print("[DEBUG] WebSocketIO initialized for Aider")
 
         # Initialize toolkit for this workspace
         await self._setup_toolkit()
 
         # Create a minimal IO object for non-interactive use
-        import io
 
         class WebIO:
             """Custom IO for web use."""
@@ -122,7 +118,7 @@ class AiderCoderIntegration(CodingCapability):
             def get_file_content(self, filename):
                 """Get file content - simplified version."""
                 try:
-                    with open(filename, "r", encoding=self.encoding) as f:
+                    with open(filename, encoding=self.encoding) as f:
                         return f.read()
                 except Exception as e:
                     return f"Error reading file: {e}"
@@ -208,7 +204,7 @@ class AiderCoderIntegration(CodingCapability):
 
         if api_key:
             os.environ["OPENAI_API_KEY"] = api_key
-            print(f"[DEBUG] Set OPENAI_API_KEY from environment")
+            print("[DEBUG] Set OPENAI_API_KEY from environment")
         if base_url:
             os.environ["OPENAI_API_BASE"] = base_url
             print(f"[DEBUG] Set OPENAI_API_BASE from environment: {base_url}")
@@ -315,12 +311,12 @@ class AiderCoderIntegration(CodingCapability):
             # Initialize aider_edited_files if not present
             if not hasattr(self.coder, 'aider_edited_files') or self.coder.aider_edited_files is None:
                 self.coder.aider_edited_files = set()
-                print(f"[DEBUG] Initialized aider_edited_files as empty set")
+                print("[DEBUG] Initialized aider_edited_files as empty set")
 
             # Initialize reflected_message if not present
             if not hasattr(self.coder, 'reflected_message'):
                 self.coder.reflected_message = None
-                print(f"[DEBUG] Initialized reflected_message as None")
+                print("[DEBUG] Initialized reflected_message as None")
 
             # Initialize other missing attributes
             if not hasattr(self.coder, 'num_migrations'):
@@ -334,7 +330,7 @@ class AiderCoderIntegration(CodingCapability):
             traceback.print_exc()
             raise
 
-    async def get_tool_definitions(self) -> List[Dict[str, Any]]:
+    async def get_tool_definitions(self) -> list[dict[str, Any]]:
         """Aider doesn't use tool definitions in the traditional sense."""
         # Return empty list - aider handles everything internally
         return []
@@ -343,7 +339,7 @@ class AiderCoderIntegration(CodingCapability):
         """Not used - we use run_message instead."""
         return await self.run_message(ctx, instructions)
 
-    async def execute_tool(self, ctx: RuntimeContext, name: str, args: Dict[str, Any]) -> str:
+    async def execute_tool(self, ctx: RuntimeContext, name: str, args: dict[str, Any]) -> str:
         """Not used - we use run_message instead."""
         return await self.run_message(ctx, args.get("instructions", ""))
 
@@ -389,7 +385,7 @@ class AiderCoderIntegration(CodingCapability):
                     traceback.print_exc()
                     raise
 
-                print(f"[DEBUG] Message processing completed")
+                print("[DEBUG] Message processing completed")
             except Exception as e:
                 print(f"[DEBUG] Message processing error: {e}")
                 raise
@@ -403,9 +399,7 @@ class AiderCoderIntegration(CodingCapability):
                     output_parts.append(f"Error: {msg}")
                 elif msg_type == "warning":
                     output_parts.append(f"Warning: {msg}")
-                elif msg_type == "assistant":
-                    output_parts.append(msg)
-                elif msg_type == "ai":
+                elif msg_type == "assistant" or msg_type == "ai":
                     output_parts.append(msg)
 
             # Add coder's response
@@ -430,7 +424,7 @@ class AiderCoderIntegration(CodingCapability):
                 f.write(f"\n\n{error_msg}\n{tb}\n")
             return error_msg
 
-    def get_file_changes(self) -> List[Dict[str, Any]]:
+    def get_file_changes(self) -> list[dict[str, Any]]:
         """Get list of files that were modified."""
         changes = []
 
@@ -450,7 +444,7 @@ class AiderCoderIntegration(CodingCapability):
             if abs_path not in self.coder.abs_fnames:
                 self.coder.abs_fnames.add(abs_path)
 
-    def get_chat_history(self) -> List[Dict[str, Any]]:
+    def get_chat_history(self) -> list[dict[str, Any]]:
         """Get the chat history."""
         if not self.coder:
             return []
@@ -476,7 +470,6 @@ class AiderCoderIntegration(CodingCapability):
     async def _setup_toolkit(self):
         """Setup toolkit directory for this workspace"""
         import shutil
-        import os
 
         toolkit_dir = self.workspace_root / "toolkit"
         # 修正路径：global_toolkit 在项目根目录，不在 src 目录
@@ -507,7 +500,7 @@ class AiderCoderIntegration(CodingCapability):
                     text=True
                 )
                 if result.returncode == 0:
-                    print(f"[DEBUG] Toolkit registry refreshed")
+                    print("[DEBUG] Toolkit registry refreshed")
                 else:
                     print(f"[WARNING] Failed to refresh toolkit: {result.stderr}")
         except Exception as e:

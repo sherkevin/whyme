@@ -4,11 +4,12 @@ Tests for the classifier.py module that classifies content by type.
 """
 
 import pytest
+
 from agent_os.agent.classifier import (
-    ItemType,
     ClassificationConfidence,
+    ItemType,
     classify_content,
-    infer_subtype
+    infer_subtype,
 )
 
 

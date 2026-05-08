@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import Column, Integer, String, Text, JSON, DateTime, ForeignKey, Index
-from sqlalchemy.orm import relationship
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, Index, Integer, String, Text
 
 from agent_os.db.base import Base
 

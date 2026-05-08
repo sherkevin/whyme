@@ -1,20 +1,16 @@
 """Performance test configuration and fixtures."""
 
-import pytest
-import asyncio
-import time
 import statistics
-from typing import List, Dict, Any
+import time
 from datetime import datetime
 from statistics import StatisticsError
+from typing import Any
 
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from agent_os.search_engine.search_engine import SearchEngine, SearchQuery
-from agent_os.search_engine.search_service import SearchService
-from agent_os.search_engine.models import SearchIndex, Base
-
+from agent_os.search_engine.models import Base, SearchIndex
 
 # ============================================================================
 # Performance Benchmarks
@@ -115,9 +111,9 @@ class PerformanceMetrics:
     """Track and analyze performance metrics."""
 
     def __init__(self):
-        self.results: List[Dict[str, Any]] = []
+        self.results: list[dict[str, Any]] = []
 
-    def add_result(self, name: str, duration: float, success: bool = True, metadata: Dict = None):
+    def add_result(self, name: str, duration: float, success: bool = True, metadata: dict = None):
         """Add a performance result."""
         self.results.append({
             "name": name,
@@ -127,7 +123,7 @@ class PerformanceMetrics:
             "metadata": metadata or {}
         })
 
-    def get_statistics(self, name: str = None) -> Dict[str, Any]:
+    def get_statistics(self, name: str = None) -> dict[str, Any]:
         """Get statistics for results.
 
         Args:
@@ -219,7 +215,7 @@ def perf_metrics():
 # Benchmark Decorator
 # ============================================================================
 
-def benchmark(name: str, thresholds: Dict[str, float] = None):
+def benchmark(name: str, thresholds: dict[str, float] = None):
     """Decorator for benchmarking async functions.
 
     Args:

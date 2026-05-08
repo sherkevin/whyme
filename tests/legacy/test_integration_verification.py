@@ -1,16 +1,13 @@
 """Integration verification test for all user requirements."""
 
 import pytest
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from agent_os.db.base import Base
 from agent_os.agent import Agent
-from agent_os.tools import ToolRegistryImpl
-from agent_os.skills import SkillManager
 from agent_os.conversations import ConversationRepository
-from agent_os.auth.models import User
-from agent_os.knowledge.models import InboxItem, Card
-from agent_os.tasks.models import Task
+from agent_os.db.base import Base
+from agent_os.skills import SkillManager
+from agent_os.tools import ToolRegistryImpl
 
 
 class TestUserRequirements:
@@ -132,7 +129,6 @@ class TestUserRequirements:
         assert source.count('async def get_db') == 1, "Duplicate get_db function found"
 
         # Check Agent class supports database
-        from agent_os.agent import Agent
         agent_source = inspect.getsource(Agent.__init__)
 
         # Verify Agent can accept db_session

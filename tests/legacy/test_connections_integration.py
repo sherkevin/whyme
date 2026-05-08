@@ -3,16 +3,15 @@
 Complete integration tests for Connection API using full CRUD workflow.
 """
 
-import pytest
 import uuid
-from datetime import datetime, timedelta
 
-from agent_os.connections.engine import ConnectionEngine
+import pytest
+
 from agent_os.connections import crud
-from agent_os.items.crud import create_workspace, create_item
-from agent_os.items.schema import WorkspaceCreate, ItemCreate
+from agent_os.connections.engine import ConnectionEngine
+from agent_os.items.crud import create_item, create_workspace
 from agent_os.items.models import Item
-
+from agent_os.items.schema import ItemCreate, WorkspaceCreate
 
 # ============================================================================
 # Integration Tests - Connection CRUD

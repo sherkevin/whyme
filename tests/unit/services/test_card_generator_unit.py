@@ -3,15 +3,12 @@
 Tests the InboxItem → Card conversion logic without database dependencies.
 """
 
-import pytest
 from unittest.mock import Mock
 
-from agent_os.items.models import ItemStatus, ItemType
-from agent_os.knowledge.card_generator import (
-    _map_item_type_to_para_type,
-    _extract_tags
-)
+import pytest
 
+from agent_os.items.models import ItemStatus, ItemType
+from agent_os.knowledge.card_generator import _extract_tags, _map_item_type_to_para_type
 
 # ============================================================================
 # Test Fixtures

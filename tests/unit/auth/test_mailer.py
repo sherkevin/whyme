@@ -3,17 +3,11 @@
 Tests B-03A: SMTP email service configuration.
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+from unittest.mock import MagicMock, patch
 
-from agent_os.auth.mailer import (
-    SMTPConfig,
-    Mailer,
-    SendResult,
-    get_mailer
-)
+import pytest
+
+from agent_os.auth.mailer import Mailer, SendResult, SMTPConfig, get_mailer
 
 
 class TestSMTPConfig:

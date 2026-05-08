@@ -7,18 +7,13 @@ Stage 4 Implementation:
 - FastAPI Router for integrations
 """
 
-from agent_os.integrations.wechat import (
-    WeChatWebhookReceiver,
-    LinkExtractor,
-    process_wechat_message
-)
-
-from agent_os.integrations.crawler import (
-    WebCrawler,
-    crawl_url
-)
-
 from agent_os.integrations import router
+from agent_os.integrations.crawler import WebCrawler, crawl_url
+from agent_os.integrations.wechat import (
+    LinkExtractor,
+    WeChatWebhookReceiver,
+    process_wechat_message,
+)
 
 __all__ = [
     # WeChat

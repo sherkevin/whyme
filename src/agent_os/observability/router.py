@@ -1,19 +1,17 @@
 """Observability API Router - Monitoring and Metrics Endpoints."""
 
-import time
 import logging
-from typing import Dict, Any
-from fastapi import APIRouter, Depends
+import time
+from typing import Any, Dict
 
-from agent_os.observability.middleware import (
-    performance_metrics,
-    health_checker
-)
+from fastapi import APIRouter
+
+from agent_os.observability.middleware import health_checker, performance_metrics
 from agent_os.observability.schema import (
-    MetricsResponse,
-    HealthResponse,
     EndpointStats,
-    HealthCheckResponse
+    HealthCheckResponse,
+    HealthResponse,
+    MetricsResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -111,15 +109,16 @@ async def get_health_simple():
 # ============================================================================
 
 @router.get("/info")
-async def get_system_info() -> Dict[str, Any]:
+async def get_system_info() -> dict[str, Any]:
     """
     获取系统信息
 
     Returns:
         系统信息字典
     """
-    import psutil
     import os
+
+    import psutil
 
     # CPU 使用率
     cpu_percent = psutil.cpu_percent(interval=1)
@@ -157,7 +156,7 @@ async def get_system_info() -> Dict[str, Any]:
 # Database Health Check
 # ============================================================================
 
-def check_database_health() -> Dict[str, Any]:
+def check_database_health() -> dict[str, Any]:
     """
     数据库健康检查
 

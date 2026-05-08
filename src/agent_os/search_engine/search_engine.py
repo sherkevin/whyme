@@ -8,15 +8,16 @@ This module implements the core search functionality including:
 - Filtering and pagination
 """
 
-import uuid
 import logging
 import math
-from typing import Dict, List, Any, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func
+from datetime import UTC
+from typing import Any, Dict, List, Optional
 
-from agent_os.search_engine.models import SearchIndex
+from sqlalchemy import and_, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from agent_os.search_engine.embedding_service import get_embedding_service
+from agent_os.search_engine.models import SearchIndex
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ class SearchResult:
         total: int,
         page: int,
         page_size: int,
-        results: List["SearchResultItem"]
+        results: list["SearchResultItem"]
     ):
         self.total = total
         self.page = page
@@ -47,8 +48,8 @@ class SearchResultItem:
         title: str,
         content_snippet: str,
         score: float,
-        tags: List[str],
-        search_metadata: Dict,
+        tags: list[str],
+        search_metadata: dict,
         created_at
     ):
         self.item_type = item_type
@@ -67,8 +68,8 @@ class SearchQuery:
     def __init__(
         self,
         query: str,
-        item_types: Optional[List[str]] = None,
-        tags: Optional[List[str]] = None,
+        item_types: list[str] | None = None,
+        tags: list[str] | None = None,
         date_from: Optional = None,
         date_to: Optional = None,
         page: int = 1,
@@ -169,7 +170,7 @@ class SearchEngine:
 
         return text_result
 
-    def _cosine_similarity(self, vec1: List[float], vec2: List[float]) -> float:
+    def _cosine_similarity(self, vec1: list[float], vec2: list[float]) -> float:
         """Calculate cosine similarity between two vectors.
 
         Args:
@@ -191,7 +192,7 @@ class SearchEngine:
     def _merge_results(
         self,
         text_result: SearchResult,
-        vector_scores: List[Dict],
+        vector_scores: list[dict],
         query: SearchQuery
     ) -> SearchResult:
         """Merge text and vector search results.
@@ -228,7 +229,7 @@ class SearchEngine:
             # Freshness boost: newer content gets slight advantage (PRD4 requirement)
             # Calculate days since creation/updated
             from datetime import datetime, timezone
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             item_time = row.updated_at if row.updated_at else row.created_at
             if item_time:
                 days_old = (now - item_time).days
@@ -402,7 +403,7 @@ class SearchEngine:
         else:
             return 0.5
 
-    def _generate_snippet(self, content: Optional[str], query: str, max_length: int = 200) -> str:
+    def _generate_snippet(self, content: str | None, query: str, max_length: int = 200) -> str:
         """Generate content snippet with query highlighting.
 
         Args:

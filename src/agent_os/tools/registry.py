@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+import importlib.util
 import json
-from inspect import Parameter, Signature, signature
-from typing import Any, Callable
+import sys
+from collections.abc import Callable
+from inspect import Parameter, signature
+from pathlib import Path
+from typing import Any
 
 from agent_os.core.interfaces import ToolRegistry
-import importlib.util
-import os
-import sys
-from pathlib import Path
 
 # Import MCPBridge for MCP integration
 try:
@@ -280,7 +280,7 @@ class ToolRegistryImpl(ToolRegistry):
                 raise RuntimeError(f"MCP error: {response['error']}")
 
             return response.get("result", {})
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # Restart process on timeout
             await self._kill_mcp_process(tool_name)
             raise TimeoutError(f"MCP tool {tool_name} timed out")

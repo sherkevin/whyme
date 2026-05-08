@@ -2,8 +2,8 @@
 
 import uuid
 from typing import List, Optional
-from pydantic import BaseModel, Field
 
+from pydantic import BaseModel, Field
 
 # ============================================================================
 # Connection Schemas
@@ -17,7 +17,7 @@ class ConnectionEdge(BaseModel):
     weight: float = Field(..., ge=0.0, le=1.0, description="连接权重 (0.0 - 1.0)")
     relation_type: str = Field(..., description="关系类型: topic, causal, supplement")
     is_strong: bool = Field(..., description="是否为强连接")
-    created_at: Optional[str] = None
+    created_at: str | None = None
 
     class Config:
         from_attributes = True
@@ -26,7 +26,7 @@ class ConnectionEdge(BaseModel):
 class ConnectionList(BaseModel):
     """连接列表"""
     node_id: uuid.UUID
-    connections: List[ConnectionEdge]
+    connections: list[ConnectionEdge]
     total_count: int
     strong_count: int
 
@@ -48,7 +48,7 @@ class GraphNode(BaseModel):
     id: uuid.UUID
     label: str = Field(..., description="节点标签 (通常是title)")
     type: str = Field(..., description="节点类型: note, task, resource, etc.")
-    created_at: Optional[str] = None
+    created_at: str | None = None
 
     class Config:
         from_attributes = True
@@ -65,14 +65,14 @@ class GraphEdgeSimple(BaseModel):
 
 class GraphData(BaseModel):
     """图数据 (用于可视化)"""
-    nodes: List[GraphNode]
-    edges: List[GraphEdgeSimple]
+    nodes: list[GraphNode]
+    edges: list[GraphEdgeSimple]
 
 
 class RecalculateRequest(BaseModel):
     """手动触发连接计算请求"""
     item_id: uuid.UUID
-    limit: Optional[int] = Field(100, ge=1, le=1000, description="候选Item数量限制")
+    limit: int | None = Field(100, ge=1, le=1000, description="候选Item数量限制")
 
 
 class RecalculateResponse(BaseModel):

@@ -5,15 +5,24 @@ This module contains:
 - DailyInsight: Insights generated from knowledge processing
 """
 
-from datetime import datetime
+import uuid
 from enum import Enum
+
 from sqlalchemy import (
-    Column, String, Text, DateTime, ForeignKey, Float, Boolean, Integer,
-    Index, UniqueConstraint, CheckConstraint
+    Boolean,
+    CheckConstraint,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
-import uuid
 
 from agent_os.db.base import Base
 

@@ -1,27 +1,43 @@
 """Unified Items CRUD Operations - PRD4 Implementation."""
 
 import uuid
-from typing import Optional, List, Tuple
+from typing import List, Optional, Tuple
+
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func
 from sqlalchemy.orm import selectinload
 
 from agent_os.items.models import (
-    Item, Workspace, Area, Project,
-    TaskExtension, DecisionPoint, LedgerEvent, GraphEdge,
-    ItemType, ItemStatus
+    Area,
+    DecisionPoint,
+    GraphEdge,
+    Item,
+    ItemStatus,
+    ItemType,
+    LedgerEvent,
+    Project,
+    TaskExtension,
+    Workspace,
 )
 from agent_os.items.schema import (
-    ItemCreate, ItemUpdate, ItemResponse,
-    WorkspaceCreate, WorkspaceResponse,
-    AreaCreate, AreaResponse,
-    ProjectCreate, ProjectResponse,
-    TaskExtensionCreate, TaskExtensionResponse,
-    DecisionPointCreate, DecisionPointResponse,
-    LedgerEventCreate, LedgerEventResponse,
-    GraphEdgeCreate, GraphEdgeResponse
+    AreaCreate,
+    AreaResponse,
+    DecisionPointCreate,
+    DecisionPointResponse,
+    GraphEdgeCreate,
+    GraphEdgeResponse,
+    ItemCreate,
+    ItemResponse,
+    ItemUpdate,
+    LedgerEventCreate,
+    LedgerEventResponse,
+    ProjectCreate,
+    ProjectResponse,
+    TaskExtensionCreate,
+    TaskExtensionResponse,
+    WorkspaceCreate,
+    WorkspaceResponse,
 )
-
 
 # ============================================================================
 # Workspace CRUD
@@ -42,7 +58,7 @@ async def create_workspace(
 async def get_workspace(
     db: AsyncSession,
     workspace_id: uuid.UUID
-) -> Optional[WorkspaceResponse]:
+) -> WorkspaceResponse | None:
     """获取 Workspace"""
     result = await db.execute(
         select(Workspace).filter(Workspace.id == workspace_id)
@@ -58,7 +74,7 @@ async def list_workspaces(
     owner_id: uuid.UUID,
     skip: int = 0,
     limit: int = 100
-) -> List[WorkspaceResponse]:
+) -> list[WorkspaceResponse]:
     """列出 Workspaces"""
     result = await db.execute(
         select(Workspace)
@@ -89,7 +105,7 @@ async def create_area(
 async def get_area(
     db: AsyncSession,
     area_id: uuid.UUID
-) -> Optional[AreaResponse]:
+) -> AreaResponse | None:
     """获取 Area"""
     result = await db.execute(
         select(Area).filter(Area.id == area_id)
@@ -103,8 +119,8 @@ async def get_area(
 async def list_areas(
     db: AsyncSession,
     workspace_id: uuid.UUID,
-    parent_id: Optional[uuid.UUID] = None
-) -> List[AreaResponse]:
+    parent_id: uuid.UUID | None = None
+) -> list[AreaResponse]:
     """列出 Areas"""
     conditions = [Area.workspace_id == workspace_id]
     if parent_id is not None:
@@ -124,13 +140,13 @@ async def list_areas(
 async def get_area_tree(
     db: AsyncSession,
     workspace_id: uuid.UUID
-) -> List[AreaResponse]:
+) -> list[AreaResponse]:
     """获取 Area 树形结构 (递归查询)"""
     # 先获取所有顶级 Area
     top_areas = await list_areas(db, workspace_id, None)
 
     # 递归加载子 Area
-    async def load_children(area_id: uuid.UUID) -> List[AreaResponse]:
+    async def load_children(area_id: uuid.UUID) -> list[AreaResponse]:
         children = await list_areas(db, workspace_id, area_id)
         for child in children:
             # 这里可以递归加载更深层次,但目前只加载一层
@@ -149,7 +165,7 @@ async def update_area(
     db: AsyncSession,
     area_id: uuid.UUID,
     area_update: dict
-) -> Optional[AreaResponse]:
+) -> AreaResponse | None:
     """更新 Area"""
     result = await db.execute(
         select(Area).filter(Area.id == area_id)
@@ -199,7 +215,7 @@ async def create_project(
 async def get_project(
     db: AsyncSession,
     project_id: uuid.UUID
-) -> Optional[ProjectResponse]:
+) -> ProjectResponse | None:
     """获取 Project"""
     result = await db.execute(
         select(Project).filter(Project.id == project_id)
@@ -213,10 +229,10 @@ async def get_project(
 async def list_projects(
     db: AsyncSession,
     workspace_id: uuid.UUID,
-    area_id: Optional[uuid.UUID] = None,
+    area_id: uuid.UUID | None = None,
     skip: int = 0,
     limit: int = 100
-) -> List[ProjectResponse]:
+) -> list[ProjectResponse]:
     """列出 Projects"""
     conditions = [Project.workspace_id == workspace_id]
     if area_id:
@@ -251,7 +267,7 @@ async def create_item(
 async def get_item(
     db: AsyncSession,
     item_id: uuid.UUID
-) -> Optional[ItemResponse]:
+) -> ItemResponse | None:
     """获取 Item"""
     result = await db.execute(
         select(Item)
@@ -269,7 +285,7 @@ async def update_item(
     db: AsyncSession,
     item_id: uuid.UUID,
     item_update: ItemUpdate
-) -> Optional[ItemResponse]:
+) -> ItemResponse | None:
     """更新 Item"""
     result = await db.execute(
         select(Item).filter(Item.id == item_id)
@@ -304,13 +320,13 @@ async def delete_item(
 async def list_items(
     db: AsyncSession,
     workspace_id: uuid.UUID,
-    type: Optional[ItemType] = None,
-    area_id: Optional[uuid.UUID] = None,
-    project_id: Optional[uuid.UUID] = None,
-    status: Optional[ItemStatus] = None,
+    type: ItemType | None = None,
+    area_id: uuid.UUID | None = None,
+    project_id: uuid.UUID | None = None,
+    status: ItemStatus | None = None,
     skip: int = 0,
     limit: int = 20
-) -> Tuple[List[ItemResponse], int]:
+) -> tuple[list[ItemResponse], int]:
     """列出 Items (带分页)"""
     conditions = [
         Item.workspace_id == workspace_id,
@@ -363,7 +379,7 @@ async def create_task_extension(
 async def get_task_extension(
     db: AsyncSession,
     item_id: uuid.UUID
-) -> Optional[TaskExtensionResponse]:
+) -> TaskExtensionResponse | None:
     """获取 Task Extension"""
     result = await db.execute(
         select(TaskExtension).filter(TaskExtension.item_id == item_id)
@@ -393,7 +409,7 @@ async def create_decision_point(
 async def get_decision_points(
     db: AsyncSession,
     task_id: uuid.UUID
-) -> List[DecisionPointResponse]:
+) -> list[DecisionPointResponse]:
     """获取任务的所有 Decision Points"""
     result = await db.execute(
         select(DecisionPoint)
@@ -408,7 +424,7 @@ async def confirm_decision(
     db: AsyncSession,
     decision_id: uuid.UUID,
     option_id: uuid.UUID
-) -> Optional[DecisionPointResponse]:
+) -> DecisionPointResponse | None:
     """确认决策"""
     result = await db.execute(
         select(DecisionPoint).filter(DecisionPoint.id == decision_id)
@@ -484,7 +500,7 @@ async def create_ledger_event(
 async def get_task_ledger(
     db: AsyncSession,
     task_id: uuid.UUID
-) -> List[LedgerEventResponse]:
+) -> list[LedgerEventResponse]:
     """获取任务的审计日志"""
     result = await db.execute(
         select(LedgerEvent)
@@ -515,7 +531,7 @@ async def get_edges(
     db: AsyncSession,
     node_id: uuid.UUID,
     strong_only: bool = False
-) -> List[GraphEdgeResponse]:
+) -> list[GraphEdgeResponse]:
     """查询节点的所有连接"""
     conditions = or_(
         GraphEdge.from_node_id == node_id,
@@ -537,7 +553,7 @@ async def get_edges(
 async def get_strong_connections(
     db: AsyncSession,
     node_id: uuid.UUID
-) -> List[GraphEdgeResponse]:
+) -> list[GraphEdgeResponse]:
     """仅查询强连接"""
     return await get_edges(db, node_id, strong_only=True)
 

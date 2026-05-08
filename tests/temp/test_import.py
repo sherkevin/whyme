@@ -1,14 +1,16 @@
 """Test if the imported WebIO is correct."""
 
 import sys
+
 sys.path.insert(0, "src")
 
 # Import the module
-from agent_os.capabilities.coding.aider_integration import AiderCoderIntegration
-
 # Initialize it (this will create WebIO)
 import asyncio
 from pathlib import Path
+
+from agent_os.capabilities.coding.aider_integration import AiderCoderIntegration
+
 
 async def test():
     workspace = Path("data/workspaces/import_test")

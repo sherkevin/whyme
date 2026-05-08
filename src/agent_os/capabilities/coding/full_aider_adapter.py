@@ -8,10 +8,8 @@ from __future__ import annotations
 
 import asyncio
 import os
-import tempfile
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
 from typing import Any, Optional
 
 from agent_os.core.interfaces import CodingCapability
@@ -31,7 +29,7 @@ class FullAiderAdapter(CodingCapability):
         sandbox: Any,
         ws_io: WebSocketIO,
         model: str = "gpt-4",
-        editor_model: Optional[str] = None,
+        editor_model: str | None = None,
     ) -> None:
         """Initialize the full Aider adapter.
 
@@ -47,7 +45,7 @@ class FullAiderAdapter(CodingCapability):
         self.editor_model = editor_model or model
 
         # Aider Coder instance (created on first use)
-        self._coder: Optional[Any] = None
+        self._coder: Any | None = None
         self._coder_lock = threading.Lock()
 
         # Thread pool for running Aider operations
@@ -207,7 +205,7 @@ class FullAiderAdapter(CodingCapability):
         """Get Git status of workspace."""
         return await self.sandbox.run_command("git status")
 
-    async def _aider_git_diff(self, file: Optional[str]) -> str:
+    async def _aider_git_diff(self, file: str | None) -> str:
         """Get Git diff."""
         cmd = "git diff"
         if file:
@@ -306,7 +304,7 @@ class AiderCoderFactory:
         output_queue: asyncio.Queue,
         loop: asyncio.AbstractEventLoop,
         model: str = "gpt-4",
-        editor_model: Optional[str] = None,
+        editor_model: str | None = None,
     ) -> FullAiderAdapter:
         """Create a fully configured Aider adapter.
 

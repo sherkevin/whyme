@@ -7,16 +7,15 @@ Provides email sending capabilities with:
 - Structured logging
 """
 
+import logging
 import os
 import smtplib
-import logging
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from typing import Optional, Dict, Any
 from dataclasses import dataclass
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from pathlib import Path
+from typing import Any, Dict, Optional
 
-import aiohttp
 from jinja2 import Template
 
 logger = logging.getLogger(__name__)
@@ -27,9 +26,9 @@ class SMTPConfig:
     """SMTP configuration."""
     host: str
     port: int = 587
-    user: Optional[str] = None
-    password: Optional[str] = None
-    from_email: Optional[str] = None
+    user: str | None = None
+    password: str | None = None
+    from_email: str | None = None
     use_tls: bool = True
 
     @classmethod
@@ -56,15 +55,15 @@ class SMTPConfig:
 class SendResult:
     """Result of email send operation."""
     success: bool
-    message_id: Optional[str] = None
-    error: Optional[str] = None
+    message_id: str | None = None
+    error: str | None = None
     retry_count: int = 0
 
 
 class Mailer:
     """Email sending service with SMTP support."""
 
-    def __init__(self, config: Optional[SMTPConfig] = None):
+    def __init__(self, config: SMTPConfig | None = None):
         """Initialize mailer with SMTP configuration.
 
         Args:
@@ -72,7 +71,7 @@ class Mailer:
         """
         self.config = config or SMTPConfig.from_env()
         self.config.validate()
-        self._template_cache: Dict[str, Template] = {}
+        self._template_cache: dict[str, Template] = {}
 
     def send_text(
         self,
@@ -147,7 +146,7 @@ class Mailer:
         to: str,
         subject: str,
         template_name: str,
-        context: Dict[str, Any],
+        context: dict[str, Any],
         retry_count: int = 0
     ) -> SendResult:
         """Send email from Jinja2 template.
@@ -169,7 +168,7 @@ class Mailer:
                 if not template_path.exists():
                     raise FileNotFoundError(f"Template not found: {template_name}")
 
-                with open(template_path, "r", encoding="utf-8") as f:
+                with open(template_path, encoding="utf-8") as f:
                     self._template_cache[template_name] = Template(f.read())
 
             template = self._template_cache[template_name]
@@ -267,7 +266,7 @@ class Mailer:
 
 
 # Global mailer instance
-_mailer: Optional[Mailer] = None
+_mailer: Mailer | None = None
 
 
 def get_mailer() -> Mailer:

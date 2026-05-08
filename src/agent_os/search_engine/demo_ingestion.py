@@ -11,15 +11,15 @@ This demo shows:
 import asyncio
 import uuid
 from pathlib import Path
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
-from agent_os.search_engine.content_fetcher import ContentFetcher
-from agent_os.search_engine.text_chunker import TextChunker
-from agent_os.search_engine.ingestion_pipeline import IngestionService
-from agent_os.search_engine.search_service import SearchService
-from agent_os.search_engine.search_engine import SearchEngine, SearchQuery
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from agent_os.db.base import Base
-
+from agent_os.search_engine.content_fetcher import ContentFetcher
+from agent_os.search_engine.ingestion_pipeline import IngestionService
+from agent_os.search_engine.search_engine import SearchEngine, SearchQuery
+from agent_os.search_engine.search_service import SearchService
+from agent_os.search_engine.text_chunker import TextChunker
 
 # Create async engine for demo
 DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -286,16 +286,16 @@ Final thoughts and summary of the document.
 
         # Search index stats
         stats = await search_service.get_index_stats()
-        print(f"\n  Search Index Statistics:")
+        print("\n  Search Index Statistics:")
         print(f"    Total indices: {stats['total']}")
-        print(f"    By type:")
+        print("    By type:")
         for item_type, count in stats['by_type'].items():
             print(f"      - {item_type}: {count}")
 
         # Chunk statistics
         if chunks:
             chunk_result = chunker.chunk_text(sample_content)
-            print(f"\n  Chunking Statistics:")
+            print("\n  Chunking Statistics:")
             print(f"    Original length: {len(sample_content)} chars")
             print(f"    Number of chunks: {len(chunk_result)}")
             avg_size = sum(len(c) for c in chunk_result) / len(chunk_result)

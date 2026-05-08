@@ -6,10 +6,9 @@ by the coding agent for version control tasks.
 
 from __future__ import annotations
 
-import os
 import subprocess
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 
 class GitOperationError(Exception):
@@ -45,7 +44,7 @@ class GitWrapper:
                 "Please install Git to use version control features."
             ) from e
 
-    def _run_git(self, args: List[str], capture: bool = True) -> subprocess.CompletedProcess:
+    def _run_git(self, args: list[str], capture: bool = True) -> subprocess.CompletedProcess:
         """Run a git command in the workspace.
 
         Args:
@@ -96,7 +95,7 @@ class GitWrapper:
         result = self._run_git(["init"])
         return f"Initialized empty Git repository: {result.stdout.strip()}"
 
-    def status(self) -> Dict[str, Any]:
+    def status(self) -> dict[str, Any]:
         """Get repository status.
 
         Returns:
@@ -146,7 +145,7 @@ class GitWrapper:
             "untracked": untracked,
         }
 
-    def add(self, files: List[str] | str = ".") -> str:
+    def add(self, files: list[str] | str = ".") -> str:
         """Stage files for commit.
 
         Args:
@@ -195,7 +194,7 @@ class GitWrapper:
 
         return f"Committed: {commit_sha}"
 
-    def get_diff(self, cached: bool = False, file: Optional[str] = None) -> str:
+    def get_diff(self, cached: bool = False, file: str | None = None) -> str:
         """Get git diff.
 
         Args:
@@ -217,7 +216,7 @@ class GitWrapper:
         result = self._run_git(args)
         return result.stdout
 
-    def log(self, max_count: int = 10) -> List[Dict[str, str]]:
+    def log(self, max_count: int = 10) -> list[dict[str, str]]:
         """Get commit history.
 
         Args:
@@ -296,7 +295,7 @@ class GitWrapper:
         self._run_git(["checkout", branch_or_sha])
         return f"Checked out '{branch_or_sha}'"
 
-    def branch(self) -> List[str]:
+    def branch(self) -> list[str]:
         """List all branches.
 
         Returns:
@@ -324,7 +323,7 @@ class GitWrapper:
         except GitOperationError:
             return False
 
-    def get_changed_files(self) -> List[str]:
+    def get_changed_files(self) -> list[str]:
         """Get list of changed (modified) files.
 
         Returns:
@@ -355,7 +354,7 @@ class GitWrapper:
         self._run_git(["checkout", "--", filepath])
         return f"Reset '{filepath}' to last commit"
 
-    def clone(self, url: str, destination: Optional[str] = None) -> str:
+    def clone(self, url: str, destination: str | None = None) -> str:
         """Clone a repository.
 
         Args:

@@ -5,15 +5,38 @@ import tarfile
 from io import BytesIO
 from typing import Optional, cast
 
-import docker
-from docker.models.containers import Container
+# PRD10 production images and tests don't need the legacy DockerSandbox; we
+# make the upstream `docker` SDK optional so `import agent_os.server.app`
+# keeps working in environments where the SDK was intentionally omitted
+# from the wheel set (e.g. our Dockerfile.prd10). Calls into DockerSandbox
+# raise a clear ImportError lazily when actually used.
+try:
+    import docker  # type: ignore[import-not-found]
+    from docker.models.containers import Container  # type: ignore[import-not-found]
+
+    _DOCKER_SDK_AVAILABLE = True
+    _DOCKER_IMPORT_ERROR: Exception | None = None
+except Exception as _docker_import_error:  # noqa: BLE001
+    docker = None  # type: ignore[assignment]
+    Container = object  # type: ignore[assignment, misc]
+    _DOCKER_SDK_AVAILABLE = False
+    _DOCKER_IMPORT_ERROR = _docker_import_error
 
 from agent_os.core.interfaces import ExecutionEnvironment
 from agent_os.server.security import (
+    sanitize_path,
     validate_command,
     validate_file_size,
-    sanitize_path,
 )
+
+
+def _require_docker_sdk() -> None:
+    if not _DOCKER_SDK_AVAILABLE:
+        raise ImportError(
+            "The 'docker' Python SDK is required to use DockerSandbox. "
+            "Install with `pip install docker>=7.0`. "
+            f"Original import error: {_DOCKER_IMPORT_ERROR}"
+        )
 
 
 class DockerSandbox(ExecutionEnvironment):
@@ -26,14 +49,15 @@ class DockerSandbox(ExecutionEnvironment):
         network_disabled: bool = False,
         read_only: bool = False
     ) -> None:
+        _require_docker_sdk()
         self.image = image
         self.workspace = workspace
         self.memory_limit = memory_limit
         self.cpu_quota = cpu_quota
         self.network_disabled = network_disabled
         self.read_only = read_only
-        self._client: Optional[docker.DockerClient] = None
-        self._container: Optional[Container] = None
+        self._client: docker.DockerClient | None = None
+        self._container: Container | None = None
 
     def _require_container(self) -> Container:
         if self._container is None:

@@ -7,14 +7,15 @@ This module provides functionality for:
 - Automatic embedding generation
 """
 
-import uuid
 import logging
-from typing import Dict, List, Optional, Any, Union
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+import uuid
+from typing import Any, Dict, List, Optional, Union
 
-from agent_os.search_engine.models import SearchIndex
+from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from agent_os.search_engine.embedding_service import get_embedding_service
+from agent_os.search_engine.models import SearchIndex
 
 logger = logging.getLogger(__name__)
 
@@ -40,12 +41,12 @@ class SearchService:
     async def index_item(
         self,
         item_type: str,
-        item_id: Union[str, uuid.UUID],
+        item_id: str | uuid.UUID,
         title: str,
         content: str = None,
-        tags: List[str] = None,
-        search_metadata: Dict[str, Any] = None,
-        embedding: List[float] = None,
+        tags: list[str] = None,
+        search_metadata: dict[str, Any] = None,
+        embedding: list[float] = None,
         generate_embedding: bool = None
     ) -> SearchIndex:
         """Create or update a search index entry.
@@ -128,8 +129,8 @@ class SearchService:
     async def get_index(
         self,
         item_type: str,
-        item_id: Union[str, uuid.UUID]
-    ) -> Optional[SearchIndex]:
+        item_id: str | uuid.UUID
+    ) -> SearchIndex | None:
         """Get a search index by item type and ID.
 
         Args:
@@ -158,7 +159,7 @@ class SearchService:
     async def delete_index(
         self,
         item_type: str,
-        item_id: Union[str, uuid.UUID]
+        item_id: str | uuid.UUID
     ) -> bool:
         """Delete a search index.
 
@@ -196,7 +197,7 @@ class SearchService:
 
     async def bulk_index_items(
         self,
-        items: List[Dict[str, Any]]
+        items: list[dict[str, Any]]
     ) -> int:
         """Create or update multiple search indices in bulk.
 
@@ -238,7 +239,7 @@ class SearchService:
 
     async def rebuild_index(
         self,
-        item_type: Optional[str] = None
+        item_type: str | None = None
     ) -> int:
         """Rebuild search index from source data.
 
@@ -280,10 +281,10 @@ class SearchService:
 
     async def list_indices(
         self,
-        item_type: Optional[str] = None,
+        item_type: str | None = None,
         limit: int = 100,
         offset: int = 0
-    ) -> List[SearchIndex]:
+    ) -> list[SearchIndex]:
         """List search indices with optional filtering.
 
         Args:
@@ -307,8 +308,8 @@ class SearchService:
 
     async def get_index_stats(
         self,
-        item_type: Optional[str] = None
-    ) -> Dict[str, Any]:
+        item_type: str | None = None
+    ) -> dict[str, Any]:
         """Get statistics about search indices.
 
         Args:

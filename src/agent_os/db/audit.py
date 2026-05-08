@@ -7,10 +7,9 @@ Tracks all data access and modifications for:
 - User activity analytics
 """
 
-from datetime import datetime, timezone
-from typing import Optional, Dict, Any
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON, CheckConstraint, Index
-from sqlalchemy.orm import relationship
+from typing import Any, Dict, Optional
+
+from sqlalchemy import JSON, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
 
@@ -101,15 +100,15 @@ class AuditLogger:
         self,
         db: AsyncSession,
         organization_id: int,
-        user_id: Optional[int],
+        user_id: int | None,
         table_name: str,
         record_id: int,
-        new_values: Dict[str, Any],
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        request_id: Optional[str] = None,
+        new_values: dict[str, Any],
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        request_id: str | None = None,
         status: str = "success",
-        error_message: Optional[str] = None,
+        error_message: str | None = None,
     ):
         """Log a create operation."""
         log_entry = AuditLog(
@@ -131,12 +130,12 @@ class AuditLogger:
         self,
         db: AsyncSession,
         organization_id: int,
-        user_id: Optional[int],
+        user_id: int | None,
         table_name: str,
-        record_id: Optional[int] = None,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        request_id: Optional[str] = None,
+        record_id: int | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        request_id: str | None = None,
     ):
         """Log a read operation."""
         log_entry = AuditLog(
@@ -156,16 +155,16 @@ class AuditLogger:
         self,
         db: AsyncSession,
         organization_id: int,
-        user_id: Optional[int],
+        user_id: int | None,
         table_name: str,
         record_id: int,
-        old_values: Dict[str, Any],
-        new_values: Dict[str, Any],
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        request_id: Optional[str] = None,
+        old_values: dict[str, Any],
+        new_values: dict[str, Any],
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        request_id: str | None = None,
         status: str = "success",
-        error_message: Optional[str] = None,
+        error_message: str | None = None,
     ):
         """Log an update operation."""
         log_entry = AuditLog(
@@ -188,15 +187,15 @@ class AuditLogger:
         self,
         db: AsyncSession,
         organization_id: int,
-        user_id: Optional[int],
+        user_id: int | None,
         table_name: str,
         record_id: int,
-        old_values: Dict[str, Any],
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        request_id: Optional[str] = None,
+        old_values: dict[str, Any],
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        request_id: str | None = None,
         status: str = "success",
-        error_message: Optional[str] = None,
+        error_message: str | None = None,
     ):
         """Log a delete operation."""
         log_entry = AuditLog(
@@ -218,13 +217,13 @@ class AuditLogger:
         self,
         db: AsyncSession,
         organization_id: int,
-        user_id: Optional[int],
+        user_id: int | None,
         table_name: str,
         action: str,
         error_message: str,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        request_id: Optional[str] = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        request_id: str | None = None,
     ):
         """Log a failed operation."""
         log_entry = AuditLog(
@@ -250,13 +249,14 @@ audit_logger = AuditLogger()
 # ============================================================================
 
 from fastapi import Request
+
 from agent_os.auth.models import User
 
 
 async def get_audit_context(
     request: Request,
     current_user: User
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Extract audit context from FastAPI request.
 
     Returns dict with:

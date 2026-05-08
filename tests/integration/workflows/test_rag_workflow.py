@@ -1,12 +1,13 @@
 """Test RAG interface and providers."""
 
+from unittest.mock import AsyncMock, Mock
+
 import pytest
-from unittest.mock import Mock, AsyncMock
+
 from agent_os.knowledge.rag_interface import (
-    RAGProvider,
-    SearchResult,
     KnowledgeContext,
     MockRAGProvider,
+    SearchResult,
 )
 from agent_os.knowledge.rag_provider import CardRAGProvider, get_rag_provider
 

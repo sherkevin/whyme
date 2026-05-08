@@ -7,8 +7,8 @@ This module provides database routing for multi-tenant architecture:
 
 import os
 from typing import Dict, Optional
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.pool import NullPool
+
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from agent_os.core.config import load_config
 
@@ -25,8 +25,8 @@ class DatabaseRouter:
         self.config = load_config("config.yaml")
         self.shared_engine = None
         self.shared_session_factory = None
-        self.tenant_engines: Dict[int, object] = {}
-        self.tenant_session_factories: Dict[int, object] = {}
+        self.tenant_engines: dict[int, object] = {}
+        self.tenant_session_factories: dict[int, object] = {}
 
     def _get_shared_engine(self):
         """Get or create shared database engine."""
@@ -78,7 +78,7 @@ class DatabaseRouter:
 
         return self.tenant_engines[organization_id]
 
-    async def get_session(self, organization_id: Optional[int] = None) -> AsyncSession:
+    async def get_session(self, organization_id: int | None = None) -> AsyncSession:
         """Get database session for organization.
 
         Args:
@@ -146,7 +146,7 @@ class DatabaseRouter:
 db_router = DatabaseRouter()
 
 
-async def get_db_session(organization_id: Optional[int] = None) -> AsyncSession:
+async def get_db_session(organization_id: int | None = None) -> AsyncSession:
     """FastAPI dependency for getting database session.
 
     Args:

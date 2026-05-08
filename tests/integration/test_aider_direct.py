@@ -1,12 +1,15 @@
 """Direct test of aider"""
-import sys
 import os
+import sys
+
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
 os.environ["AGENTOS_SANDBOX"] = "local"
 
-from agent_os.capabilities.coding.aider_integration import AiderCoderIntegration
 from pathlib import Path
+
+from agent_os.capabilities.coding.aider_integration import AiderCoderIntegration
+
 
 async def test():
     workspace = Path("./data/workspaces/my_first_project_b9bffa2c")

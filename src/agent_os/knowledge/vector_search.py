@@ -1,12 +1,13 @@
 """Vector similarity search for knowledge cards."""
 
 import logging
-from typing import List, Optional, Tuple
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, text
+from typing import List, Optional
 
+from sqlalchemy import and_, select, text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from agent_os.knowledge.embeddings import EmbeddingService
 from agent_os.knowledge.models import Card
-from agent_os.knowledge.embeddings import EmbeddingService, generate_embedding_for_card
 from agent_os.knowledge.rag_interface import SearchResult
 
 logger = logging.getLogger(__name__)
@@ -24,11 +25,11 @@ class VectorSearchService:
         db: AsyncSession,
         *,
         user_id: int,
-        query_embedding: List[float],
+        query_embedding: list[float],
         limit: int = 10,
-        para_type_filter: Optional[str] = None,
+        para_type_filter: str | None = None,
         similarity_threshold: float = 0.5,
-    ) -> List[SearchResult]:
+    ) -> list[SearchResult]:
         """Search cards by vector similarity.
 
         Args:
@@ -75,11 +76,11 @@ class VectorSearchService:
         db: AsyncSession,
         *,
         user_id: int,
-        query_embedding: List[float],
+        query_embedding: list[float],
         limit: int,
-        para_type_filter: Optional[str],
+        para_type_filter: str | None,
         similarity_threshold: float,
-    ) -> List[SearchResult]:
+    ) -> list[SearchResult]:
         """Perform search using pgvector cosine similarity.
 
         Args:
@@ -154,8 +155,8 @@ class VectorSearchService:
         user_id: int,
         query: str,  # Note: This is actually embedding, used as placeholder
         limit: int,
-        para_type_filter: Optional[str],
-    ) -> List[SearchResult]:
+        para_type_filter: str | None,
+    ) -> list[SearchResult]:
         """Fallback search when pgvector is not available.
 
         Uses basic text matching and computes similarity in Python.
@@ -208,7 +209,7 @@ class VectorSearchService:
         card_id: int,
         user_id: int,
         limit: int = 5,
-    ) -> List[SearchResult]:
+    ) -> list[SearchResult]:
         """Find similar cards to a given card.
 
         Args:
@@ -261,8 +262,8 @@ async def search_cards_by_text(
     user_id: int,
     query_text: str,
     limit: int = 10,
-    para_type_filter: Optional[str] = None,
-) -> List[SearchResult]:
+    para_type_filter: str | None = None,
+) -> list[SearchResult]:
     """Search cards by text query using vector similarity.
 
     Args:

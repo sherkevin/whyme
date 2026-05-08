@@ -3,25 +3,36 @@
 Tests B-03B and B-03C: Verification code generation and validation.
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock
-from time import sleep
 
 from agent_os.auth.verification import (
-    VerificationService,
-    RateLimitError,
-    InvalidCodeError,
     ExpiredCodeError,
-    TooManyAttemptsError,
+    InvalidCodeError,
     LockedError,
-    get_verification_service
+    RateLimitError,
+    TooManyAttemptsError,
+    VerificationService,
+    get_verification_service,
 )
 
 
 @pytest.fixture
 def redis():
-    """Create mock Redis client."""
-    return MagicMock()
+    """Create mock Redis client.
+
+    The default ``MagicMock`` returns truthy ``MagicMock`` objects for every
+    attribute access, which makes ``redis.exists(lock_key)`` accidentally
+    look like a locked account inside ``check_locked``. We seed sensible
+    defaults so individual tests only need to override the redis behavior
+    they actually care about.
+    """
+    mock = MagicMock()
+    mock.exists.return_value = False
+    mock.get.return_value = None
+    mock.incr.return_value = 1
+    return mock
 
 
 @pytest.fixture
@@ -296,9 +307,15 @@ class TestVerificationServiceOneTimeUse:
 
 
 class TestGetVerificationService:
-    """Test verification service factory."""
+    """Test verification service factory.
 
-    @patch('agent_os.auth.verification.get_redis')
+    The factory does ``from agent_os.db.cache import get_redis`` lazily, so
+    the patch target must follow that import path rather than the legacy
+    ``agent_os.auth.verification.get_redis`` (which never existed as a
+    module attribute).
+    """
+
+    @patch('agent_os.db.cache.get_redis')
     def test_returns_service(self, mock_get_redis):
         """Test factory returns VerificationService."""
         mock_redis = MagicMock()
@@ -309,7 +326,7 @@ class TestGetVerificationService:
         assert service is not None
         assert isinstance(service, VerificationService)
 
-    @patch('agent_os.auth.verification.get_redis')
+    @patch('agent_os.db.cache.get_redis')
     def test_returns_none_on_error(self, mock_get_redis):
         """Test factory returns None on error."""
         mock_get_redis.side_effect = Exception("Redis error")

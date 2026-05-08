@@ -8,18 +8,18 @@ This demo shows:
 """
 
 import asyncio
-import uuid
 import tempfile
+import uuid
 from pathlib import Path
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
-from agent_os.search_engine.content_fetcher import ContentFetcher
-from agent_os.search_engine.text_chunker import TextChunker
-from agent_os.search_engine.ingestion_pipeline import IngestionService
-from agent_os.search_engine.search_service import SearchService
-from agent_os.search_engine.search_engine import SearchEngine, SearchQuery
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from agent_os.db.base import Base
-
+from agent_os.search_engine.content_fetcher import ContentFetcher
+from agent_os.search_engine.ingestion_pipeline import IngestionService
+from agent_os.search_engine.search_engine import SearchEngine, SearchQuery
+from agent_os.search_engine.search_service import SearchService
+from agent_os.search_engine.text_chunker import TextChunker
 
 # Create async engine for demo
 DATABASE_URL = "sqlite+aiosqlite:///:memory:"

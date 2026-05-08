@@ -3,10 +3,10 @@
 This module verifies that the current implementation meets all Stage 1 acceptance criteria.
 """
 
-import pytest
-import os
 import uuid
 from pathlib import Path
+
+import pytest
 
 # ============================================================================
 # Project Engineering Structure Verification
@@ -79,11 +79,10 @@ def test_jwt_implementation():
     """验证 JWT 登录机制已实现"""
     # 检查 JWT 相关导入
     from agent_os.auth.security import (
-        create_access_token,
-        create_refresh_token,
-        decode_token,
+        ALGORITHM,
         SECRET_KEY,
-        ALGORITHM
+        create_access_token,
+        decode_token,
     )
 
     # 验证基本功能
@@ -120,7 +119,7 @@ def test_user_model_exists():
 
 def test_user_data_isolation():
     """验证用户数据隔离"""
-    from agent_os.items.models import Workspace, Item
+    from agent_os.items.models import Item, Workspace
 
     # 检查 Workspace 模型是否有所有者字段用于隔离
     assert hasattr(Workspace, "owner_id"), "Workspace should have owner_id for isolation"
@@ -208,8 +207,6 @@ def test_today_api_endpoint_exists():
     # 检查是否有路由文件定义了 /today 端点
     # 这需要检查所有路由文件
 
-    import importlib.util
-    import sys
     from pathlib import Path
 
     project_root = Path("/root/whyme/src")
@@ -238,9 +235,8 @@ def test_today_api_endpoint_exists():
 
 def test_database_schema():
     """验证数据库 Schema 定义"""
-    from agent_os.db.base import Base
-    from agent_os.items.models import Workspace, Area, Project, Item
     from agent_os.auth.models import User
+    from agent_os.items.models import Item, Workspace
 
     # 验证核心模型已定义并继承 Base
     assert hasattr(Workspace, '__tablename__'), "Workspace should have __tablename__"
@@ -304,8 +300,6 @@ def test_no_agent_auto_execution():
     # 这个测试检查项目是否专注于基础能力
     # 而不是 Agent 决策或自动执行
 
-    from agent_os.auth.models import User, Role
-    from agent_os.items.models import Item
 
     # 验证我们有基础的数据模型
     # 而不是复杂的 Agent 执行逻辑

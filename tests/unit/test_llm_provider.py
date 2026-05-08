@@ -14,7 +14,7 @@ class TestLiteLLMProvider:
         """Test initialization with default values."""
         provider = LiteLLMProvider()
 
-        assert provider.model == "openai/gpt-4o-mini"
+        assert provider.model == os.getenv("MODEL", "deepseek-v4-flash")
         assert provider.temperature == 0.7
         assert provider.max_tokens == 4096
 
@@ -58,13 +58,14 @@ class TestLiteLLMProvider:
         assert provider.api_base == "https://api.example.com/v1"
 
     @pytest.mark.asyncio
-    async def test_complete_missing_api_key(self) -> None:
+    async def test_complete_missing_api_key(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test completion fails without API key."""
         # Ensure no API key is set
+        monkeypatch.delenv("API_KEY", raising=False)
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        monkeypatch.delenv("LITELLM_API_KEY", raising=False)
+        monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
         provider = LiteLLMProvider(api_key=None)
-        os.environ.pop("API_KEY", None)
-        os.environ.pop("OPENAI_API_KEY", None)
-        os.environ.pop("LITELLM_API_KEY", None)
 
         with pytest.raises(Exception):
             await provider.complete(
@@ -95,10 +96,10 @@ class TestLiteLLMProvider:
         assert "usage" in response
         assert len(response["content"]) > 0
 
-    def test_normalize_api_base_none(self) -> None:
-        """Test normalization with None."""
+    def test_api_base_none_uses_environment_default(self) -> None:
+        """Test None falls back to configured environment base URL."""
         provider = LiteLLMProvider(api_base=None)
-        assert provider.api_base is None
+        assert provider.api_base == os.getenv("BASE_URL")
 
     def test_normalize_api_base_trailing_slash(self) -> None:
         """Test normalization removes trailing slash."""

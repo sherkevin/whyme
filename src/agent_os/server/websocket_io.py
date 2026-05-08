@@ -75,9 +75,9 @@ class WebSocketIO(InputOutput):
             # Wait for it to complete with reasonable timeout
             # Increased timeout to handle busy event loops
             future.result(timeout=5.0)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # Event loop is busy - log and continue
-            print(f"[WebSocketIO] Warning: Event loop timeout when sending event")
+            print("[WebSocketIO] Warning: Event loop timeout when sending event")
             # Don't fail - the event might still be queued
         except Exception as e:
             # If we can't send to the queue, log it but don't crash
@@ -319,8 +319,8 @@ class WebSocketIO(InputOutput):
         Returns:
             True if user approved, False if rejected
         """
-        import uuid
         import difflib
+        import uuid
 
         # Generate unique diff ID
         diff_id = str(uuid.uuid4())
@@ -465,8 +465,8 @@ class AiderExecutor:
         self.sandbox = sandbox
         self._output_queue = output_queue
         self._loop = loop
-        self._ws_io: Optional[WebSocketIO] = None
-        self._thread: Optional[threading.Thread] = None
+        self._ws_io: WebSocketIO | None = None
+        self._thread: threading.Thread | None = None
         self._stop_event = threading.Event()
         self._ready_event = threading.Event()
 

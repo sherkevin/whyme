@@ -1,24 +1,23 @@
 """Connection API Router - Cognitive Graph Endpoints."""
 
-import uuid
 import logging
-from typing import List
-from sqlalchemy.ext.asyncio import AsyncSession
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_os.connections.engine import ConnectionEngine
 from agent_os.connections import crud
+from agent_os.connections.engine import ConnectionEngine
 from agent_os.connections.schema import (
     ConnectionList,
     ConnectionStats,
     GraphData,
     RecalculateRequest,
-    RecalculateResponse
+    RecalculateResponse,
 )
-from agent_os.items.models import Item
 from agent_os.db.base import get_db
-from sqlalchemy import select, and_
+from agent_os.items.models import Item
 
 logger = logging.getLogger(__name__)
 

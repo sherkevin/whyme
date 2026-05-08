@@ -1,16 +1,12 @@
 """Unit tests for Stage 4 Ingestion modules."""
 
-import pytest
 import uuid
-from datetime import datetime
-from pathlib import Path
-from sqlalchemy import select
+
+import pytest
 
 from agent_os.search_engine.content_fetcher import ContentFetcher
-from agent_os.search_engine.text_chunker import TextChunker, ChunkResult
 from agent_os.search_engine.ingestion_pipeline import IngestionService
-from agent_os.search_engine.models import IngestionJob
-
+from agent_os.search_engine.text_chunker import ChunkResult, TextChunker
 
 # =============================================================================
 # ContentFetcher Tests

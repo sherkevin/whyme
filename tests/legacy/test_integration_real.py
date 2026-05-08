@@ -18,7 +18,6 @@ async def test_security_validation():
     from agent_os.server.security import (
         SecurityValidator,
         sanitize_path,
-        validate_filename,
         validate_command,
     )
 
@@ -84,15 +83,16 @@ async def test_git_operations():
     """Test Git wrapper operations."""
     print("\n=== Test 3: Git Operations ===")
 
-    from agent_os.capabilities.vcs.git import GitWrapper, GitOperationError
     import tempfile
+
+    from agent_os.capabilities.vcs.git import GitOperationError, GitWrapper
 
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
             git = GitWrapper(tmpdir)
 
             # Check if git is available
-            print(f"[OK] GitWrapper initialized")
+            print("[OK] GitWrapper initialized")
 
             # Initialize repo
             msg = git.init()
@@ -117,7 +117,7 @@ async def test_git_operations():
             # Get log
             log = git.log(max_count=1)
             if log and log[0]["message"] == "Test commit":
-                print(f"[OK] Commit log retrieved correctly")
+                print("[OK] Commit log retrieved correctly")
             else:
                 print(f"[FAIL] Commit log incorrect: {log}")
                 return False
@@ -126,7 +126,7 @@ async def test_git_operations():
             test_file.write_text("Hello, Modified Git!")
             diff = git.get_diff()
             if "Modified" in diff or "+Hello, Modified" in diff:
-                print(f"[OK] Diff generated correctly")
+                print("[OK] Diff generated correctly")
             else:
                 print(f"[WARN]  Diff might be empty: {diff[:100]}")
 
@@ -147,9 +147,10 @@ async def test_mem0_provider():
     print("\n=== Test 4: Mem0Provider ===")
 
     try:
-        from agent_os.memory.mem0_impl import Mem0Provider
-        from agent_os.core.types import RuntimeContext
         import tempfile
+
+        from agent_os.core.types import RuntimeContext
+        from agent_os.memory.mem0_impl import Mem0Provider
 
         print("[INFO]  Note: Mem0 tests require sentence-transformers")
         print("[INFO]  Testing index rebuilding logic only...")
@@ -161,7 +162,7 @@ async def test_mem0_provider():
                 embedding_dim=384,
             )
 
-            print(f"[OK] Mem0Provider initialized")
+            print("[OK] Mem0Provider initialized")
 
             # Test optimize_index (doesn't require embeddings)
             stats = await provider.optimize_index()
@@ -184,14 +185,15 @@ async def test_sandbox_security():
     print("\n=== Test 5: Sandbox Security ===")
 
     try:
-        from agent_os.sandbox.local_impl import LocalSandbox
         import tempfile
+
+        from agent_os.sandbox.local_impl import LocalSandbox
 
         with tempfile.TemporaryDirectory() as tmpdir:
             sandbox = LocalSandbox(workspace=tmpdir)
             await sandbox.start()
 
-            print(f"[OK] LocalSandbox initialized")
+            print("[OK] LocalSandbox initialized")
 
             # Test file size validation
             try:

@@ -1,9 +1,9 @@
 """Pydantic schemas for Task management."""
 
 from datetime import date, datetime
-from typing import Optional, List
-from pydantic import BaseModel, Field, field_validator
+from typing import List, Optional
 
+from pydantic import BaseModel, Field
 
 # =============================================================================
 # Task Schemas
@@ -13,12 +13,12 @@ class TaskBase(BaseModel):
     """Base task schema with common fields."""
 
     title: str = Field(..., min_length=1, max_length=200, description="Task title")
-    description: Optional[str] = Field(None, description="Task description")
+    description: str | None = Field(None, description="Task description")
     type: str = Field("task", pattern="^(task|habit|goal)$", description="Task type")
     source: str = Field("manual", pattern="^(manual|ai_generated|recurring)$", description="Task source")
     status: str = Field("pending", pattern="^(pending|in_progress|completed)$", description="Task status")
     priority: int = Field(5, ge=1, le=10, description="Task priority (1-10)")
-    scheduled_date: Optional[date] = Field(None, description="Scheduled date for the task")
+    scheduled_date: date | None = Field(None, description="Scheduled date for the task")
 
 
 class TaskCreate(TaskBase):
@@ -30,14 +30,14 @@ class TaskCreate(TaskBase):
 class TaskUpdate(BaseModel):
     """Schema for updating a task."""
 
-    title: Optional[str] = Field(None, min_length=1, max_length=200)
-    description: Optional[str] = None
-    type: Optional[str] = Field(None, pattern="^(task|habit|goal)$")
-    source: Optional[str] = Field(None, pattern="^(manual|ai_generated|recurring)$")
-    status: Optional[str] = Field(None, pattern="^(pending|in_progress|completed)$")
-    priority: Optional[int] = Field(None, ge=1, le=10)
-    scheduled_date: Optional[date] = None
-    completed_at: Optional[datetime] = None
+    title: str | None = Field(None, min_length=1, max_length=200)
+    description: str | None = None
+    type: str | None = Field(None, pattern="^(task|habit|goal)$")
+    source: str | None = Field(None, pattern="^(manual|ai_generated|recurring)$")
+    status: str | None = Field(None, pattern="^(pending|in_progress|completed)$")
+    priority: int | None = Field(None, ge=1, le=10)
+    scheduled_date: date | None = None
+    completed_at: datetime | None = None
 
 
 class TaskResponse(TaskBase):
@@ -45,7 +45,7 @@ class TaskResponse(TaskBase):
 
     id: int
     user_id: int
-    completed_at: Optional[datetime] = None
+    completed_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -56,7 +56,7 @@ class TaskResponse(TaskBase):
 class TaskList(BaseModel):
     """Schema for task list response with pagination."""
 
-    items: List[TaskResponse]
+    items: list[TaskResponse]
     total: int
     page: int = 1
     page_size: int = 20
@@ -66,7 +66,7 @@ class TaskStatusUpdate(BaseModel):
     """Schema for updating task status."""
 
     status: str = Field(..., pattern="^(pending|in_progress|completed)$")
-    completed_at: Optional[datetime] = None
+    completed_at: datetime | None = None
 
 
 # =============================================================================
@@ -88,21 +88,21 @@ class TodayTasksResponse(BaseModel):
     """Schema for today's tasks aggregation response."""
 
     date: date
-    tasks: List[TaskResponse]
+    tasks: list[TaskResponse]
     stats: TaskStats
-    knowledge_context: Optional[dict] = None  # Context from knowledge base
+    knowledge_context: dict | None = None  # Context from knowledge base
 
 
 class TaskBatchCreate(BaseModel):
     """Schema for batch creating tasks."""
 
-    tasks: List[TaskCreate] = Field(..., min_length=1, max_length=50)
+    tasks: list[TaskCreate] = Field(..., min_length=1, max_length=50)
 
 
 class TaskBatchUpdate(BaseModel):
     """Schema for batch updating tasks."""
 
-    task_ids: List[int] = Field(..., min_length=1, max_length=50)
+    task_ids: list[int] = Field(..., min_length=1, max_length=50)
     updates: TaskUpdate
 
 
@@ -113,11 +113,11 @@ class TaskBatchUpdate(BaseModel):
 class TaskQueryParams(BaseModel):
     """Schema for task query parameters."""
 
-    status: Optional[str] = Field(None, pattern="^(pending|in_progress|completed)$")
-    type: Optional[str] = Field(None, pattern="^(task|habit|goal)$")
-    priority_min: Optional[int] = Field(None, ge=1, le=10)
-    priority_max: Optional[int] = Field(None, ge=1, le=10)
-    date_from: Optional[date] = None
-    date_to: Optional[date] = None
+    status: str | None = Field(None, pattern="^(pending|in_progress|completed)$")
+    type: str | None = Field(None, pattern="^(task|habit|goal)$")
+    priority_min: int | None = Field(None, ge=1, le=10)
+    priority_max: int | None = Field(None, ge=1, le=10)
+    date_from: date | None = None
+    date_to: date | None = None
     sort_by: str = Field("created_at", pattern="^(created_at|updated_at|scheduled_date|priority|completed_at)$")
     sort_order: str = Field("desc", pattern="^(asc|desc)$")

@@ -3,11 +3,13 @@
 Monitoring, logging, and performance tracking.
 """
 
-import uuid
-import time
 import logging
-from typing import Optional, Dict, Any, Callable
+import time
+import uuid
+from collections.abc import Callable
 from contextlib import contextmanager
+from typing import Any, Dict, Optional
+
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -47,7 +49,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 
         # 记录日志
         logger.info(
-            f"Request completed",
+            "Request completed",
             extra={
                 "request_id": request_id,
                 "method": request.method,
@@ -146,7 +148,7 @@ class PerformanceMetrics:
         if status_code >= 400:
             stats["errors"] += 1
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """获取统计信息"""
         if not self.response_times:
             return {
@@ -261,7 +263,7 @@ def configure_logging(
 # Decorators for Monitoring
 # ============================================================================
 
-def monitor_performance(func_name: Optional[str] = None):
+def monitor_performance(func_name: str | None = None):
     """
     性能监控装饰器
 
@@ -326,7 +328,7 @@ class HealthChecker:
     def register_check(
         self,
         name: str,
-        check_func: Callable[[], Dict[str, Any]]
+        check_func: Callable[[], dict[str, Any]]
     ):
         """
         注册健康检查
@@ -337,7 +339,7 @@ class HealthChecker:
         """
         self.checks[name] = check_func
 
-    async def check_health(self) -> Dict[str, Any]:
+    async def check_health(self) -> dict[str, Any]:
         """
         执行所有健康检查
 

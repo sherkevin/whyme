@@ -1,13 +1,14 @@
 """Integration test for Card generation."""
 
-import pytest
 import uuid
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
-from agent_os.items.models import Item, ItemStatus, Workspace
+import pytest
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from agent_os.auth.models import User
 from agent_os.auth.security import get_password_hash
+from agent_os.items.models import Item, ItemStatus, Workspace
 from agent_os.knowledge.models import Card
 
 
@@ -87,7 +88,6 @@ async def test_card_generation_from_item(
     print(f"✅ Card ID from processing: {card_id_str}")
 
     # Query to verify Card was persisted
-    from sqlalchemy import select
     result = await db_session.execute(
         select(Card).where(Card.source_inbox_item_id == item.id)
     )
@@ -96,7 +96,7 @@ async def test_card_generation_from_item(
     assert len(cards) == 1, f"Expected 1 card, found {len(cards)}"
     card = cards[0]
 
-    print(f"✅ Card successfully persisted in database!")
+    print("✅ Card successfully persisted in database!")
     print(f"   Card ID: {card.id}")
     print(f"   Title: {card.title}")
     print(f"   Type: {card.para_type}")

@@ -138,6 +138,21 @@ coverage.xml
 web/dist/
 web/build/
 
+# Local runtime data and generated workspaces
+data/memory.json
+data/sessions.json
+data/users.json
+data/uploads/
+data/workspace/
+data/workspaces/
+
+# Local IDE / transcript artifacts
+.claude/settings.local.json
+.cursor/
+.specstory/
+agent-tools*.txt
+.tmp/
+
 # Archives
 *.tar.gz
 *.zip

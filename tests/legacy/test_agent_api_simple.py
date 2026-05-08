@@ -5,11 +5,11 @@ Basic tests to verify API endpoints are accessible.
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from tests.test_app import test_app as app
 
 from agent_os.db.base import Base
 from agent_os.db.session import get_db
-from tests.test_app import test_app as app
 
 
 @pytest.fixture

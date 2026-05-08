@@ -4,9 +4,7 @@ Computes 5-dimensional connection scores between Items for Cognitive Graph.
 """
 
 import logging
-from typing import List, Tuple, Dict, Optional
-from datetime import datetime, timedelta
-import uuid
+from typing import List, Optional
 
 from agent_os.items.models import Item
 
@@ -166,7 +164,7 @@ class ConnectionEngine:
             logger.warning(f"Error calculating vector similarity: {e}")
             return 0.0
 
-    def _cosine_similarity(self, vec_a: List[float], vec_b: List[float]) -> float:
+    def _cosine_similarity(self, vec_a: list[float], vec_b: list[float]) -> float:
         """
         计算余弦相似度
 
@@ -353,7 +351,7 @@ class ConnectionEngine:
             logger.warning(f"Error calculating time decay: {e}")
             return 0.0
 
-    async def _extract_keywords(self, item: Item) -> List[str]:
+    async def _extract_keywords(self, item: Item) -> list[str]:
         """
         提取Item的关键词
 
@@ -381,7 +379,7 @@ class ConnectionEngine:
             logger.warning(f"Error extracting keywords from item {item.id}: {e}")
             return []
 
-    async def _extract_entities(self, item: Item) -> List[str]:
+    async def _extract_entities(self, item: Item) -> list[str]:
         """
         提取Item的实体 (人名、地名、组织名)
 
@@ -446,7 +444,7 @@ class ConnectionEngine:
 async def calculate_connection(
     item_a: Item,
     item_b: Item,
-    engine: Optional[ConnectionEngine] = None
+    engine: ConnectionEngine | None = None
 ) -> float:
     """
     计算两个Item之间的连接分数

@@ -6,21 +6,21 @@ Inbox items are unprocessed inputs that can be notes, tasks, or resources.
 
 import uuid
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from agent_os.auth.dependencies import get_current_user
 from agent_os.db.base import get_db
 from agent_os.inbox import crud
 from agent_os.inbox.schema import (
-    InboxItemCreate,
-    InboxItemUpdate,
-    InboxItemStatusUpdate,
-    InboxItemResponse,
-    InboxItemListResponse,
     InboxErrorResponse,
+    InboxItemCreate,
+    InboxItemListResponse,
+    InboxItemResponse,
+    InboxItemStatusUpdate,
+    InboxItemUpdate,
 )
-from agent_os.auth.dependencies import get_current_user
-from agent_os.auth.models import User
 
 router = APIRouter(prefix="/api/v1/inbox", tags=["Inbox"])
 
@@ -44,8 +44,9 @@ async def create_inbox_item(
     or resource collected from various sources (manual, WeChat, browser extension, etc.).
     """
     # Verify workspace exists (optional, can be skipped for performance)
-    from agent_os.items.models import Workspace
     from sqlalchemy import select
+
+    from agent_os.items.models import Workspace
 
     workspace_result = await db.execute(
         select(Workspace).filter(Workspace.id == item_data.workspace_id)
@@ -102,10 +103,10 @@ async def create_inbox_item(
 )
 async def list_inbox_items(
     workspace_id: uuid.UUID = Query(..., description="Workspace ID"),
-    status: Optional[str] = Query(None, description="Filter by status"),
-    type: Optional[str] = Query(None, description="Filter by item type"),
-    source_type: Optional[str] = Query(None, description="Filter by source type"),
-    search: Optional[str] = Query(None, description="Search in title and content"),
+    status: str | None = Query(None, description="Filter by status"),
+    type: str | None = Query(None, description="Filter by item type"),
+    source_type: str | None = Query(None, description="Filter by source type"),
+    search: str | None = Query(None, description="Search in title and content"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
     current_user = Depends(get_current_user),  # type: User
@@ -117,8 +118,9 @@ async def list_inbox_items(
     Supports filtering by status, type, source type, and text search.
     """
     # Verify workspace exists and user has access
+    from sqlalchemy import and_, select
+
     from agent_os.items.models import Workspace
-    from sqlalchemy import select
 
     workspace_result = await db.execute(
         select(Workspace).filter(
@@ -200,8 +202,9 @@ async def get_inbox_item(
     Returns detailed information about a single inbox item.
     """
     # Verify workspace access
+    from sqlalchemy import and_, select
+
     from agent_os.items.models import Workspace
-    from sqlalchemy import select, and_
 
     workspace_result = await db.execute(
         select(Workspace).filter(
@@ -264,8 +267,9 @@ async def update_inbox_item_status(
     Updates the status of an inbox item (e.g., raw -> processed -> archived).
     """
     # Verify workspace access
+    from sqlalchemy import and_, select
+
     from agent_os.items.models import Workspace
-    from sqlalchemy import select, and_
 
     workspace_result = await db.execute(
         select(Workspace).filter(
@@ -333,8 +337,9 @@ async def update_inbox_item(
     Updates title, content, or type of an existing inbox item.
     """
     # Verify workspace access
+    from sqlalchemy import and_, select
+
     from agent_os.items.models import Workspace
-    from sqlalchemy import select, and_
 
     workspace_result = await db.execute(
         select(Workspace).filter(
@@ -403,8 +408,9 @@ async def delete_inbox_item(
     Permanently deletes an inbox item from the database.
     """
     # Verify workspace access
+    from sqlalchemy import and_, select
+
     from agent_os.items.models import Workspace
-    from sqlalchemy import select, and_
 
     workspace_result = await db.execute(
         select(Workspace).filter(

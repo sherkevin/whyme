@@ -8,29 +8,28 @@ Provides REST API endpoints for the Garden knowledge graph:
 
 import uuid
 from datetime import datetime, timedelta
-from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func, distinct
-from sqlalchemy.orm import selectinload
+from typing import List, Optional
 
-from agent_os.db.base import get_db
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import and_, distinct, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from agent_os.auth.dependencies import get_current_user
 from agent_os.auth.models import User
-from agent_os.items.models import Item, Workspace
-from agent_os.garden.models import KnowledgeCardLink, RelationType
-from agent_os.garden.schema import (
-    GardenNode,
-    GardenNodeListResponse,
-    GardenEdgeBatchRequest,
-    GardenEdge,
-    GardenEdgeBatchResponse,
-    GardenNodeDetail,
-    ConnectedNode,
-    GardenErrorResponse,
-)
-from agent_os.garden.stats_service import GardenStatsService
 from agent_os.core.config import get_garden_strong_edge_threshold
+from agent_os.db.base import get_db
+from agent_os.garden.models import KnowledgeCardLink
+from agent_os.garden.schema import (
+    ConnectedNode,
+    GardenEdge,
+    GardenEdgeBatchRequest,
+    GardenEdgeBatchResponse,
+    GardenErrorResponse,
+    GardenNode,
+    GardenNodeDetail,
+    GardenNodeListResponse,
+)
+from agent_os.items.models import Item, Workspace
 
 router = APIRouter(prefix="/api/v1/garden", tags=["Garden"])
 
@@ -94,11 +93,11 @@ def get_item_jump_url(item_id: uuid.UUID) -> str:
 )
 async def list_garden_nodes(
     workspace_id: uuid.UUID = Query(..., description="Workspace ID to filter nodes"),
-    date_range: Optional[str] = Query(
+    date_range: str | None = Query(
         None,
         description="Date range filter: 'last_7_days', 'last_30_days', 'last_90_days', 'all'"
     ),
-    types: Optional[List[str]] = Query(
+    types: list[str] | None = Query(
         None,
         description="Filter by item types (e.g., 'note', 'card', 'task')"
     ),

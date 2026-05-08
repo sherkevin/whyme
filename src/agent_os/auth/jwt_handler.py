@@ -5,14 +5,12 @@ The actual implementation is in security.py.
 """
 
 import uuid
-from typing import Optional
 from datetime import timedelta
+from typing import Optional
 
-from agent_os.auth.security import (
-    create_access_token as _create_access_token,
-    create_refresh_token as _create_refresh_token,
-    decode_token
-)
+from agent_os.auth.security import create_access_token as _create_access_token
+from agent_os.auth.security import create_refresh_token as _create_refresh_token
+from agent_os.auth.security import decode_token
 
 
 class TokenData:
@@ -24,7 +22,7 @@ class TokenData:
 
 def create_access_token(
     user_id: uuid.UUID,
-    expires_delta: Optional[timedelta] = None
+    expires_delta: timedelta | None = None
 ) -> str:
     """Create an access token for a user.
 
@@ -54,7 +52,7 @@ def create_refresh_token(user_id: uuid.UUID) -> str:
     return _create_refresh_token(data)
 
 
-def verify_token(token: str, token_type: str = "access") -> Optional[TokenData]:
+def verify_token(token: str, token_type: str = "access") -> TokenData | None:
     """Verify and decode a JWT token.
 
     Args:

@@ -5,8 +5,9 @@ Generates Card objects from processed Items.
 
 import uuid
 from typing import Optional
-from sqlalchemy.ext.asyncio import AsyncSession
+
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_os.items.models import Item, ItemStatus, ItemType
 from agent_os.knowledge.models import Card
@@ -15,7 +16,7 @@ from agent_os.knowledge.models import Card
 async def generate_card_from_item(
     db: AsyncSession,
     item_id: str
-) -> Optional[Card]:
+) -> Card | None:
     """从处理后的 InboxItem 生成 Card.
 
     Args:

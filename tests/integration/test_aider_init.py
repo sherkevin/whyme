@@ -2,6 +2,7 @@
 
 import asyncio
 import sys
+
 sys.path.insert(0, "src")
 
 async def test_aider_init():
@@ -11,13 +12,14 @@ async def test_aider_init():
     print("="*80)
 
     try:
-        from agent_os.capabilities.coding.aider_integration import AiderCoderIntegration
         from pathlib import Path
+
+        from agent_os.capabilities.coding.aider_integration import AiderCoderIntegration
 
         workspace = Path("data/workspaces/test_init")
         workspace.mkdir(parents=True, exist_ok=True)
 
-        print(f"\n1. Creating AiderCoderIntegration...")
+        print("\n1. Creating AiderCoderIntegration...")
         integration = AiderCoderIntegration(
             workspace_root=str(workspace),
             model_name="openai/DeepSeek-V3.1"
@@ -28,7 +30,7 @@ async def test_aider_init():
 
         print("3. Checking if coder exists...")
         if integration.coder:
-            print(f"   ✓ Coder created successfully!")
+            print("   ✓ Coder created successfully!")
             print(f"   Type: {type(integration.coder)}")
             print(f"   Model: {integration.coder.main_model.name}")
             return True

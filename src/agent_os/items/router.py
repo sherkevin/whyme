@@ -1,31 +1,42 @@
 """Unified Items API Routes - PRD4 Implementation."""
 
-from typing import Optional, List
+import uuid
+from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-import uuid
 
 from agent_os.db.session import get_db
 from agent_os.items import crud
 from agent_os.items.schema import (
-    # Workspaces
-    WorkspaceCreate, WorkspaceResponse,
     # Areas
-    AreaCreate, AreaResponse,
-    # Projects
-    ProjectCreate, ProjectResponse,
-    # Items
-    ItemCreate, ItemUpdate, ItemResponse, ItemListResponse,
-    # Task Extensions
-    TaskExtensionCreate, TaskExtensionResponse,
+    AreaCreate,
+    AreaResponse,
+    DecisionConfirm,
     # Decision Points
-    DecisionPointCreate, DecisionPointResponse, DecisionConfirm,
-    # Ledger Events
-    LedgerEventCreate, LedgerEventResponse,
+    DecisionPointCreate,
+    DecisionPointResponse,
     # Graph Edges
-    GraphEdgeCreate, GraphEdgeResponse, GraphConnectionResponse
+    GraphEdgeCreate,
+    GraphEdgeResponse,
+    # Items
+    ItemCreate,
+    ItemListResponse,
+    ItemResponse,
+    ItemUpdate,
+    # Ledger Events
+    LedgerEventCreate,
+    LedgerEventResponse,
+    # Projects
+    ProjectCreate,
+    ProjectResponse,
+    # Task Extensions
+    TaskExtensionCreate,
+    TaskExtensionResponse,
+    # Workspaces
+    WorkspaceCreate,
+    WorkspaceResponse,
 )
-
 
 router = APIRouter(prefix="/prd4", tags=["PRD4 - Unified Items"])
 
@@ -55,7 +66,7 @@ async def get_workspace(
     return workspace
 
 
-@router.get("/workspaces", response_model=List[WorkspaceResponse])
+@router.get("/workspaces", response_model=list[WorkspaceResponse])
 async def list_workspaces(
     owner_id: uuid.UUID,
     skip: int = Query(0, ge=0),
@@ -91,17 +102,17 @@ async def get_area(
     return area
 
 
-@router.get("/areas", response_model=List[AreaResponse])
+@router.get("/areas", response_model=list[AreaResponse])
 async def list_areas(
     workspace_id: uuid.UUID,
-    parent_id: Optional[uuid.UUID] = None,
+    parent_id: uuid.UUID | None = None,
     db: AsyncSession = Depends(get_db)
 ):
     """列出 Areas"""
     return await crud.list_areas(db, workspace_id, parent_id)
 
 
-@router.get("/areas/{workspace_id}/tree", response_model=List[AreaResponse])
+@router.get("/areas/{workspace_id}/tree", response_model=list[AreaResponse])
 async def get_area_tree(
     workspace_id: uuid.UUID,
     db: AsyncSession = Depends(get_db)
@@ -159,10 +170,10 @@ async def get_project(
     return project
 
 
-@router.get("/projects", response_model=List[ProjectResponse])
+@router.get("/projects", response_model=list[ProjectResponse])
 async def list_projects(
     workspace_id: uuid.UUID,
-    area_id: Optional[uuid.UUID] = None,
+    area_id: uuid.UUID | None = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
     db: AsyncSession = Depends(get_db)
@@ -223,10 +234,10 @@ async def delete_item(
 @router.get("/items", response_model=ItemListResponse)
 async def list_items(
     workspace_id: uuid.UUID,
-    type: Optional[str] = Query(None),
-    area_id: Optional[uuid.UUID] = None,
-    project_id: Optional[uuid.UUID] = None,
-    status: Optional[str] = Query(None),
+    type: str | None = Query(None),
+    area_id: uuid.UUID | None = None,
+    project_id: uuid.UUID | None = None,
+    status: str | None = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db)
@@ -282,7 +293,7 @@ async def create_decision_point(
     return await crud.create_decision_point(db, decision)
 
 
-@router.get("/decision-points/{task_id}", response_model=List[DecisionPointResponse])
+@router.get("/decision-points/{task_id}", response_model=list[DecisionPointResponse])
 async def get_decision_points(
     task_id: uuid.UUID,
     db: AsyncSession = Depends(get_db)
@@ -317,7 +328,7 @@ async def create_ledger_event(
     return await crud.create_ledger_event(db, event)
 
 
-@router.get("/ledger-events/{task_id}", response_model=List[LedgerEventResponse])
+@router.get("/ledger-events/{task_id}", response_model=list[LedgerEventResponse])
 async def get_task_ledger(
     task_id: uuid.UUID,
     db: AsyncSession = Depends(get_db)
@@ -339,7 +350,7 @@ async def create_edge(
     return await crud.create_edge(db, edge)
 
 
-@router.get("/connections/{node_id}", response_model=List[GraphEdgeResponse])
+@router.get("/connections/{node_id}", response_model=list[GraphEdgeResponse])
 async def get_edges(
     node_id: uuid.UUID,
     strong_only: bool = Query(False),
@@ -349,7 +360,7 @@ async def get_edges(
     return await crud.get_edges(db, node_id, strong_only)
 
 
-@router.get("/connections/{node_id}/strong", response_model=List[GraphEdgeResponse])
+@router.get("/connections/{node_id}/strong", response_model=list[GraphEdgeResponse])
 async def get_strong_connections(
     node_id: uuid.UUID,
     db: AsyncSession = Depends(get_db)

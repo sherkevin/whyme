@@ -3,7 +3,6 @@
 Tests for the new RAW and PROCESSED status values.
 """
 
-import pytest
 from agent_os.items.models import ItemStatus
 
 

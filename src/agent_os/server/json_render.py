@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List
 
 
 class RenderType(str, Enum):
@@ -62,7 +62,7 @@ class JSONRenderProtocol:
             RenderType.TIMELINE: self._render_timeline,
         }
 
-    def parse_render_blocks(self, text: str) -> List[Dict[str, Any]]:
+    def parse_render_blocks(self, text: str) -> list[dict[str, Any]]:
         """Parse @json-render blocks from text.
 
         Args:
@@ -103,13 +103,13 @@ class JSONRenderProtocol:
                     "data": data,
                     "raw": match.group(0)
                 })
-            except Exception as e:
+            except Exception:
                 # Invalid block, skip it
                 continue
 
         return blocks
 
-    def render_block(self, block: Dict[str, Any]) -> Dict[str, Any]:
+    def render_block(self, block: dict[str, Any]) -> dict[str, Any]:
         """Render a single block.
 
         Args:
@@ -134,7 +134,7 @@ class JSONRenderProtocol:
             # Unknown render type, use fallback
             return self._render_fallback(data, options)
 
-    def render_all(self, text: str) -> List[Dict[str, Any]]:
+    def render_all(self, text: str) -> list[dict[str, Any]]:
         """Render all @json-render blocks in text.
 
         Args:
@@ -146,7 +146,7 @@ class JSONRenderProtocol:
         blocks = self.parse_render_blocks(text)
         return [self.render_block(block) for block in blocks]
 
-    def _render_table(self, data: Any, options: Dict[str, Any]) -> Dict[str, Any]:
+    def _render_table(self, data: Any, options: dict[str, Any]) -> dict[str, Any]:
         """Render data as table.
 
         Args:
@@ -195,7 +195,7 @@ class JSONRenderProtocol:
             }
         }
 
-    def _render_chart(self, data: Any, options: Dict[str, Any]) -> Dict[str, Any]:
+    def _render_chart(self, data: Any, options: dict[str, Any]) -> dict[str, Any]:
         """Render data as chart.
 
         Args:
@@ -241,7 +241,7 @@ class JSONRenderProtocol:
             }
         }
 
-    def _render_tree(self, data: Any, options: Dict[str, Any]) -> Dict[str, Any]:
+    def _render_tree(self, data: Any, options: dict[str, Any]) -> dict[str, Any]:
         """Render data as tree structure.
 
         Args:
@@ -298,7 +298,7 @@ class JSONRenderProtocol:
             }
         }
 
-    def _count_nodes(self, nodes: List[Dict]) -> int:
+    def _count_nodes(self, nodes: list[dict]) -> int:
         """Count total nodes in tree."""
         count = 0
         for node in nodes:
@@ -307,7 +307,7 @@ class JSONRenderProtocol:
                 count += self._count_nodes(node["children"])
         return count
 
-    def _render_code(self, data: Any, options: Dict[str, Any]) -> Dict[str, Any]:
+    def _render_code(self, data: Any, options: dict[str, Any]) -> dict[str, Any]:
         """Render data as code block.
 
         Args:
@@ -346,7 +346,7 @@ class JSONRenderProtocol:
             }
         }
 
-    def _render_json(self, data: Any, options: Dict[str, Any]) -> Dict[str, Any]:
+    def _render_json(self, data: Any, options: dict[str, Any]) -> dict[str, Any]:
         """Render data as formatted JSON.
 
         Args:
@@ -372,7 +372,7 @@ class JSONRenderProtocol:
             }
         }
 
-    def _render_markdown(self, data: Any, options: Dict[str, Any]) -> Dict[str, Any]:
+    def _render_markdown(self, data: Any, options: dict[str, Any]) -> dict[str, Any]:
         """Render data as markdown.
 
         Args:
@@ -394,7 +394,7 @@ class JSONRenderProtocol:
             }
         }
 
-    def _render_list(self, data: Any, options: Dict[str, Any]) -> Dict[str, Any]:
+    def _render_list(self, data: Any, options: dict[str, Any]) -> dict[str, Any]:
         """Render data as list.
 
         Args:
@@ -426,7 +426,7 @@ class JSONRenderProtocol:
             }
         }
 
-    def _render_card(self, data: Any, options: Dict[str, Any]) -> Dict[str, Any]:
+    def _render_card(self, data: Any, options: dict[str, Any]) -> dict[str, Any]:
         """Render data as card(s).
 
         Args:
@@ -476,7 +476,7 @@ class JSONRenderProtocol:
             }
         }
 
-    def _render_progress(self, data: Any, options: Dict[str, Any]) -> Dict[str, Any]:
+    def _render_progress(self, data: Any, options: dict[str, Any]) -> dict[str, Any]:
         """Render data as progress indicator(s).
 
         Args:
@@ -524,7 +524,7 @@ class JSONRenderProtocol:
             }
         }
 
-    def _render_timeline(self, data: Any, options: Dict[str, Any]) -> Dict[str, Any]:
+    def _render_timeline(self, data: Any, options: dict[str, Any]) -> dict[str, Any]:
         """Render data as timeline.
 
         Args:
@@ -575,7 +575,7 @@ class JSONRenderProtocol:
             }
         }
 
-    def _render_fallback(self, data: Any, options: Dict[str, Any]) -> Dict[str, Any]:
+    def _render_fallback(self, data: Any, options: dict[str, Any]) -> dict[str, Any]:
         """Fallback renderer for unknown types.
 
         Args:
@@ -590,7 +590,7 @@ class JSONRenderProtocol:
 
 # Convenience functions
 
-def render_json_text(text: str) -> List[Dict[str, Any]]:
+def render_json_text(text: str) -> list[dict[str, Any]]:
     """Render all @json-render blocks in text.
 
     Args:
@@ -613,7 +613,7 @@ def render_json_text(text: str) -> List[Dict[str, Any]]:
     return protocol.render_all(text)
 
 
-def create_table(data: Any, title: str = "Table", **options) -> Dict[str, Any]:
+def create_table(data: Any, title: str = "Table", **options) -> dict[str, Any]:
     """Create a table render.
 
     Args:
@@ -628,7 +628,7 @@ def create_table(data: Any, title: str = "Table", **options) -> Dict[str, Any]:
     return protocol._render_table(data, {"title": title, **options})
 
 
-def create_chart(data: Any, chart_type: str = "bar", title: str = "Chart", **options) -> Dict[str, Any]:
+def create_chart(data: Any, chart_type: str = "bar", title: str = "Chart", **options) -> dict[str, Any]:
     """Create a chart render.
 
     Args:
@@ -644,7 +644,7 @@ def create_chart(data: Any, chart_type: str = "bar", title: str = "Chart", **opt
     return protocol._render_chart(data, {"type": chart_type, "title": title, **options})
 
 
-def create_tree(data: Any, title: str = "Tree", **options) -> Dict[str, Any]:
+def create_tree(data: Any, title: str = "Tree", **options) -> dict[str, Any]:
     """Create a tree render.
 
     Args:

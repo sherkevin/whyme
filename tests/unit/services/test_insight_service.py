@@ -1,11 +1,12 @@
 """Unit tests for Stage 4 Insight Service."""
 
-import pytest
-from datetime import datetime, timedelta
-from agent_os.search_engine.insight_service import InsightService
-from agent_os.search_engine.models import SearchIndex, InsightCluster
-from agent_os.search_engine.search_service import SearchService
 import uuid
+from datetime import datetime, timedelta
+
+import pytest
+
+from agent_os.search_engine.insight_service import InsightService
+from agent_os.search_engine.search_service import SearchService
 
 
 @pytest.mark.asyncio
@@ -376,7 +377,7 @@ class TestInsightService:
         # Verify it's gone
         retrieved = await insight_service.get_insight(str(summary.id))
         assert retrieved is None
-        print(f"✅ Insight deleted successfully")
+        print("✅ Insight deleted successfully")
 
     async def test_delete_nonexistent_insight(self, db_session):
         """Test deleting a non-existent insight."""
@@ -386,7 +387,7 @@ class TestInsightService:
         result = await insight_service.delete_insight(str(fake_id))
 
         assert result is False
-        print(f"✅ Non-existent insight delete handled correctly")
+        print("✅ Non-existent insight delete handled correctly")
 
     async def test_generate_summary_empty_dataset(self, db_session):
         """Test summary generation with no matching data."""
@@ -396,7 +397,7 @@ class TestInsightService:
         with pytest.raises(ValueError, match="No.*items found matching the criteria"):
             await insight_service.generate_summary(item_type="nonexistent_type")
 
-        print(f"✅ Empty dataset error handled correctly")
+        print("✅ Empty dataset error handled correctly")
 
     async def test_generate_trend_invalid_group_by(self, db_session):
         """Test trend generation with invalid group_by parameter."""
@@ -408,7 +409,7 @@ class TestInsightService:
                 group_by="invalid"
             )
 
-        print(f"✅ Invalid group_by parameter handled correctly")
+        print("✅ Invalid group_by parameter handled correctly")
 
     async def test_insight_confidence_scores(self, db_session):
         """Test that insights have appropriate confidence scores."""
@@ -477,7 +478,7 @@ class TestInsightDataModels:
         if "unique_tags_count" in summary.insight_data:
             assert isinstance(summary.insight_data["unique_tags_count"], int)
 
-        print(f"✅ Summary data structure valid")
+        print("✅ Summary data structure valid")
 
     async def test_trend_insight_data_structure(self, db_session):
         """Test that trend insight has correct data structure."""
@@ -509,7 +510,7 @@ class TestInsightDataModels:
         assert isinstance(trend.insight_data["labels"], list)
         assert trend.insight_data["trend_direction"] in ["up", "down", "stable", "unknown"]
 
-        print(f"✅ Trend data structure valid")
+        print("✅ Trend data structure valid")
 
     async def test_topic_insight_data_structure(self, db_session):
         """Test that topic insight has correct data structure."""
@@ -541,7 +542,7 @@ class TestInsightDataModels:
             assert "frequency" in topic
             assert "percentage" in topic
 
-        print(f"✅ Topic data structure valid")
+        print("✅ Topic data structure valid")
 
     async def test_pattern_insight_data_structure(self, db_session):
         """Test that pattern insight has correct data structure."""
@@ -569,7 +570,7 @@ class TestInsightDataModels:
 
         assert isinstance(pattern.insight_data["patterns"], list)
 
-        print(f"✅ Pattern data structure valid")
+        print("✅ Pattern data structure valid")
 
 
 if __name__ == "__main__":

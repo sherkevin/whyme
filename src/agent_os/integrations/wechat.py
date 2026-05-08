@@ -4,14 +4,14 @@ Receives and processes WeChat messages, creates Resource items.
 Also provides functionality to send messages back to WeChat users.
 """
 
+import hashlib
 import logging
 import uuid
-import hashlib
 import xml.etree.ElementTree as ET
-from typing import Optional, Dict, Any, List
-from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Any, Dict, List, Optional
+
 import httpx
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_os.items.crud import create_item
 from agent_os.items.schema import ItemCreate
@@ -30,7 +30,7 @@ class WeChatWebhookReceiver:
     处理来自微信服务器的消息推送
     """
 
-    def __init__(self, token: Optional[str] = None):
+    def __init__(self, token: str | None = None):
         """
         初始化 Webhook 接收器
 
@@ -74,7 +74,7 @@ class WeChatWebhookReceiver:
         # 对比签名
         return hash_str == signature
 
-    def parse_xml_message(self, xml_data: str) -> Dict[str, Any]:
+    def parse_xml_message(self, xml_data: str) -> dict[str, Any]:
         """
         解析微信 XML 消息
 
@@ -112,7 +112,7 @@ class WeChatWebhookReceiver:
             logger.error(f"Error processing WeChat message: {e}")
             raise
 
-    def _parse_text_message(self, root: ET.Element) -> Dict[str, Any]:
+    def _parse_text_message(self, root: ET.Element) -> dict[str, Any]:
         """解析文本消息"""
         to_user = root.find('ToUserName').text
         from_user = root.find('FromUserName').text
@@ -130,7 +130,7 @@ class WeChatWebhookReceiver:
             'raw': None
         }
 
-    def _parse_image_message(self, root: ET.Element) -> Dict[str, Any]:
+    def _parse_image_message(self, root: ET.Element) -> dict[str, Any]:
         """解析图片消息"""
         to_user = root.find('ToUserName').text
         from_user = root.find('FromUserName').text
@@ -150,7 +150,7 @@ class WeChatWebhookReceiver:
             'raw': None
         }
 
-    def _parse_link_message(self, root: ET.Element) -> Dict[str, Any]:
+    def _parse_link_message(self, root: ET.Element) -> dict[str, Any]:
         """解析链接消息"""
         to_user = root.find('ToUserName').text
         from_user = root.find('FromUserName').text
@@ -175,11 +175,11 @@ class WeChatWebhookReceiver:
     async def process_message(
         self,
         db: AsyncSession,
-        message: Dict[str, Any],
+        message: dict[str, Any],
         workspace_id: str,
         creator_id: str,
-        default_area_id: Optional[str] = None
-    ) -> Optional[Dict[str, Any]]:
+        default_area_id: str | None = None
+    ) -> dict[str, Any] | None:
         """
         处理微信消息，创建 Resource Item
 
@@ -219,11 +219,11 @@ class WeChatWebhookReceiver:
     async def _process_text_message(
         self,
         db: AsyncSession,
-        message: Dict[str, Any],
+        message: dict[str, Any],
         workspace_id: str,
         creator_id: str,
-        default_area_id: Optional[str]
-    ) -> Dict[str, Any]:
+        default_area_id: str | None
+    ) -> dict[str, Any]:
         """处理文本消息"""
         content = message.get('content', '').strip()
 
@@ -260,11 +260,11 @@ class WeChatWebhookReceiver:
     async def _process_link_message(
         self,
         db: AsyncSession,
-        message: Dict[str, Any],
+        message: dict[str, Any],
         workspace_id: str,
         creator_id: str,
-        default_area_id: Optional[str]
-    ) -> Dict[str, Any]:
+        default_area_id: str | None
+    ) -> dict[str, Any]:
         """处理链接消息"""
         url = message.get('url', '').strip()
         title = message.get('title', '').strip()
@@ -308,11 +308,11 @@ class WeChatWebhookReceiver:
     async def _process_image_message(
         self,
         db: AsyncSession,
-        message: Dict[str, Any],
+        message: dict[str, Any],
         workspace_id: str,
         creator_id: str,
-        default_area_id: Optional[str]
-    ) -> Dict[str, Any]:
+        default_area_id: str | None
+    ) -> dict[str, Any]:
         """处理图片消息"""
         pic_url = message.get('pic_url', '').strip()
         media_id = message.get('media_id', '').strip()
@@ -370,7 +370,7 @@ class LinkExtractor:
     # URL 正则表达式
     URL_PATTERN = r'https?://\S+'
 
-    def extract_urls(self, text: str) -> List[str]:
+    def extract_urls(self, text: str) -> list[str]:
         """
         从文本中提取所有URL
 
@@ -404,7 +404,7 @@ class LinkExtractor:
 
         return unique_urls
 
-    def extract_first_url(self, text: str) -> Optional[str]:
+    def extract_first_url(self, text: str) -> str | None:
         """
         从文本中提取第一个URL
 
@@ -428,9 +428,9 @@ async def process_wechat_message(
     *,
     workspace_id: str,
     creator_id: str,
-    webhook_token: Optional[str] = None,
-    default_area_id: Optional[str] = None
-) -> Optional[Dict[str, Any]]:
+    webhook_token: str | None = None,
+    default_area_id: str | None = None
+) -> dict[str, Any] | None:
     """
     处理微信消息的完整流程
 
@@ -489,7 +489,7 @@ class WeChatMessageSender:
         self,
         app_id: str,
         app_secret: str,
-        access_token: Optional[str] = None
+        access_token: str | None = None
     ):
         """
         初始化消息发送器
@@ -538,7 +538,7 @@ class WeChatMessageSender:
         self,
         openid: str,
         content: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         发送文本消息
 
@@ -573,8 +573,8 @@ class WeChatMessageSender:
     async def send_news_message(
         self,
         openid: str,
-        articles: List[Dict[str, str]]
-    ) -> Dict[str, Any]:
+        articles: list[dict[str, str]]
+    ) -> dict[str, Any]:
         """
         发送图文消息
 
@@ -615,8 +615,8 @@ class WeChatMessageSender:
         title: str,
         description: str,
         url: str,
-        image_url: Optional[str] = None
-    ) -> Dict[str, Any]:
+        image_url: str | None = None
+    ) -> dict[str, Any]:
         """
         发送卡片消息（单图文）
 
@@ -659,9 +659,9 @@ class WeChatService:
 
     def __init__(
         self,
-        webhook_token: Optional[str] = None,
-        app_id: Optional[str] = None,
-        app_secret: Optional[str] = None
+        webhook_token: str | None = None,
+        app_id: str | None = None,
+        app_secret: str | None = None
     ):
         """
         初始化微信服务
@@ -699,14 +699,14 @@ class WeChatService:
     async def handle_webhook(
         self,
         xml_data: str,
-        signature: Optional[str] = None,
-        timestamp: Optional[str] = None,
-        nonce: Optional[str] = None,
-        db: Optional[AsyncSession] = None,
-        workspace_id: Optional[str] = None,
-        creator_id: Optional[str] = None,
-        default_area_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+        signature: str | None = None,
+        timestamp: str | None = None,
+        nonce: str | None = None,
+        db: AsyncSession | None = None,
+        workspace_id: str | None = None,
+        creator_id: str | None = None,
+        default_area_id: str | None = None
+    ) -> dict[str, Any]:
         """
         处理Webhook请求
 
@@ -770,7 +770,7 @@ class WeChatService:
         openid: str,
         message_type: str,
         **kwargs
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         发送消息给微信用户
 

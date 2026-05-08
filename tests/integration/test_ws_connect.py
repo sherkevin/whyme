@@ -1,7 +1,9 @@
 """Test WebSocket connection"""
 import asyncio
-import websockets
 import json
+
+import websockets
+
 
 async def test_connection():
     uri = "ws://127.0.0.1:8000/ws/chat/b9bffa2c-edd6-40a2-bffe-f203b7ba5dae"

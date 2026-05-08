@@ -1,40 +1,68 @@
 """Test Configuration and Fixtures for PRD4 Tests."""
 
-import pytest
 import asyncio
-from typing import AsyncGenerator, Generator
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.pool import NullPool
 import os
 import uuid
+from collections.abc import AsyncGenerator, Generator
 
-# Import only PRD4 models (avoid knowledge models that reference User/Organization)
-from agent_os.items.models import (
-    Workspace, Area, Project, Item,
-    TaskExtension, DecisionPoint, LedgerEvent, GraphEdge
-)
+import pytest
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
-# Import auth models
-from agent_os.auth.models import User, APIKey, Session, Role, UserRole, AuditLog
-
-# Import base after models to avoid circular imports
-from agent_os.db.base import Base
+# PRD10 SQLite UUID compatibility. The legacy ORM models declare primary
+# keys with ``postgresql.UUID(as_uuid=True)``; SQLAlchemy 2.x has no default
+# DDL rendering for that type on SQLite, which is the dialect used by
+# ``TEST_DATABASE_URL`` below. Importing this module side-effect-installs a
+# ``@compiles`` rule that renders PG UUID as ``CHAR(32)`` only on the SQLite
+# dialect, so ``Workspace.__table__.create(connection)`` etc. work in tests
+# without rewriting the model layer. PostgreSQL DDL is unchanged.
+import agent_os.db.sqlite_compat  # noqa: F401
 
 # Import agent models
 from agent_os.agent.models import AgentProcessEvent
 
+# Import auth models
+from agent_os.auth.models import APIKey, AuditLog, Role, Session, User, UserRole
+
+# Import base after models to avoid circular imports
+# Import garden models (PRD7)
+from agent_os.garden.models import DailyInsight, KnowledgeCardLink
+from agent_os.inbox.prd10_models import Prd10InboxItem
+
+# Import only PRD4 models (avoid knowledge models that reference User/Organization)
+from agent_os.items.models import (
+    Area,
+    DecisionPoint,
+    GraphEdge,
+    Item,
+    LedgerEvent,
+    Project,
+    TaskExtension,
+    Workspace,
+)
+from agent_os.jobs.models import Job as Prd10Job
+from agent_os.kb.models import Chunk as Prd10Chunk
+from agent_os.kb.models import Document as Prd10Document
+
+# Import PRD10 tables that ``cards`` references via FK (kb_folders, kb_documents,
+# kb_chunks, prd10_inbox_items, prd10_sources, prd10_jobs). Without these the
+# Card.__table__.create call below fails with NoReferencedTableError now that
+# the Card model has been extended with PRD10 §5.5 columns (folder_id,
+# inbox_item_id, source_id).
+from agent_os.kb.models import Folder as Prd10Folder
+
 # Import knowledge models
 from agent_os.knowledge.models import Card
-
-# Import stage3 models
-from agent_os.stage3.models import AgentDecision, Skill, TaskExecutionLog
+from agent_os.notifications.models import Notification as Prd10Notification
 
 # Import search_engine (stage4) models
 # Note: Renamed InsightCluster to InsightCluster4 to avoid conflicts with old insights module
-from agent_os.search_engine.models import SearchIndex, IngestionJob, InsightCluster as InsightCluster4
+from agent_os.search_engine.models import IngestionJob, SearchIndex
+from agent_os.search_engine.models import InsightCluster as InsightCluster4
+from agent_os.sources.models import Source as Prd10Source
 
-# Import garden models (PRD7)
-from agent_os.garden.models import KnowledgeCardLink, DailyInsight, RelationType, InsightStatus
+# Import stage3 models
+from agent_os.stage3.models import AgentDecision, Skill, TaskExecutionLog
 
 # Create a list of PRD4 tables for testing
 PRD4_TABLES = [
@@ -59,10 +87,20 @@ PRD4_TABLES = [
 # Test Database Configuration
 # ============================================================================
 
+# Default to per-process in-memory SQLite + StaticPool. The previous
+# default (``sqlite+aiosqlite:///./test.db``) shared a single file across
+# every test's engine fixture, which caused intermittent
+# ``OperationalError: no such table`` cross-talk when tests with
+# function-scoped engines (PRD10 tests) ran alongside this fixture's
+# function-scoped engine, and produced cleanup-time PermissionError on
+# Windows. ``:memory:`` gives each engine instance its own DB; StaticPool
+# is required so multiple connections within the same engine see the
+# same DB. Set ``TEST_DATABASE_URL`` to override (e.g. real Postgres).
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
-    "sqlite+aiosqlite:///./test.db"
+    "sqlite+aiosqlite:///:memory:",
 )
+_USE_STATIC_POOL = TEST_DATABASE_URL.startswith("sqlite+aiosqlite:///:memory:")
 
 
 @pytest.fixture(scope="session")
@@ -76,12 +114,19 @@ def event_loop() -> Generator:
 @pytest.fixture(scope="function")
 async def engine():
     """创建测试数据库引擎"""
-    engine = create_async_engine(
-        TEST_DATABASE_URL,
-        echo=False,
-        poolclass=NullPool,
-        future=True
-    )
+    from sqlalchemy.pool import StaticPool
+
+    engine_kwargs: dict = {
+        "echo": False,
+        "future": True,
+    }
+    if _USE_STATIC_POOL:
+        engine_kwargs["poolclass"] = StaticPool
+        engine_kwargs["connect_args"] = {"check_same_thread": False}
+    else:
+        engine_kwargs["poolclass"] = NullPool
+
+    engine = create_async_engine(TEST_DATABASE_URL, **engine_kwargs)
 
     # 只创建 PRD4 表 (避免 knowledge models 的依赖问题)
     async with engine.begin() as conn:
@@ -106,6 +151,16 @@ async def engine():
             AuditLog.__table__.create(connection, checkfirst=True)
             # Agent tables
             AgentProcessEvent.__table__.create(connection, checkfirst=True)
+            # PRD10 tables that the Card model FKs to. Created BEFORE Card
+            # so the FK references resolve. Order: source -> inbox_item ->
+            # folder -> document -> chunk (forward chain).
+            Prd10Source.__table__.create(connection, checkfirst=True)
+            Prd10InboxItem.__table__.create(connection, checkfirst=True)
+            Prd10Folder.__table__.create(connection, checkfirst=True)
+            Prd10Document.__table__.create(connection, checkfirst=True)
+            Prd10Chunk.__table__.create(connection, checkfirst=True)
+            Prd10Job.__table__.create(connection, checkfirst=True)
+            Prd10Notification.__table__.create(connection, checkfirst=True)
             # Knowledge tables
             Card.__table__.create(connection, checkfirst=True)
             # Stage 3 tables
@@ -176,38 +231,47 @@ async def db_session(engine) -> AsyncGenerator[AsyncSession, None]:
     async with async_session_maker() as session:
         yield session
 
-    # 清理数据 - 删除所有测试数据
+    # 清理数据 - 删除所有测试数据。
+    # ``engine`` is per-test in-memory + StaticPool by default, so the whole
+    # database is discarded when the engine is disposed at the end of the
+    # ``engine`` fixture. The DELETE loop below is kept for the rare case
+    # where ``TEST_DATABASE_URL`` overrides to a real Postgres / file-backed
+    # SQLite. Every statement is wrapped in try/except so a missing table
+    # (e.g. if a test rolled back the schema) doesn't poison the next test.
+    from sqlalchemy import delete
+    from sqlalchemy.exc import OperationalError, ProgrammingError
+
     async with async_session_maker() as session:
-        from sqlalchemy import delete
-        # Delete in reverse order of dependencies
-        # PRD7 Garden tables first
-        await session.execute(delete(KnowledgeCardLink))
-        await session.execute(delete(DailyInsight))
-        # Stage 4 tables
-        await session.execute(delete(InsightCluster4))
-        await session.execute(delete(IngestionJob))
-        await session.execute(delete(SearchIndex))
-        # Stage 3 tables
-        await session.execute(delete(TaskExecutionLog))
-        await session.execute(delete(Skill))
-        await session.execute(delete(AgentDecision))
-        # Knowledge tables
-        await session.execute(delete(Card))
-        # Agent tables
-        await session.execute(delete(AgentProcessEvent))
-        # Auth tables
-        await session.execute(delete(UserRole))
-        await session.execute(delete(AuditLog))
-        await session.execute(delete(User))
-        await session.execute(delete(APIKey))
-        await session.execute(delete(Session))
-        await session.execute(delete(Role))
-        # PRD4 tables
-        await session.execute(delete(Item))
-        await session.execute(delete(Project))
-        await session.execute(delete(Area))
-        await session.execute(delete(Workspace))
-        await session.commit()
+        for model in (
+            KnowledgeCardLink,
+            DailyInsight,
+            InsightCluster4,
+            IngestionJob,
+            SearchIndex,
+            TaskExecutionLog,
+            Skill,
+            AgentDecision,
+            Card,
+            AgentProcessEvent,
+            UserRole,
+            AuditLog,
+            User,
+            APIKey,
+            Session,
+            Role,
+            Item,
+            Project,
+            Area,
+            Workspace,
+        ):
+            try:
+                await session.execute(delete(model))
+            except (OperationalError, ProgrammingError):
+                await session.rollback()
+        try:
+            await session.commit()
+        except (OperationalError, ProgrammingError):
+            await session.rollback()
 
 
 # ============================================================================

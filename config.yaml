@@ -7,10 +7,9 @@ agent:
 llm:
   provider: "agent_os.llm.litellm_impl.LiteLLMProvider"
   config:
-    # Model format: provider/model-name (for litellm)
-    # For DeepSeek: use "deepseek/deepseek-chat" or "deepseek/deepseek-coder"
+    # Model name can be overridden via MODEL / DEEPSEEK_MODEL in .env.local.
     # For OpenAI: use "openai/gpt-4o" or "openai/gpt-3.5-turbo"
-    model: "deepseek/deepseek-chat"
+    model: "deepseek-v4-flash"
     # api_base and api_key are read from environment variables:
     # API_KEY, DEEPSEEK_API_KEY, or OPENAI_API_KEY from .env file
     # BASE_URL from .env file

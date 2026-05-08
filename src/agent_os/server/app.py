@@ -3,68 +3,371 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+if TYPE_CHECKING:
+    from agent_os.server.diff_service import DiffService
+
+from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from agent_os.core.types import RuntimeContext
-from agent_os.sandbox.docker_impl import DockerSandbox
-from agent_os.core.config import instantiate, load_class, Config, load_config
-from agent_os.agent_legacy import Agent
+from agent_os.common import (
+    ApiErrorCode,
+    Prd10AccessLogMiddleware,
+    RateLimitMiddleware,
+    RequestIdMiddleware,
+    error_json_response,
+    http_exception_to_envelope,
+)
+from agent_os.common.sentry_setup import init_sentry as _init_sentry
+
+# PRD10 §11.5 — initialize Sentry as early as possible so module-import
+# errors during router wiring also reach the dashboard. ``init_sentry`` is
+# idempotent and a no-op when ``SENTRY_DSN`` is unset; the second call from
+# ``startup_event`` keeps belt-and-suspenders coverage if env was set late.
+_init_sentry()
+# PRD10 §11.10 account-compliance router (data export / soft-delete /
+# unsubscribe). Lives under /api/v1/me/* alongside the existing /api/v1/me
+# profile endpoint mounted by ``me_router``.
+from agent_os.account import account_router
 from agent_os.agent_aider import AiderAgent
-from agent_os.core.interfaces import AgentCallbackHandler
-from agent_os.server.security import sanitize_path, validate_filename
+from agent_os.agent_legacy import Agent
+from agent_os.ai.router import router as ai_router
+from agent_os.auth.router import demo_router, me_router
 from agent_os.auth.router import router as auth_router
-from agent_os.inbox.router import router as inbox_router
-from agent_os.today.router import router as today_router
-from agent_os.knowledge.router import router as knowledge_router
-from agent_os.tasks.router import router as tasks_router
-from agent_os.aggregation.router import router as aggregation_router
+from agent_os.billing import billing_router
+from agent_os.workspaces import workspaces_router
+
+# PRD10 product-data routers (Agent 2 ownership).
+from agent_os.capture.router import router as capture_router
 from agent_os.conversations.router import router as conversations_router
-from agent_os.stage3.router import router as stage3_router
-from agent_os.search_engine.router import router as stage4_router
+from agent_os.core.config import instantiate, load_config
+from agent_os.core.interfaces import AgentCallbackHandler
+from agent_os.feed.router import router as feed_router
 from agent_os.garden.router import router as garden_router
+from agent_os.garden.router_prd10 import router as garden_prd10_router
+from agent_os.inbox.router import router as inbox_router
+from agent_os.insights.router import router as insights_router
+from agent_os.jobs.router import router as jobs_router
+from agent_os.kb.router import router as kb_router
+from agent_os.knowledge.router import router as knowledge_router
+from agent_os.marketplace import marketplace_router
+from agent_os.notifications.router import router as notifications_router
+from agent_os.search_engine.router import router as stage4_router
+
+# PRD10 intelligence-domain routers (Agent 3 ownership).
+from agent_os.search_engine.router_prd10 import router as search_prd10_router
+from agent_os.server.security import sanitize_path
+from agent_os.skills.router import router as skills_prd10_router
+from agent_os.stage3.router import router as stage3_router
+from agent_os.tasks.prd10_router import router as tasks_prd10_router
+from agent_os.tasks.router import router as tasks_router
+from agent_os.today.prd10_router import router as today_prd10_router
+from agent_os.today.router import router as today_router
+from agent_os.uploads.router import router as uploads_router
+
 # Import agent_router later to avoid circular import issues
 
-app = FastAPI(
-    title="AgentOS API",
-    description="AgentOS - AI-powered development environment with knowledge management",
-    version="1.0.0"
-)
 
-# Include API routers
-app.include_router(auth_router)
-app.include_router(inbox_router)
-app.include_router(today_router)
-app.include_router(knowledge_router)
-app.include_router(tasks_router)
-app.include_router(aggregation_router)
-app.include_router(conversations_router)
-app.include_router(stage3_router)
-app.include_router(stage4_router)
-app.include_router(garden_router)
+# PRD10 §6.2 — Lifespan-based startup/shutdown (replaces deprecated
+# ``@app.on_event(...)`` hooks). FastAPI / Starlette runs the function
+# body up to ``yield`` on startup, hands control back to the application,
+# then runs the rest after the last request finishes (or on SIGTERM).
+#
+# Invariants this preserves from the legacy hooks:
+#   1. ``configure_logging`` runs once before any request — JSON
+#      handler installs without races.
+#   2. ``_init_sentry`` is called twice (module load + lifespan)
+#      because env vars can be injected after import in containers;
+#      the call is idempotent.
+#   3. DB engine + tables initialize before the first request hits
+#      ``get_db``. Failures log but don't crash the app — preserves
+#      backward compatibility with environments that pre-create
+#      schema externally (Alembic, manual SQL, etc.).
+#   4. PRD10 worker loop only starts when ``AGENTOS_PRD10_WORKER`` is
+#      truthy (the ``is_worker_enabled`` predicate); failures degrade
+#      to a warning instead of crashing the app.
+#   5. ``stop_worker_loop`` runs on shutdown (or on lifespan exit) so
+#      pytest fixtures and uvicorn ``--reload`` cycles don't leak the
+#      background task between runs.
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Initialize app resources before serving and tear them down on exit.
 
+    All imports stay lazy to avoid pulling DB / worker / logging modules
+    into module-import time (which keeps ``import agent_os.server.app``
+    fast for the test collector and OpenAPI generators).
+    """
 
-# Startup event to initialize database
-@app.on_event("startup")
-async def startup_event():
-    """Initialize database engine on startup."""
-    from agent_os.db.base import get_engine, init_db
     import logging
 
-    # Initialize database engine
+    from agent_os.common import configure_logging
+    from agent_os.db.base import get_engine, init_db
+    from agent_os.jobs.worker_loop import (
+        is_worker_enabled,
+        start_worker_loop,
+        stop_worker_loop,
+    )
+
+    configure_logging()
+    _init_sentry()
+
     get_engine()
     logging.info("Database engine initialized")
 
-    # Create database tables
     try:
         await init_db()
         logging.info("Database tables created successfully")
     except Exception as e:
         logging.error(f"Failed to create database tables: {e}")
-        # Don't fail startup if table creation fails
+
+    if is_worker_enabled():
+        try:
+            start_worker_loop()
+        except Exception as exc:
+            logging.warning(f"Failed to start PRD10 worker loop: {exc}")
+
+    try:
+        yield
+    finally:
+        try:
+            await stop_worker_loop()
+        except Exception as exc:
+            logging.warning(f"Failed to stop PRD10 worker loop cleanly: {exc}")
+
+
+app = FastAPI(
+    title="Mydow API",
+    description=(
+        "Mydow / PRD10 backend — capture, knowledge base, AI chat, search, "
+        "skills, notifications, and async jobs. All `/api/v1/*` responses use "
+        "the PRD10 §6 envelope `{success, data, request_id}` (or paginated "
+        "`{items, pagination}` / error `{error: {code, message, details}}`).\n\n"
+        "**Quick start**:\n"
+        "```bash\n"
+        "curl -X POST http://localhost:8000/api/v1/auth/register \\\n"
+        "  -H 'Content-Type: application/json' \\\n"
+        "  -d '{\"username\":\"demo\",\"email\":\"demo@example.com\",\"password\":\"demo123\"}'\n"
+        "curl -X POST http://localhost:8000/api/v1/auth/login \\\n"
+        "  -H 'Content-Type: application/json' \\\n"
+        "  -d '{\"username\":\"demo\",\"password\":\"demo123\"}'\n"
+        "# capture text\n"
+        "curl -X POST http://localhost:8000/api/v1/capture/text \\\n"
+        "  -H 'Authorization: Bearer <token>' \\\n"
+        "  -H 'Content-Type: application/json' \\\n"
+        "  -d '{\"content\":\"今天想到一个新点子\",\"tags\":[\"想法\"]}'\n"
+        "```\n\n"
+        "See the [architecture overview](/) and `docs/architecture.md`."
+    ),
+    version="1.0.0",
+    openapi_tags=[
+        {"name": "Authentication", "description": "Register / login / token refresh"},
+        {"name": "User", "description": "PRD10 §5.1 `/api/v1/me`"},
+        {"name": "Capture", "description": "PRD10 §8 `/api/v1/capture/*`"},
+        {"name": "Knowledge Base", "description": "PRD10 §10 folders & documents"},
+        {"name": "Feed", "description": "PRD10 §9 cards & feed"},
+        {"name": "Mydow AI", "description": "PRD10 §11 conversations & SSE streaming"},
+        {"name": "Skills", "description": "PRD10 §17 skill list & runs"},
+        {"name": "Search", "description": "PRD10 §13 hybrid search"},
+        {"name": "Tasks (PRD10)", "description": "PRD10 §14 task CRUD (UUID identity)"},
+        {"name": "Notifications", "description": "PRD10 §15 notifications & SSE stream"},
+        {"name": "Jobs", "description": "PRD10 §16 async job status"},
+        {"name": "Insights & Reports", "description": "PRD10 §12 insights / daily-weekly reports"},
+        {"name": "Demo", "description": "Demo auto-login & seeded data"},
+    ],
+    contact={"name": "Mydow Team"},
+    license_info={"name": "Proprietary"},
+    lifespan=lifespan,
+)
+
+# PRD10 envelope requires every response to carry a stable request id.
+# Order matters: Starlette runs ``add_middleware`` in reverse insertion
+# order (last added = outermost). Target call stack:
+#
+#     RequestIdMiddleware            (outermost — stamps request_id first)
+#     RateLimitMiddleware            (PRD10 §29 — checks before work happens)
+#     Prd10AccessLogMiddleware       (logs duration once everything below ran)
+#     <app>
+#
+# So we ``add_middleware`` from innermost to outermost. The rate-limit
+# middleware is mounted unconditionally and stays inert unless
+# ``AGENTOS_RATE_LIMIT=on``; the inactive path is a single env check
+# plus a policy lookup short-circuit.
+app.add_middleware(Prd10AccessLogMiddleware)
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(RequestIdMiddleware)
+
+# PRD10 §11.4 CORS — strict by default, configurable via env vars.
+# AGENTOS_CORS_ORIGINS: comma-separated allowed origins (e.g. "https://demo.mydow.app")
+# AGENTOS_CORS_ALLOW_ALL=1 explicitly opens "*" for local development. The default
+# falls back to common dev origins so `npm run dev` style workflows work without
+# extra config but production deployments stay locked down.
+import os as _os
+
+from fastapi.middleware.cors import CORSMiddleware as _CORSMiddleware
+
+_cors_origins_raw = _os.getenv("AGENTOS_CORS_ORIGINS", "").strip()
+_cors_allow_all = _os.getenv("AGENTOS_CORS_ALLOW_ALL", "").strip().lower() in ("1", "on", "true", "yes")
+if _cors_allow_all:
+    _cors_origins: list[str] = ["*"]
+elif _cors_origins_raw:
+    _cors_origins = [o.strip() for o in _cors_origins_raw.split(",") if o.strip()]
+else:
+    # Sensible local-dev defaults; production deployments should override
+    # via AGENTOS_CORS_ORIGINS to a strict list.
+    _cors_origins = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:8000",
+        "http://localhost:8770",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:8000",
+        "http://127.0.0.1:8770",
+    ]
+app.add_middleware(
+    _CORSMiddleware,
+    allow_origins=_cors_origins,
+    allow_credentials=not _cors_allow_all,  # cannot use credentials with "*"
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["X-Request-ID"],
+)
+
+_PRD10_ENVELOPE_PREFIXES = (
+    "/api/v1/capture",
+    "/api/v1/uploads",
+    "/api/v1/kb",
+    "/api/v1/jobs",
+    "/api/v1/notifications",
+    "/api/v1/feed",
+    "/api/v1/cards",
+    "/api/v1/today",
+    "/api/v1/inbox",
+    # Agent 3 PRD10 intelligence surface.
+    "/api/v1/search",
+    "/api/v1/ai",
+    "/api/v1/skills",
+    "/api/v1/garden",
+    "/api/v1/insights",
+    "/api/v1/reports",
+    # PRD10 §11.10 account compliance surface (export / delete / unsubscribe).
+    "/api/v1/me",
+)
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Keep newly wired PRD10 APIs on the envelope without reshaping legacy APIs."""
+
+    if request.url.path.startswith(_PRD10_ENVELOPE_PREFIXES):
+        return http_exception_to_envelope(exc, request=request)
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=exc.headers,
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Return PRD10 validation envelopes for newly wired APIs."""
+
+    if request.url.path.startswith(_PRD10_ENVELOPE_PREFIXES):
+        return error_json_response(
+            ApiErrorCode.VALIDATION_ERROR,
+            "Validation error",
+            details={"errors": jsonable_encoder(exc.errors())},
+            status_code=422,
+            request=request,
+        )
+
+    return JSONResponse(
+        status_code=422,
+        content={"detail": jsonable_encoder(exc.errors())},
+    )
+
+# Include API routers.
+# Order matters: PRD10 routers ship the new envelope and must match BEFORE
+# their legacy counterparts (today / search / garden) so the legacy view
+# stays reachable only via legacy-shaped sub-paths (e.g. /api/v1/search/index).
+app.include_router(auth_router)
+app.include_router(me_router)
+# PRD10 §11.10 account compliance: /api/v1/me/{export, unsubscribe} +
+# DELETE /api/v1/me. Mounted right after ``me_router`` so the ``/me``
+# tag stays grouped in /docs and the longer paths (``/me/export`` etc.)
+# don't shadow the legacy ``GET /me``.
+app.include_router(account_router)
+app.include_router(demo_router)
+app.include_router(workspaces_router)
+app.include_router(billing_router)
+app.include_router(marketplace_router)
+app.include_router(inbox_router)
+# PRD10 intelligence routers (Agent 3): registered before legacy stage4/garden
+# so /api/v1/search and /api/v1/garden hit the PRD10 read-path first.
+app.include_router(search_prd10_router)
+app.include_router(ai_router)
+app.include_router(skills_prd10_router)
+app.include_router(garden_prd10_router)
+app.include_router(insights_router)
+
+app.include_router(today_router)
+app.include_router(knowledge_router)
+# PRD10 §14 task router (UUID identity); registered BEFORE legacy
+# Integer-keyed tasks router so PRD10 envelopes apply to /api/v1/tasks
+# and /api/v1/tasks/{uuid}. Legacy /today, /stats, /batch sub-paths
+# remain reachable through ``tasks_router`` because typed UUID path
+# params won't match int IDs and bare /tasks list/create are PRD10's
+# canonical contract.
+app.include_router(tasks_prd10_router)
+app.include_router(tasks_router)
+app.include_router(conversations_router)
+app.include_router(stage3_router)
+app.include_router(stage4_router)
+app.include_router(garden_router)
+
+# PRD10 product-data routers (Agent 2).
+# ``today_prd10_router`` is included BEFORE ``today_router`` so the PRD10
+# ``GET /api/v1/today`` matches first; the legacy view stays reachable at
+# ``/api/v1/today/legacy``.
+app.include_router(today_prd10_router)
+app.include_router(capture_router)
+app.include_router(uploads_router)
+app.include_router(feed_router)
+app.include_router(kb_router)
+app.include_router(jobs_router)
+app.include_router(notifications_router)
+
+# PRD10 §11.5b — operator-only Sentry smoke endpoint. Mounted only when
+# the env opt-in is on AND Sentry itself is initialized; safe to leave the
+# import on every deploy because the registration is conditional.
+try:
+    from agent_os.common.sentry_test_router import (
+        is_sentry_test_endpoint_enabled,
+    )
+    from agent_os.common.sentry_test_router import (
+        router as sentry_test_router,
+    )
+
+    if is_sentry_test_endpoint_enabled():
+        app.include_router(sentry_test_router)
+except Exception:  # pragma: no cover - defensive, never block startup
+    import logging as _logging
+    _logging.getLogger("agent_os.prd10.sentry").warning(
+        "sentry_test_router_mount_failed", exc_info=True
+    )
+
+
+# PRD10 §6.2 — startup / shutdown hooks moved to ``lifespan`` above.
+# Keeping this comment here so future readers see the migration trail.
 
 
 # Import and include agent router after app creation
@@ -76,6 +379,10 @@ except Exception as e:
     # If agent router fails to import, log but don't crash
     import logging
     logging.warning(f"Failed to import agent router: {e}")
+
+from agent_os.server.openapi_examples import install_openapi_examples
+
+install_openapi_examples(app)
 
 
 class SessionMetadata(BaseModel):
@@ -92,7 +399,7 @@ class SessionManager:
     def __init__(self) -> None:
         self._sessions: dict[str, ExecutionEnvironment] = {}
         self._agents: dict[str, Agent] = {}
-        self._diff_services: dict[str, "DiffService"] = {}
+        self._diff_services: dict[str, DiffService] = {}
         self._output_queues: dict[str, asyncio.Queue] = {}
         self._event_loops: dict[str, asyncio.AbstractEventLoop] = {}
         self._lock = asyncio.Lock()
@@ -105,7 +412,6 @@ class SessionManager:
         # Default configuration
         self.sandbox_provider = "agent_os.sandbox.docker_impl.DockerSandbox"
         
-        import os
         if os.environ.get("AGENTOS_SANDBOX") == "local":
             self.sandbox_provider = "agent_os.sandbox.local_impl.LocalSandbox"
 
@@ -243,7 +549,13 @@ class SessionManager:
                 config = load_config("config.yaml")
             except FileNotFoundError:
                 # Fallback if config is missing (e.g. tests)
-                from agent_os.core.config import Config, LLMConfig, AgentConfig, MemoryConfig, ContextConfig
+                from agent_os.core.config import (
+                    AgentConfig,
+                    Config,
+                    ContextConfig,
+                    LLMConfig,
+                    MemoryConfig,
+                )
                 config = Config(
                     agent=AgentConfig(name="AgentOS"),
                     llm=LLMConfig(
@@ -277,7 +589,7 @@ class SessionManager:
             self._agents[session_id] = agent
 
             with open("debug_agent_creation.log", "a", encoding="utf-8") as f:
-                f.write(f"AiderAgent created successfully\n")
+                f.write("AiderAgent created successfully\n")
 
             return self._agents[session_id]
 
@@ -303,7 +615,7 @@ class SessionManager:
         session_id: str,
         output_queue: asyncio.Queue,
         loop: asyncio.AbstractEventLoop,
-    ) -> "DiffService":
+    ) -> DiffService:
         """Get or create a diff service for the given session."""
         async with self._lock:
             if session_id not in self._diff_services:
@@ -313,7 +625,7 @@ class SessionManager:
                 self._event_loops[session_id] = loop
             return self._diff_services[session_id]
 
-    def get_diff_service(self, session_id: str) -> "DiffService | None":
+    def get_diff_service(self, session_id: str) -> DiffService | None:
         """Get existing diff service for session without creating."""
         return self._diff_services.get(session_id)
 
@@ -419,7 +731,6 @@ class WebSocketCallbackHandler(AgentCallbackHandler):
 @app.websocket("/ws/chat/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str) -> None:
     """WebSocket endpoint for real-time chat and updates."""
-    import sys
     msg = f"[DEBUG WS] WebSocket connection requested for session: {session_id}"
     print(msg, flush=True)
     with open("ws_debug.log", "a", encoding="utf-8") as f:
@@ -432,14 +743,14 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str) -> None:
         f.write(msg2 + "\n")
 
     # Create output queue for this session
-    debug_msg3 = f"[DEBUG WS] Creating output queue..."
+    debug_msg3 = "[DEBUG WS] Creating output queue..."
     print(debug_msg3, flush=True)
     with open("ws_debug.log", "a", encoding="utf-8") as f:
         f.write(debug_msg3 + "\n")
 
     output_queue = asyncio.Queue()
 
-    debug_msg4 = f"[DEBUG WS] Getting event loop..."
+    debug_msg4 = "[DEBUG WS] Getting event loop..."
     print(debug_msg4, flush=True)
     with open("ws_debug.log", "a", encoding="utf-8") as f:
         f.write(debug_msg4 + "\n")
@@ -466,8 +777,8 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str) -> None:
             agent._event_loop = loop
 
         with open("ws_debug.log", "a", encoding="utf-8") as f:
-            f.write(f"[DEBUG WS] Agent created/retrieved successfully\n")
-        print(f"[DEBUG WS] Agent created/retrieved successfully", flush=True)
+            f.write("[DEBUG WS] Agent created/retrieved successfully\n")
+        print("[DEBUG WS] Agent created/retrieved successfully", flush=True)
 
         # Ensure sandbox exists too (often needed by tools)
         sandbox = await _session_manager.get_or_create_sandbox(session_id)
@@ -679,8 +990,8 @@ async def list_sessions() -> list[dict]:
 @app.post("/api/sessions", response_model=SessionResponse)
 async def create_session(request: SessionCreateRequest) -> SessionResponse:
     """Create a new session with a sandbox."""
-    import uuid
     import re
+    import uuid
     
     session_id = str(uuid.uuid4())
     
@@ -751,10 +1062,8 @@ async def delete_session(session_id: str) -> dict[str, str]:
     return {"message": f"Session {session_id} deleted"}
 
 
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
-from pathlib import Path
-import os
 
 # Get the directory where this file is located - more robust
 # This works whether app is imported or run directly
@@ -831,8 +1140,155 @@ async def get_file_tree(session_id: str, path: str = "") -> FileTreeNode:
 
 
 @app.get("/")
-async def get_index() -> HTMLResponse:
-    """Serve the index page."""
+async def get_index(go: str | None = None):
+    """Serve the V1 investor-friendly hero landing page at the site root.
+
+    PRD10 §10.5 default-entry switch (replaces the old §15.20 redirect).
+    When ``static/landing/index.html`` is deployed we render it as the
+    public homepage so first-time visitors (investors / customers / press)
+    see a value-prop landing instead of being teleported into the demo
+    workspace. A prominent **"开始体验"** CTA on the landing page links
+    to ``/mydow/biz/``; press users / Chrome-MCP smoke / docker healthcheck
+    can also short-circuit by passing ``?go=demo`` which 307-redirects
+    straight to the business prototype (preserving the old §15.20
+    behaviour as an opt-in).
+
+    Fallback chain when the landing bundle is missing (e.g. running tests
+    against a barebones tree): land on the business prototype if present,
+    else the SPA, else the legacy AgentOS index.
+    """
+
+    v14_index = _MYDOW_DIR / "biz_v14" / "index.html" if _MYDOW_DIR.exists() else None
+    biz_v10 = _MYDOW_DIR / "biz" / "index.html" if _MYDOW_DIR.exists() else None
+    has_v14 = v14_index is not None and v14_index.exists()
+    has_v10 = biz_v10 is not None and biz_v10.exists()
+
+    if go == "demo":
+        if has_v14:
+            return RedirectResponse(url="/mydow/biz_v14/", status_code=307)
+        if has_v10:
+            return RedirectResponse(url="/mydow/biz/", status_code=307)
+
+    landing_index = _LANDING_DIR / "index.html"
+    if _LANDING_DIR.exists() and landing_index.exists():
+        with open(landing_index, encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+
+    if has_v14:
+        return RedirectResponse(url="/mydow/biz_v14/", status_code=307)
+    if has_v10:
+        return RedirectResponse(url="/mydow/biz/", status_code=307)
+
+    if _MYDOW_DIR.exists():
+        return RedirectResponse(url="/mydow/", status_code=307)
+
+    return await get_legacy_index()
+
+
+@app.get("/mydow/")
+async def get_mydow_default_entry():
+    """PRD10 §15.20 / §15.34 — ``/mydow/`` redirects to the business prototype.
+
+    Priority chain (top-to-bottom): v1.4 (`biz_v14/`, business owner's
+    canonical drop) → v1.0 (`biz/`, legacy bridge.js host) → SPA shell.
+
+    §15.34 (2026-05-07) flipped the default to v1.4 so investor-facing
+    visits land on the latest business-owner-approved visual. Earlier
+    revisions sent users to v1.0 which the user judged a "严重错误" on
+    2026-05-07 17:25 because the `/mydow/` page no longer matched the
+    business owner's zip drop.
+
+    Defined **before** ``app.mount("/mydow", StaticFiles(html=True))`` so
+    Starlette's first-match wins. The mount continues to serve every
+    other path under ``/mydow/...`` (including ``/mydow/spa/index.html``,
+    ``/mydow/biz/...``, ``/mydow/biz_v14/...``, ``/mydow/style.css``)
+    directly from disk.
+    """
+
+    v14_path = _MYDOW_DIR / "biz_v14" / "index.html"
+    if v14_path.exists():
+        return RedirectResponse(url="/mydow/biz_v14/", status_code=307)
+    biz_path = _MYDOW_DIR / "biz" / "index.html"
+    if biz_path.exists():
+        return RedirectResponse(url="/mydow/biz/", status_code=307)
+    return RedirectResponse(url="/mydow/spa/", status_code=307)
+
+
+@app.get("/mydow/biz_v14/")
+async def get_mydow_biz_v14() -> HTMLResponse:
+    """PRD10 §15.30 / §15.32 — serve the v1.4 business prototype with
+    bridge_v14.js auto-injected before ``</body>``.
+
+    The v1.4 prototype (``static/mydow/biz_v14/index.html``, 461 KB) ships
+    as a high-fidelity static page with ``simulateAction`` placeholders.
+    We do **not** modify the original HTML — instead we inject a single
+    ``<script defer src="/mydow/biz_v14/bridge_v14.js">`` immediately before
+    ``</body>`` so the bridge can run after the page's IIFE registers
+    its own listeners (capture-phase + bubble-phase coexistence).
+
+    Falls through to the static mount when the v1.4 bundle is missing
+    so dev branches without the asset don't 500.
+    """
+
+    v14_index = _MYDOW_DIR / "biz_v14" / "index.html"
+    if not v14_index.exists():
+        return HTMLResponse(
+            content="<h1>Error</h1><p>v1.4 bundle not found at static/mydow/biz_v14/</p>",
+            status_code=404,
+        )
+    with open(v14_index, encoding="utf-8") as f:
+        html = f.read()
+    bridge_tag = (
+        '<script defer src="/mydow/biz_v14/bridge_v14.js" '
+        'data-mydow-bridge-v14="true"></script>\n'
+        '  <script defer src="/mydow/biz_v14/bridge_v14_ext.js" '
+        'data-mydow-bridge-v14-ext="true"></script>\n  </body>'
+    )
+    if 'data-mydow-bridge-v14' not in html:
+        # Inject just before the closing body so the prototype IIFE runs
+        # first; bridge_v14.js attaches capture-phase listeners after,
+        # then bridge_v14_ext.js (this commit) wires the long tail of
+        # data-toast / data-inline-menu / data-notice-action / data-account-action
+        # buttons to real PRD10 endpoints.
+        html = html.replace("</body>", bridge_tag, 1)
+    return HTMLResponse(content=html)
+
+
+@app.get("/mydow/spa/")
+async def get_mydow_spa_alias() -> HTMLResponse:
+    """PRD10 §15.20 — ``/mydow/spa/`` resolves to the legacy SPA index.
+
+    Serves ``static/mydow/index.html`` (the JS-rendered SPA shell) so the
+    old prototype remains reachable for regression comparison while the
+    biz prototype takes over the default ``/mydow/`` entry. Defined
+    explicitly because StaticFiles only auto-resolves ``index.html`` at
+    the directory root, not for the ``spa/`` alias.
+
+    The SPA index uses **relative** paths (``./style.css``, ``./app.js``,
+    ``./mydow-api.js``); when served from ``/mydow/spa/`` those would
+    resolve to ``/mydow/spa/style.css`` (404). We inject a
+    ``<base href="/mydow/">`` so every relative URL resolves against the
+    real bundle directory under ``/mydow/`` regardless of the alias path.
+    """
+
+    spa_index = _MYDOW_DIR / "index.html"
+    if not spa_index.exists():
+        return HTMLResponse(
+            content="<h1>Error</h1><p>SPA bundle not found</p>",
+            status_code=404,
+        )
+    with open(spa_index, encoding="utf-8") as f:
+        html = f.read()
+    if "<base " not in html:
+        # Inject right after <head> so it precedes every relative href/src.
+        html = html.replace("<head>", "<head>\n    <base href=\"/mydow/\">", 1)
+    return HTMLResponse(content=html)
+
+
+@app.get("/legacy")
+async def get_legacy_index() -> HTMLResponse:
+    """Serve the legacy AgentOS static index page."""
+
     index_file = STATIC_DIR / "index.html"
 
     # Debug: print the path we're trying to load
@@ -841,7 +1297,6 @@ async def get_index() -> HTMLResponse:
 
     if not index_file.exists():
         # Fallback: try to find the file anywhere
-        import glob
         matches = list(Path(".").rglob("index.html"))
         if matches:
             index_file = matches[0]
@@ -888,6 +1343,68 @@ async def get_project_wizard() -> HTMLResponse:
 
 # Mount static files (optional, for css/js if split)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+# Mount the Mydow Web frontend bundle delivered in
+# ``Mydow_Web_Frontend_Complete_Package.zip``. The package ships as a single
+# HTML prototype under ``static/mydow/index.html`` plus a sibling
+# ``mydow-api.js`` that wires the static prototype's DOM hooks
+# (``data-nav-target``, the global search input, etc.) to the real PRD10
+# backend. ``static/`` is the project-root static folder, which is distinct
+# from ``src/agent_os/server/static`` mounted above.
+_MYDOW_DIR = Path("static/mydow").resolve()
+if not _MYDOW_DIR.exists():
+    # When running from the repo root the path above is correct; when
+    # running from inside ``src/`` we fall back one level.
+    _alt_mydow = (Path(__file__).resolve().parents[3] / "static" / "mydow")
+    if _alt_mydow.exists():
+        _MYDOW_DIR = _alt_mydow
+
+if _MYDOW_DIR.exists():
+    app.mount(
+        "/mydow",
+        StaticFiles(directory=str(_MYDOW_DIR), html=True),
+        name="mydow",
+    )
+
+
+# PRD10 §11.10 compliance: serve Privacy / Terms HTML pages from
+# ``static/legal/{privacy,terms,index}.html`` so the frontend can deep-link
+# (`/legal/privacy.html` / `/legal/terms.html`) and we have an investor-
+# facing surface for the right-to-erasure / right-to-portability story.
+_LEGAL_DIR = Path("static/legal").resolve()
+if not _LEGAL_DIR.exists():
+    _alt_legal = (Path(__file__).resolve().parents[3] / "static" / "legal")
+    if _alt_legal.exists():
+        _LEGAL_DIR = _alt_legal
+
+if _LEGAL_DIR.exists():
+    app.mount(
+        "/legal",
+        StaticFiles(directory=str(_LEGAL_DIR), html=True),
+        name="legal",
+    )
+
+
+# PRD10 §10.5 — investor-friendly hero landing bundle. Lives at
+# ``static/landing/index.html`` and is rendered by the root `/` handler
+# (``get_index`` above). Mount it under ``/landing/`` as well so deep
+# links (favicon variants / og-image / future split css/js) resolve
+# without needing a per-file route. The hero page itself is fully
+# self-contained (inline CSS, inline SVG icon) so the mount is mostly
+# for forward-compatibility with future asset splits.
+_LANDING_DIR = Path("static/landing").resolve()
+if not _LANDING_DIR.exists():
+    _alt_landing = (Path(__file__).resolve().parents[3] / "static" / "landing")
+    if _alt_landing.exists():
+        _LANDING_DIR = _alt_landing
+
+if _LANDING_DIR.exists():
+    app.mount(
+        "/landing",
+        StaticFiles(directory=str(_LANDING_DIR), html=True),
+        name="landing",
+    )
 
 
 @app.post("/api/sessions/{session_id}/files/save")
@@ -978,14 +1495,14 @@ async def list_skills(session_id: str) -> dict[str, Any]:
         sandbox = await _session_manager.get_or_create_sandbox(session_id)
 
         if hasattr(sandbox, "workspace_root"):
-            import os
             import json
+            import os
 
             toolkit_dir = os.path.join(sandbox.workspace_root, "toolkit")
             registry_path = os.path.join(toolkit_dir, "registry.json")
 
             if os.path.exists(registry_path):
-                with open(registry_path, "r", encoding="utf-8") as f:
+                with open(registry_path, encoding="utf-8") as f:
                     registry = json.load(f)
                     return {"skills": registry.get("skills", [])}
             else:
@@ -1009,7 +1526,7 @@ async def get_skill(session_id: str, skill_name: str) -> dict[str, Any]:
             skill_path = os.path.join(toolkit_dir, "bins", f"{skill_name}.py")
 
             if os.path.exists(skill_path):
-                with open(skill_path, "r", encoding="utf-8") as f:
+                with open(skill_path, encoding="utf-8") as f:
                     code = f.read()
                     return {"name": skill_name, "code": code, "path": f"bins/{skill_name}.py"}
             else:
@@ -1151,14 +1668,14 @@ async def list_mcp_servers(session_id: str) -> dict[str, Any]:
         sandbox = await _session_manager.get_or_create_sandbox(session_id)
 
         if hasattr(sandbox, "workspace_root"):
-            import os
             import json
+            import os
 
             toolkit_dir = os.path.join(sandbox.workspace_root, "toolkit")
             registry_path = os.path.join(toolkit_dir, "registry.json")
 
             if os.path.exists(registry_path):
-                with open(registry_path, "r", encoding="utf-8") as f:
+                with open(registry_path, encoding="utf-8") as f:
                     registry = json.load(f)
                     return {"mcp_servers": registry.get("mcp_servers", [])}
             else:
@@ -1223,8 +1740,8 @@ async def update_mcp_server(session_id: str, server_name: str, server_data: dict
         sandbox = await _session_manager.get_or_create_sandbox(session_id)
 
         if hasattr(sandbox, "workspace_root"):
-            import os
             import json
+            import os
 
             toolkit_dir = os.path.join(sandbox.workspace_root, "toolkit")
             mcp_servers_dir = os.path.join(toolkit_dir, "mcp_servers")
@@ -1234,7 +1751,7 @@ async def update_mcp_server(session_id: str, server_name: str, server_data: dict
                 raise HTTPException(status_code=404, detail=f"MCP server '{server_name}' not found")
 
             # Read existing config
-            with open(config_path, 'r') as f:
+            with open(config_path) as f:
                 config = json.load(f)
 
             # Update with new data
@@ -1256,7 +1773,7 @@ async def update_mcp_server(session_id: str, server_name: str, server_data: dict
             with open(config_path, 'w') as f:
                 json.dump(config, f, indent=2)
 
-            return {"message": f"MCP server updated successfully", "name": new_name}
+            return {"message": "MCP server updated successfully", "name": new_name}
 
         raise HTTPException(status_code=500, detail="Sandbox does not support toolkit")
     except HTTPException:
@@ -1272,14 +1789,14 @@ async def delete_mcp_server(session_id: str, server_name: str) -> dict[str, Any]
         sandbox = await _session_manager.get_or_create_sandbox(session_id)
 
         if hasattr(sandbox, "workspace_root"):
-            import os
             import json
+            import os
 
             toolkit_dir = os.path.join(sandbox.workspace_root, "toolkit")
             registry_path = os.path.join(toolkit_dir, "registry.json")
 
             if os.path.exists(registry_path):
-                with open(registry_path, "r", encoding="utf-8") as f:
+                with open(registry_path, encoding="utf-8") as f:
                     registry = json.load(f)
 
                 # Remove the server from registry
@@ -1307,11 +1824,104 @@ async def delete_mcp_server(session_id: str, server_name: str) -> dict[str, Any]
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Health check
+# Health & readiness checks (PRD10 §11.8 / Acceptance Gate 14.9)
 @app.get("/health")
 async def health_check() -> dict[str, str]:
-    """Health check endpoint."""
+    """Liveness probe — process is up and HTTP stack is responsive."""
     return {"status": "healthy"}
+
+
+@app.get("/ready")
+async def ready_check() -> dict:
+    """Readiness probe — checks dependencies (DB) and reports service info.
+
+    Returns 200 with status=``ready`` when DB is reachable, 503 when not.
+    Optional Redis/object-storage checks can be added behind feature flags
+    once those services are wired in production deployments.
+    """
+
+    from sqlalchemy import text as _text
+
+    from agent_os.common.sentry_setup import get_sentry_state
+    from agent_os.db.base import get_engine
+
+    deps: dict = {"db": "unknown"}
+    overall_ok = True
+
+    try:
+        engine = get_engine()
+        async with engine.connect() as conn:
+            await conn.execute(_text("SELECT 1"))
+        deps["db"] = "ok"
+    except Exception as exc:  # pragma: no cover - defensive
+        deps["db"] = f"down: {exc.__class__.__name__}"
+        overall_ok = False
+
+    sentry_state = get_sentry_state()
+    deps["sentry"] = "active" if sentry_state.get("enabled") else "disabled"
+
+    payload = {
+        "status": "ready" if overall_ok else "not_ready",
+        "service": "agent-os",
+        "version": "v1",
+        "dependencies": deps,
+        "observability": {
+            "sentry": {
+                "enabled": bool(sentry_state.get("enabled")),
+                "environment": sentry_state.get("environment"),
+                "release": sentry_state.get("release"),
+            },
+        },
+    }
+    if not overall_ok:
+        return JSONResponse(status_code=503, content=payload)
+    return payload
+
+
+# ---------------------------------------------------------------------------
+# PRD10 §12.1 — API metrics & P95 monitoring
+# ---------------------------------------------------------------------------
+#
+# Two endpoints expose request latency / throughput data without pulling in
+# ``prometheus_client`` as a hard dep:
+#
+#   * ``GET /metrics``                       — Prometheus exposition text,
+#     scraped by Prometheus / Grafana / Victoria-Metrics in production.
+#   * ``GET /api/v1/__metrics__/json``       — Human-readable JSON
+#     summary with §25.2 latency targets baked in. Useful for ops consoles
+#     and the investor demo readout.
+#
+# Both endpoints are *not* themselves recorded into the registry (recording
+# them would create unbounded self-traffic when scrapes run every 10s).
+# They also bypass the rate limiter via ``_RATE_LIMIT_BYPASS_PATHS``.
+@app.get("/metrics", include_in_schema=False)
+async def metrics_prometheus() -> Response:
+    """Prometheus exposition text endpoint (PRD10 §12.1)."""
+
+    from agent_os.common.metrics import get_default_metrics
+
+    body = get_default_metrics().to_prometheus_text()
+    return Response(
+        content=body,
+        media_type="text/plain; version=0.0.4; charset=utf-8",
+    )
+
+
+@app.get("/api/v1/__metrics__/json", include_in_schema=False)
+async def metrics_json_summary() -> JSONResponse:
+    """Operator-facing JSON view of route latency vs §25.2 targets.
+
+    The endpoint is intentionally namespaced under ``__metrics__`` so it
+    cannot be confused with a public PRD10 surface. It does not require
+    auth on purpose: the per-bucket data is non-sensitive (no user IDs,
+    no payload contents, just latency aggregates) and operators on a
+    bastion host need to be able to ``curl`` it without minting tokens.
+    """
+
+    from agent_os.common.metrics import get_default_metrics
+
+    summary = get_default_metrics().to_json_summary()
+    return JSONResponse(content=summary)
 
 
 # ===== Authentication API =====
@@ -1338,12 +1948,7 @@ class AuthResponse(BaseModel):
 
 # Import auth module
 try:
-    from agent_os.server.auth import (
-        get_user_manager,
-        UserCreate,
-        UserManager,
-        get_current_user
-    )
+    from agent_os.server.auth import UserCreate, UserManager, get_current_user, get_user_manager
     AUTH_AVAILABLE = True
 except ImportError as e:
     print(f"[WARNING] Auth module not available: {e}")

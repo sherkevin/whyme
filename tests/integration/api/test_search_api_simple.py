@@ -1,12 +1,22 @@
-"""Stage 2: Hybrid Search - Simplified Tests."""
+"""Stage 2: Hybrid Search - Simplified Tests.
+
+PRD10 NOTICE
+============
+
+PRD10's canonical search surface is still ``agent_os.search_engine``. The
+legacy ``agent_os.search`` import path now provides a small real compatibility
+layer so historical callers and tests keep working instead of hitting a
+``NotImplementedError`` shim.
+"""
 
 import pytest
-import uuid
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_os.search.keyword_search import KeywordSearchService
-from agent_os.search.hybrid_search import HybridSearchService
+import uuid  # noqa: E402,F401
 
+from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402,F401
+
+from agent_os.search.hybrid_search import HybridSearchService  # noqa: E402,F401
+from agent_os.search.keyword_search import KeywordSearchService  # noqa: E402,F401
 
 # ============================================================================
 # Unit Tests (No database required)
@@ -162,8 +172,8 @@ class TestHybridSearchUnit:
 @pytest.mark.asyncio
 async def test_keyword_search_with_data(db_session: AsyncSession):
     """测试关键词搜索 (需要数据库) - 使用完整 CRUD 流程"""
-    from agent_os.items.crud import create_workspace, create_item
-    from agent_os.items.schema import WorkspaceCreate, ItemCreate
+    from agent_os.items.crud import create_item, create_workspace
+    from agent_os.items.schema import ItemCreate, WorkspaceCreate
 
     # Step 1: 创建测试 workspace (通过 CRUD)
     creator_id = uuid.uuid4()
@@ -244,8 +254,8 @@ async def test_keyword_search_with_data(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_hybrid_search_with_data(db_session: AsyncSession):
     """测试混合搜索 (需要数据库) - 使用完整 CRUD 流程"""
-    from agent_os.items.crud import create_workspace, create_item
-    from agent_os.items.schema import WorkspaceCreate, ItemCreate
+    from agent_os.items.crud import create_item, create_workspace
+    from agent_os.items.schema import ItemCreate, WorkspaceCreate
 
     # Step 1: 创建 workspace
     creator_id = uuid.uuid4()
@@ -298,8 +308,9 @@ async def test_hybrid_search_with_data(db_session: AsyncSession):
 async def test_search_performance(db_session: AsyncSession):
     """测试搜索性能 - 使用完整 CRUD 流程"""
     import time
-    from agent_os.items.crud import create_workspace, create_item
-    from agent_os.items.schema import WorkspaceCreate, ItemCreate
+
+    from agent_os.items.crud import create_item, create_workspace
+    from agent_os.items.schema import ItemCreate, WorkspaceCreate
 
     # Step 1: 创建 workspace
     creator_id = uuid.uuid4()

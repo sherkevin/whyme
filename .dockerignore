@@ -46,6 +46,8 @@ htmlcov/
 
 # Documentation
 *.md
+!README.md
+!static/mydow/biz_v14/*.md
 docs/_build/
 site/
 

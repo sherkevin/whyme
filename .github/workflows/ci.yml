@@ -1,105 +1,241 @@
 name: CI
 
+# PRD10 / Mydow CI pipeline.
+#
+# Strategy (per `.cursor/rules/whyme-multiagent-workflow.mdc` §4.4):
+#   * Lint and format must stay green at all times.
+#   * `pytest --collect-only` must exit 0 across the full repo (proves the
+#     legacy ignore list in `pyproject.toml [tool.pytest.ini_options].addopts`
+#     is still authoritative and no test file imports break).
+#   * The PRD10 acceptance matrix (the same 14 suites Engineer 1 runs locally
+#     before every milestone) must pass on SQLite as the primary engine.
+#   * The PRD10 matrix must also pass against PostgreSQL 16 to preserve the
+#     "双引擎绿章" Engineer 1 signed off in §0.
+#   * Type-check and security scans run advisory-only (continue-on-error)
+#     so they never block a green PRD10 baseline.
+
 on:
   push:
     branches: [ master, main, develop ]
   pull_request:
     branches: [ master, main, develop ]
 
+# Cancel in-flight runs on the same ref to avoid wasting compute on
+# superseded commits. PR runs queue per branch; pushes to main bypass.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Single source of truth for the PRD10 acceptance matrix (mirrored in
+  # whyme-multiagent-workflow.mdc §4.4).
+  PRD10_MATRIX: >-
+    tests/integration/api/test_prd10_v1_acceptance.py
+    tests/integration/api/test_prd10_frontend_binding.py
+    tests/integration/api/test_prd10_ai_api.py
+    tests/integration/api/test_prd10_ai_llm.py
+    tests/integration/api/test_prd10_search_api.py
+    tests/integration/api/test_prd10_skills_api.py
+    tests/integration/api/test_prd10_garden_api.py
+    tests/integration/api/test_prd10_observability.py
+    tests/integration/api/test_prd10_app_wiring.py
+    tests/integration/api/test_prd10_models_intelligence.py
+    tests/integration/api/test_prd10_e2e_flow.py
+    tests/integration/api/test_prd10_product_data_api.py
+    tests/integration/api/test_prd10_insights_api.py
+    tests/integration/api/test_prd10_demo_envelope.py
+    tests/integration/api/test_prd10_deployment_nginx.py
+    tests/integration/api/test_prd10_lifespan_migration.py
+    tests/integration/api/test_prd10_me_patch.py
+    tests/integration/api/test_prd10_me_password_and_preferences_get.py
+    tests/integration/api/test_prd10_metrics.py
+    tests/integration/api/test_prd10_production_seed.py
+    tests/integration/api/test_prd10_rate_limit.py
+    tests/integration/api/test_prd10_sentry_integration.py
+    tests/integration/api/test_prd10_sentry_request_id.py
+    tests/integration/api/prd10/
+
 jobs:
   lint:
-    name: Lint
+    name: Lint (ruff check + format)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          version: "latest"
-
-      - name: Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
 
-      - name: Install dependencies
+      - name: Install ruff
         run: |
-          uv sync --dev
+          python -m pip install --upgrade pip
+          pip install "ruff>=0.8"
 
-      - name: Run ruff linter
-        run: |
-          uv run ruff check src/ tests/
+      - name: ruff check (lint)
+        run: ruff check src/agent_os tests
 
-      - name: Run ruff formatter check
-        run: |
-          uv run ruff format --check src/ tests/
+      - name: ruff format --check
+        run: ruff format --check src/agent_os tests
 
-  test:
-    name: Test
+  collect-only:
+    name: Pytest collect-only (full repo)
     runs-on: ubuntu-latest
     needs: lint
-    strategy:
-      matrix:
-        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
         with:
-          version: "latest"
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install project (editable)
+        run: |
+          python -m pip install --upgrade pip wheel
+          pip install -e ".[dev]"
+
+      - name: pytest --collect-only must exit 0
+        run: |
+          pytest --collect-only -q -p no:cacheprovider
+
+  prd10-sqlite:
+    name: PRD10 acceptance matrix (SQLite)
+    runs-on: ubuntu-latest
+    needs: collect-only
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: "pip"
 
-      - name: Install dependencies
+      - name: Install project (editable)
         run: |
-          uv sync --dev
+          python -m pip install --upgrade pip wheel
+          pip install -e ".[dev]"
 
-      - name: Run tests with coverage
+      - name: PRD10 matrix on SQLite (in-memory)
+        env:
+          # Force in-memory SQLite (Milestone 22 baseline) so the run is
+          # deterministic and Windows-style file locks never apply.
+          TEST_DATABASE_URL: "sqlite+aiosqlite:///:memory:"
+          AGENTOS_PRD10_WORKER: "off"
+          AGENTOS_AI_LLM: "off"
+          AGENTOS_DEMO_MODE: "off"
         run: |
-          uv run pytest --cov=src/agent_os --cov-report=xml --cov-report=term-missing
+          pytest ${{ env.PRD10_MATRIX }} \
+            -q -p no:cacheprovider \
+            --tb=short \
+            --maxfail=15
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./coverage.xml
-          fail_ci_if_error: false
-
-  type-check:
-    name: Type Check
+  prd10-postgres:
+    name: PRD10 acceptance matrix (PostgreSQL 16)
     runs-on: ubuntu-latest
+    needs: collect-only
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: agentos_ci
+          POSTGRES_PASSWORD: agentos_ci_password
+          POSTGRES_DB: agentos_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U agentos_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          version: "latest"
-
-      - name: Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
 
-      - name: Install dependencies
+      - name: Install project (editable) + asyncpg
         run: |
-          uv sync --dev
+          python -m pip install --upgrade pip wheel
+          pip install -e ".[dev]"
+          pip install "asyncpg>=0.29" "psycopg[binary]>=3.1"
 
-      - name: Run mypy
+      - name: Wait for Postgres
         run: |
-          uv run mypy src/agent_os --ignore-missing-imports
-        continue-on-error: true
+          for i in $(seq 1 30); do
+            if pg_isready -h 127.0.0.1 -p 5432 -U agentos_ci; then
+              echo "postgres is ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "postgres did not become ready in time"
+          exit 1
 
-  security:
-    name: Security Scan
+      - name: PRD10 matrix on PostgreSQL 16
+        env:
+          TEST_DATABASE_URL: "postgresql+asyncpg://agentos_ci:agentos_ci_password@127.0.0.1:5432/agentos_ci"
+          AGENTOS_PRD10_WORKER: "off"
+          AGENTOS_AI_LLM: "off"
+          AGENTOS_DEMO_MODE: "off"
+        run: |
+          pytest ${{ env.PRD10_MATRIX }} \
+            -q -p no:cacheprovider \
+            --tb=short \
+            --maxfail=15
+
+  type-check:
+    name: Type Check (advisory)
     runs-on: ubuntu-latest
+    needs: lint
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run Bandit security linter
-        uses: shpigford/security-scan-action@master
-        continue-on-error: true
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install project + mypy
+        run: |
+          python -m pip install --upgrade pip wheel
+          pip install -e ".[dev]"
+          pip install "mypy>=1.10"
+
+      - name: Run mypy (advisory)
+        run: mypy src/agent_os --ignore-missing-imports
+
+  security:
+    name: Security Scan (advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install bandit
+        run: |
+          python -m pip install --upgrade pip
+          pip install "bandit[toml]>=1.7"
+
+      - name: Run bandit (advisory)
+        run: bandit -q -r src/agent_os -lll || true

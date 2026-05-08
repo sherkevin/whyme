@@ -1,17 +1,15 @@
 """FastAPI dependencies for authentication."""
 
-import uuid
 from typing import Optional
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_os.db.base import get_db
-from agent_os.auth.jwt_handler import verify_token, TokenData
+from agent_os.auth.jwt_handler import TokenData, verify_token
 from agent_os.auth.models import User
-
+from agent_os.db.base import get_db
 
 # HTTP Bearer token scheme
 security = HTTPBearer(auto_error=False)
@@ -44,7 +42,7 @@ async def get_current_user(
         raise credentials_exception
 
     # Verify token
-    token_data: Optional[TokenData] = verify_token(
+    token_data: TokenData | None = verify_token(
         credentials.credentials,
         token_type="access"
     )

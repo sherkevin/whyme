@@ -4,7 +4,6 @@ Skill Manager - Manages loading, caching, and applying skills.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +13,7 @@ from .models import (
     SkillCategory,
     SkillContext,
 )
-from .parser import SkillParser, SkillParseError
+from .parser import SkillParseError, SkillParser
 
 
 class SkillManager:

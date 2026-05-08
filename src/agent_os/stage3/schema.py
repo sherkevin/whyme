@@ -1,10 +1,10 @@
 """Pydantic schemas for Stage 3 API requests and responses."""
 
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field
-from datetime import datetime
 import uuid
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
+from pydantic import BaseModel, Field
 
 # =============================================================================
 # Decision Schemas
@@ -16,7 +16,7 @@ class DecisionOption(BaseModel):
     title: str = Field(..., description="Option title")
     description: str = Field(..., description="Option description")
     rationale: str = Field(..., description="Rationale for this option")
-    risks: List[str] = Field(default_factory=list, description="Associated risks")
+    risks: list[str] = Field(default_factory=list, description="Associated risks")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score")
 
 
@@ -24,7 +24,7 @@ class DecisionCreate(BaseModel):
     """Schema for creating a decision (used internally)."""
     task_id: str = Field(..., description="Task ID")
     step_name: str = Field(..., description="Step name")
-    options: List[DecisionOption] = Field(..., min_items=1, description="Decision options")
+    options: list[DecisionOption] = Field(..., min_items=1, description="Decision options")
 
 
 class DecisionResponse(BaseModel):
@@ -32,9 +32,9 @@ class DecisionResponse(BaseModel):
     id: uuid.UUID
     task_id: str
     step_name: str
-    options: List[DecisionOption]
-    selected_option_id: Optional[str] = None
-    confirmed_at: Optional[datetime] = None
+    options: list[DecisionOption]
+    selected_option_id: str | None = None
+    confirmed_at: datetime | None = None
     created_at: datetime
 
     class Config:
@@ -44,7 +44,7 @@ class DecisionResponse(BaseModel):
 class DecisionConfirm(BaseModel):
     """Schema for confirming a decision."""
     selected_option_id: str = Field(..., description="ID of selected option")
-    confirmed_by: Optional[str] = Field(None, description="User ID confirming")
+    confirmed_by: str | None = Field(None, description="User ID confirming")
 
 
 # =============================================================================
@@ -55,7 +55,7 @@ class SkillStep(BaseModel):
     """Schema for a skill step."""
     order: int = Field(..., ge=1, description="Step order")
     name: str = Field(..., description="Step name")
-    description: Optional[str] = Field(None, description="Step description")
+    description: str | None = Field(None, description="Step description")
     agent_action: str = Field(..., description="Agent action to execute")
     requires_confirmation: bool = Field(default=False, description="Needs user confirmation")
 
@@ -65,12 +65,12 @@ class SkillCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200, description="Skill name")
     description: str = Field(..., min_length=1, description="Skill description")
     category: str = Field(..., description="Skill category")
-    steps: List[SkillStep] = Field(..., min_items=1, description="Skill steps")
-    applicable_item_types: List[str] = Field(
+    steps: list[SkillStep] = Field(..., min_items=1, description="Skill steps")
+    applicable_item_types: list[str] = Field(
         default_factory=list,
         description="Item types this skill applies to"
     )
-    required_tags: List[str] = Field(
+    required_tags: list[str] = Field(
         default_factory=list,
         description="Tags required for skill to apply"
     )
@@ -79,13 +79,13 @@ class SkillCreate(BaseModel):
 
 class SkillUpdate(BaseModel):
     """Schema for updating a skill."""
-    name: Optional[str] = Field(None, min_length=1, max_length=200)
-    description: Optional[str] = Field(None, min_length=1)
-    category: Optional[str] = None
-    steps: Optional[List[SkillStep]] = None
-    applicable_item_types: Optional[List[str]] = None
-    required_tags: Optional[List[str]] = None
-    is_active: Optional[bool] = None
+    name: str | None = Field(None, min_length=1, max_length=200)
+    description: str | None = Field(None, min_length=1)
+    category: str | None = None
+    steps: list[SkillStep] | None = None
+    applicable_item_types: list[str] | None = None
+    required_tags: list[str] | None = None
+    is_active: bool | None = None
 
 
 class SkillResponse(BaseModel):
@@ -94,15 +94,15 @@ class SkillResponse(BaseModel):
     name: str
     description: str
     category: str
-    steps: List[Dict[str, Any]]  # Stored as JSON in DB
-    applicable_item_types: List[str]
-    required_tags: List[str]
+    steps: list[dict[str, Any]]  # Stored as JSON in DB
+    applicable_item_types: list[str]
+    required_tags: list[str]
     version: str
-    parent_skill_id: Optional[uuid.UUID] = None
+    parent_skill_id: uuid.UUID | None = None
     is_active: bool
     created_by: str
     created_at: datetime
-    updated_at: Optional[datetime] = None
+    updated_at: datetime | None = None
 
     class Config:
         from_attributes = True
@@ -111,8 +111,8 @@ class SkillResponse(BaseModel):
 class SkillRecommendRequest(BaseModel):
     """Schema for skill recommendation request."""
     task_type: str = Field(..., description="Task item type")
-    task_tags: Optional[List[str]] = Field(None, description="Task tags")
-    task_content: Optional[str] = Field(None, description="Task content")
+    task_tags: list[str] | None = Field(None, description="Task tags")
+    task_content: str | None = Field(None, description="Task content")
     limit: int = Field(default=5, ge=1, le=20, description="Max recommendations")
 
 
@@ -131,7 +131,7 @@ class FlowStartRequest(BaseModel):
     """Schema for starting a flow."""
     task_id: str = Field(..., description="Task ID")
     skill_id: str = Field(..., description="Skill ID to execute")
-    initial_context: Dict[str, Any] = Field(
+    initial_context: dict[str, Any] = Field(
         default_factory=dict,
         description="Initial context for the flow"
     )
@@ -152,7 +152,7 @@ class FlowStatusResponse(BaseModel):
     status: str
     current_step: int
     total_steps: int
-    decision: Optional[DecisionResponse] = None
+    decision: DecisionResponse | None = None
 
 
 class FlowContinueRequest(BaseModel):
@@ -186,14 +186,14 @@ class ExecutionLogResponse(BaseModel):
     step_name: str
     step_order: int
     status: str
-    agent_action: Optional[str] = None
-    input_data: Optional[Dict[str, Any]] = None
-    output_data: Optional[Dict[str, Any]] = None
-    error_message: Optional[str] = None
+    agent_action: str | None = None
+    input_data: dict[str, Any] | None = None
+    output_data: dict[str, Any] | None = None
+    error_message: str | None = None
     started_at: datetime
-    completed_at: Optional[datetime] = None
-    duration_ms: Optional[int] = None
-    decision_id: Optional[uuid.UUID] = None
+    completed_at: datetime | None = None
+    duration_ms: int | None = None
+    decision_id: uuid.UUID | None = None
 
     class Config:
         from_attributes = True

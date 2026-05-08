@@ -38,13 +38,13 @@ class SummarizerContext(ContextManager):
         self.max_tokens = max_tokens
         self.summary_threshold = summary_threshold
         self.keep_recent = keep_recent
-        self._summary_cache: Dict[str, str] = {}
+        self._summary_cache: dict[str, str] = {}
 
     async def process(
         self,
-        messages: List[Dict[str, Any]],
+        messages: list[dict[str, Any]],
         max_tokens: int,
-    ) -> Tuple[List[Dict[str, Any]], PruningReport]:
+    ) -> tuple[list[dict[str, Any]], PruningReport]:
         """Process messages with summarization.
 
         Args:
@@ -112,7 +112,7 @@ class SummarizerContext(ContextManager):
             strategy_used="summarization",
         )
 
-    async def _generate_summary(self, messages: List[Dict[str, Any]]) -> str:
+    async def _generate_summary(self, messages: list[dict[str, Any]]) -> str:
         """Generate a summary of messages using LLM.
 
         Args:
@@ -153,11 +153,11 @@ Summary:"""
             self._summary_cache[cache_key] = summary
 
             return summary
-        except Exception as e:
+        except Exception:
             # Fallback: simple concatenation
             return f"Previous conversation covered: {self._extract_topics(messages)}"
 
-    def _format_messages(self, messages: List[Dict[str, Any]]) -> str:
+    def _format_messages(self, messages: list[dict[str, Any]]) -> str:
         """Format messages as text for summarization."""
         lines = []
         for msg in messages:
@@ -166,7 +166,7 @@ Summary:"""
             lines.append(f"{role.upper()}: {content}")
         return "\n\n".join(lines)
 
-    def _extract_topics(self, messages: List[Dict[str, Any]]) -> str:
+    def _extract_topics(self, messages: list[dict[str, Any]]) -> str:
         """Extract simple topic list from messages (fallback)."""
         topics = []
         for msg in messages:
@@ -177,7 +177,7 @@ Summary:"""
                 topics.append(first_part)
         return ", ".join(topics[:5])
 
-    def _create_cache_key(self, messages: List[Dict[str, Any]]) -> str:
+    def _create_cache_key(self, messages: list[dict[str, Any]]) -> str:
         """Create a cache key for messages."""
         # Simple hash based on message count and first/last content
         if not messages:
@@ -186,7 +186,7 @@ Summary:"""
         last = messages[-1].get("content", "")[:20]
         return f"{len(messages)}:{first}:{last}"
 
-    def _estimate_tokens(self, messages: List[Dict[str, Any]]) -> int:
+    def _estimate_tokens(self, messages: list[dict[str, Any]]) -> int:
         """Estimate token count for messages.
 
         Uses rough approximation: 1 token ≈ 4 characters.
@@ -221,13 +221,13 @@ class KeyInfoExtractor(ContextManager):
         self.llm_provider = llm_provider
         self.max_tokens = max_tokens
         self.key_info_tokens = key_info_tokens
-        self._key_info: List[str] = []
+        self._key_info: list[str] = []
 
     async def process(
         self,
-        messages: List[Dict[str, Any]],
+        messages: list[dict[str, Any]],
         max_tokens: int,
-    ) -> Tuple[List[Dict[str, Any]], PruningReport]:
+    ) -> tuple[list[dict[str, Any]], PruningReport]:
         """Process messages with key info extraction.
 
         Args:
@@ -278,7 +278,7 @@ class KeyInfoExtractor(ContextManager):
             strategy_used="key_info_extraction",
         )
 
-    async def _extract_key_info(self, messages: List[Dict[str, Any]]) -> None:
+    async def _extract_key_info(self, messages: list[dict[str, Any]]) -> None:
         """Extract key information from messages."""
         # Format messages
         conversation_text = self._format_messages(messages)
@@ -325,9 +325,9 @@ List key information as bullet points (max 10 items):"""
 
     def _select_recent_messages(
         self,
-        messages: List[Dict[str, Any]],
+        messages: list[dict[str, Any]],
         available_tokens: int,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Select recent messages that fit in available tokens."""
         non_system = [m for m in messages if m.get("role") != "system"]
 
@@ -345,7 +345,7 @@ List key information as bullet points (max 10 items):"""
 
         return selected
 
-    def _format_messages(self, messages: List[Dict[str, Any]]) -> str:
+    def _format_messages(self, messages: list[dict[str, Any]]) -> str:
         """Format messages as text."""
         lines = []
         for msg in messages:
@@ -354,7 +354,7 @@ List key information as bullet points (max 10 items):"""
             lines.append(f"{role.upper()}: {content}")
         return "\n\n".join(lines)
 
-    def _estimate_tokens(self, messages: List[Dict[str, Any]]) -> int:
+    def _estimate_tokens(self, messages: list[dict[str, Any]]) -> int:
         """Estimate token count (1 token ≈ 4 characters)."""
         total_chars = sum(len(m.get("content", "")) for m in messages)
         return total_chars // 4

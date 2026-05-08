@@ -1,9 +1,11 @@
 """Test aider file modification through WebSocket."""
 
 import asyncio
-import websockets
 import json
 import time
+
+import websockets
+
 
 async def test_aider_file_mod():
     """Test that aider can create and modify files."""
@@ -64,7 +66,7 @@ async def test_aider_file_mod():
                     # Check if done
                     if data.get('type') == 'done':
                         break
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # Check if we've received enough responses
                     if len(responses) > 2:
                         break
@@ -113,7 +115,7 @@ async def test_aider_file_mod():
                     # Check if done
                     if data.get('type') == 'done':
                         break
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     if len(responses) > 2:
                         break
                     continue

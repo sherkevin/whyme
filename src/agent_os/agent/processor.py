@@ -7,20 +7,19 @@ Part of PA 1.0 Stage 2 implementation.
 import logging
 import os
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from agent_os.agent.classifier import ItemType, classify_content, infer_subtype
+from agent_os.agent.summarizer import calculate_summary_quality, generate_summary
+from agent_os.agent.title_generator import generate_title_from_metadata
 from agent_os.items.models import Item, ItemStatus
-from agent_os.agent.title_generator import generate_title, generate_title_from_metadata
-from agent_os.agent.summarizer import generate_summary, calculate_summary_quality
-from agent_os.agent.classifier import classify_content, ItemType, infer_subtype
 
 # Import LLM processor for optional LLM-based processing
 USE_LLM_PROCESSING = os.getenv("USE_LLM_PROCESSING", "false").lower() == "true"
 if USE_LLM_PROCESSING:
     from agent_os.agent.llm_processor import (
-        generate_summary_llm,
-        generate_tags_llm,
         generate_summary_and_tags_llm,
     )
 
@@ -34,14 +33,14 @@ class ProcessingResult:
     def __init__(
         self,
         success: bool,
-        item_id: Optional[str] = None,
-        from_status: Optional[ItemStatus] = None,
-        to_status: Optional[ItemStatus] = None,
-        title: Optional[str] = None,
-        summary: Optional[str] = None,
-        item_type: Optional[ItemType] = None,
-        error: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        item_id: str | None = None,
+        from_status: ItemStatus | None = None,
+        to_status: ItemStatus | None = None,
+        title: str | None = None,
+        summary: str | None = None,
+        item_type: ItemType | None = None,
+        error: str | None = None,
+        metadata: dict[str, Any] | None = None
     ):
         self.success = success
         self.item_id = item_id
@@ -54,7 +53,7 @@ class ProcessingResult:
         self.metadata = metadata or {}
         self.processed_at = datetime.utcnow()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典."""
         # 处理 from_status 和 to_status - 可能是枚举或字符串
         from_status_val = self.from_status.value if hasattr(self.from_status, 'value') else str(self.from_status) if self.from_status else None
@@ -94,6 +93,7 @@ async def process_inbox_item(
     try:
         # 1. 获取 Item - 直接查询而不是使用 CRUD
         import uuid
+
         from sqlalchemy import select
 
         # 将字符串转换为 UUID
@@ -254,7 +254,7 @@ async def _record_processing_event(
     item_id: str,
     from_status: ItemStatus,
     to_status: ItemStatus,
-    result: Dict[str, Any]
+    result: dict[str, Any]
 ) -> None:
     """记录处理事件.
 
@@ -358,7 +358,7 @@ async def agent_tick(
     db: AsyncSession,
     max_items: int = 10,
     force_reprocess: bool = False
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """执行一次 Agent Tick.
 
     处理所有 raw 状态的 InboxItems.

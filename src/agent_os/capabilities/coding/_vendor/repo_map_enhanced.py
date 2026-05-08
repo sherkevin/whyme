@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
 
 class RepoMapEnhanced:
@@ -69,8 +69,8 @@ class RepoMapEnhanced:
         root: str | None = None,
         map_tokens: int = 1024,
         verbose: bool = False,
-        include_patterns: List[str] | None = None,
-        exclude_patterns: List[str] | None = None,
+        include_patterns: list[str] | None = None,
+        exclude_patterns: list[str] | None = None,
     ):
         """Initialize RepoMapEnhanced."""
         self.root = Path(root) if root else Path.cwd()
@@ -88,7 +88,7 @@ class RepoMapEnhanced:
             "**/*.egg-info/**",
         ]
 
-    def get_repo_map(self, other_files: List[str] | None = None) -> str:
+    def get_repo_map(self, other_files: list[str] | None = None) -> str:
         """Generate comprehensive repository map."""
         if not self.root.exists():
             return f"# Repository Map\n\nError: Path {self.root} does not exist.\n"
@@ -150,7 +150,7 @@ class RepoMapEnhanced:
     def _add_to_tree(
         self,
         path: Path,
-        lines: List[str],
+        lines: list[str],
         prefix: str,
         depth: int,
         max_depth: int,
@@ -203,7 +203,7 @@ class RepoMapEnhanced:
 
         return False
 
-    def _extract_symbols(self, other_files: List[str] | None = None) -> Dict[str, Dict[str, List[str]]]:
+    def _extract_symbols(self, other_files: list[str] | None = None) -> dict[str, dict[str, list[str]]]:
         """Extract symbols from code files."""
         symbols = {}
         code_files = self._get_code_files(other_files)
@@ -223,7 +223,7 @@ class RepoMapEnhanced:
 
         return symbols
 
-    def _get_code_files(self, other_files: List[str] | None = None) -> List[Path]:
+    def _get_code_files(self, other_files: list[str] | None = None) -> list[Path]:
         """Get all code files in the repository."""
         files = []
 
@@ -278,15 +278,15 @@ class RepoMapEnhanced:
 
         return False
 
-    def _detect_language(self, file_path: Path) -> Optional[str]:
+    def _detect_language(self, file_path: Path) -> str | None:
         """Detect programming language from file extension."""
         suffix = file_path.suffix.lower()
         return self.LANGUAGE_MAP.get(suffix)
 
-    def _extract_from_file(self, file_path: Path, lang: str) -> Dict[str, List[str]]:
+    def _extract_from_file(self, file_path: Path, lang: str) -> dict[str, list[str]]:
         """Extract symbols from a single file."""
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = f.read()
         except Exception as e:
             if self.verbose:
@@ -316,7 +316,7 @@ class RepoMapEnhanced:
 
         return symbols
 
-    def _get_statistics(self) -> Dict[str, Any]:
+    def _get_statistics(self) -> dict[str, Any]:
         """Get repository statistics."""
         stats = {
             "total_files": 0,
@@ -331,7 +331,7 @@ class RepoMapEnhanced:
 
         for file_path in code_files:
             try:
-                with open(file_path, "r", encoding="utf-8") as f:
+                with open(file_path, encoding="utf-8") as f:
                     lines = len(f.readlines())
                     stats["total_lines"] += lines
 
@@ -343,7 +343,7 @@ class RepoMapEnhanced:
 
         return stats
 
-    def get_tags_map(self, files: List[str]) -> str:
+    def get_tags_map(self, files: list[str]) -> str:
         """Generate ctags-style tags map."""
         if not files:
             return ""

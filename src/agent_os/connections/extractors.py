@@ -1,8 +1,8 @@
 """NLP Extractors for Connection Engine - Keywords and Entities."""
 
-import re
 import logging
-from typing import List, Set
+import re
+from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ class KeywordExtractor:
         """初始化关键词提取器"""
         pass
 
-    def extract(self, text: str, top_k: int = 10) -> List[str]:
+    def extract(self, text: str, top_k: int = 10) -> list[str]:
         """
         提取文本中的关键词
 
@@ -100,7 +100,7 @@ class KeywordExtractor:
             logger.error(f"Error extracting keywords: {e}")
             return []
 
-    def _tokenize(self, text: str) -> List[str]:
+    def _tokenize(self, text: str) -> list[str]:
         """
         分词 - 简化版本
 
@@ -170,7 +170,7 @@ class EntityExtractor:
             for name, pattern in self.PATTERNS.items()
         }
 
-    def extract(self, text: str) -> List[str]:
+    def extract(self, text: str) -> list[str]:
         """
         提取文本中的实体
 
@@ -217,7 +217,7 @@ class EntityExtractor:
             logger.error(f"Error extracting entities: {e}")
             return []
 
-    def extract_persons(self, text: str) -> List[str]:
+    def extract_persons(self, text: str) -> list[str]:
         """
         提取人名
 
@@ -242,7 +242,7 @@ class EntityExtractor:
 
         return list(persons)
 
-    def extract_organizations(self, text: str) -> List[str]:
+    def extract_organizations(self, text: str) -> list[str]:
         """
         提取组织名
 
@@ -267,7 +267,7 @@ class EntityExtractor:
 
         return list(orgs)
 
-    def extract_emails(self, text: str) -> List[str]:
+    def extract_emails(self, text: str) -> list[str]:
         """
         提取邮箱地址
 
@@ -288,7 +288,7 @@ class EntityExtractor:
 def extract_keywords_and_entities(
     text: str,
     top_k: int = 10
-) -> tuple[List[str], List[str]]:
+) -> tuple[list[str], list[str]]:
     """
     同时提取关键词和实体
 

@@ -1,12 +1,13 @@
 """Tests for AiderAdapter."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
 from typing import Any
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from agent_os.capabilities.coding.aider_adapter import AiderAdapter
 from agent_os.core.types import RuntimeContext
+
 
 class TestAiderAdapter:
     """Test suite for AiderAdapter."""

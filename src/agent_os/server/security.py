@@ -10,12 +10,10 @@ This module provides comprehensive security validation including:
 
 from __future__ import annotations
 
-import os
 import re
 import shlex
 from pathlib import Path
 from typing import Optional
-
 
 # Security constants
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB default
@@ -184,7 +182,7 @@ def escape_shell_args(command: str, *args: str) -> str:
     return f"{command} {' '.join(escaped_args)}"
 
 
-def validate_file_size(size: int, max_size: Optional[int] = None) -> bool:
+def validate_file_size(size: int, max_size: int | None = None) -> bool:
     """Validate file size against maximum.
 
     Args:
@@ -259,7 +257,7 @@ class SecurityValidator:
     """
 
     @staticmethod
-    def validate_path(path: str, allow_absolute: bool = False, workspace: Optional[str] = None) -> str:
+    def validate_path(path: str, allow_absolute: bool = False, workspace: str | None = None) -> str:
         """Validate and sanitize a file path.
 
         Args:
@@ -320,7 +318,7 @@ class SecurityValidator:
         return escape_shell_args("echo", arg)
 
     @staticmethod
-    def validate_file_size(size: int, max_size: Optional[int] = None) -> bool:
+    def validate_file_size(size: int, max_size: int | None = None) -> bool:
         """Validate file size against maximum.
 
         Args:

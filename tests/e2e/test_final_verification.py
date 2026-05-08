@@ -1,9 +1,11 @@
 """Final verification test for aider integration."""
 
 import asyncio
-import websockets
 import json
 from pathlib import Path
+
+import websockets
+
 
 async def test_aider_integration():
     """Test the complete aider integration through WebSocket."""
@@ -48,9 +50,9 @@ async def test_aider_integration():
                             content = payload.get('data', {}).get('content', '')
                             print(f"[RECEIVED] Chat response ({len(content)} chars)")
                             if 'Error' not in content and len(content) > 20:
-                                print(f"[OK] Got valid response")
+                                print("[OK] Got valid response")
                                 if 'Hello from Aider' in content or 'test_simple.txt' in content:
-                                    print(f"[OK] Response mentions the file")
+                                    print("[OK] Response mentions the file")
                             elif 'Error' in content:
                                 print(f"[ERROR] {content[:100]}")
 
@@ -58,7 +60,7 @@ async def test_aider_integration():
                         print("[OK] Done signal received")
                         break
 
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     break
 
             # Wait a bit for file operations
@@ -105,13 +107,13 @@ async def test_aider_integration():
                             content = payload.get('data', {}).get('content', '')
                             print(f"[RECEIVED] Chat response ({len(content)} chars)")
                             if 'Applied edit' in content or 'Modified' in content:
-                                print(f"[OK] File was modified")
+                                print("[OK] File was modified")
 
                     if data.get('type') == 'done':
                         print("[OK] Done signal received")
                         break
 
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     break
 
             # Wait for file operations
@@ -122,15 +124,15 @@ async def test_aider_integration():
             if hello_file.exists():
                 content = hello_file.read_text(encoding='utf-8')
                 if '# Modified by Aider' in content or 'Modified by Aider' in content:
-                    print(f"\n[SUCCESS] hello.py was modified")
+                    print("\n[SUCCESS] hello.py was modified")
                     print(f"First line: {content.split(chr(10))[0]}")
                     test2_passed = True
                 else:
-                    print(f"\n[UNCERTAIN] hello.py content:")
+                    print("\n[UNCERTAIN] hello.py content:")
                     print(content[:200])
                     test2_passed = False
             else:
-                print(f"\n[FAIL] hello.py not found")
+                print("\n[FAIL] hello.py not found")
                 test2_passed = False
 
             # Summary

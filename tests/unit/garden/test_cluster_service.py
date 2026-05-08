@@ -7,18 +7,18 @@ Tests:
 - Deduplication by canonical_hash (evidence_count increment)
 """
 
-import pytest
-import uuid
 import json
+import uuid
 from datetime import datetime, timedelta
-from typing import List
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
 
-from agent_os.garden.cluster_service import ClusterService, InsightWorker
-from agent_os.garden.models import KnowledgeCardLink, DailyInsight
-from agent_os.items.models import Item, Workspace
+import pytest
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from agent_os.auth.models import User
+from agent_os.garden.cluster_service import ClusterService, InsightWorker
+from agent_os.garden.models import DailyInsight, KnowledgeCardLink
+from agent_os.items.models import Item, Workspace
 
 
 @pytest.fixture
@@ -445,7 +445,7 @@ class TestInsightWorker:
         assert result2["insight_id"] == first_insight_id  # Same record
 
         # Verify only ONE insight record exists
-        from sqlalchemy import select, func
+        from sqlalchemy import select
         stmt = select(func.count(DailyInsight.id)).where(
             DailyInsight.canonical_hash == "same_hash"
         )

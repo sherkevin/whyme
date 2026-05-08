@@ -1,0 +1,71 @@
+{
+  "product": "Mydow Web",
+  "version": "1.4-final-backend-cursor-handoff",
+  "updatedAt": "2026-05-06T18:45:00+08:00",
+  "entry": "mydow.html",
+  "runtime": {
+    "type": "static-html",
+    "buildRequired": false,
+    "recommendedForCursor": true
+  },
+  "files": [
+    {
+      "path": "mydow.html",
+      "role": "frontend-prototype",
+      "description": "Latest clickable single-file frontend with HTML, CSS, SVG icons, and interaction script."
+    },
+    {
+      "path": "Mydow_Web_API_Contract_v1.4.md",
+      "role": "backend-contract",
+      "description": "Current API contract, data models, frontend hooks, and integration priorities."
+    },
+    {
+      "path": "Mydow_Web_Backend_Cursor_Handoff_v1.4.md",
+      "role": "handoff-guide",
+      "description": "Cursor/backend development handoff guide."
+    },
+    {
+      "path": "Mydow_Web_Frontend_Handoff.md",
+      "role": "legacy-summary",
+      "description": "Frontend handoff summary retained for history."
+    },
+    {
+      "path": "Mydow_Web_前后端交互与按钮接口定义_v1.1.md",
+      "role": "legacy-api-notes",
+      "description": "Previous interaction and button/API mapping retained for comparison."
+    },
+    {
+      "path": "Mydow_Web_前端开发交付说明_v1.1.md",
+      "role": "legacy-frontend-delivery",
+      "description": "Previous frontend delivery note retained for comparison."
+    },
+    {
+      "path": "Mydow_Web_AI工作台优化说明_v1.3.md",
+      "role": "ai-workspace-note",
+      "description": "AI workspace optimization note."
+    }
+  ],
+  "importantHooks": [
+    "data-nav-target",
+    "data-view-target",
+    "data-inline-menu",
+    "data-open-modal",
+    "data-open-drawer",
+    "data-generate-insight",
+    "data-note-option",
+    "data-notice-filter",
+    "data-notice-action",
+    "data-notice-quick",
+    "data-search-trigger"
+  ],
+  "recommendedFirstBackendEndpoints": [
+    "GET /api/v1/me",
+    "GET /api/v1/capture/items",
+    "POST /api/v1/capture/items",
+    "GET /api/v1/kb/folders",
+    "GET /api/v1/ai/chats",
+    "POST /api/v1/ai/messages",
+    "GET /api/v1/notifications",
+    "GET /api/v1/search"
+  ]
+}

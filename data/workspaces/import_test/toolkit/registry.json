@@ -1,15 +1,15 @@
 {
   "skills": [
     {
-      "name": "weather",
-      "path": "bins/weather.py",
-      "description": "Weather Skill - 获取天气信息",
+      "name": "calculator",
+      "path": "bins\\calculator.py",
+      "description": "Calculator Skill - 安全的数学计算器",
       "type": "skill"
     },
     {
-      "name": "calculator",
-      "path": "bins/calculator.py",
-      "description": "Calculator Skill - 安全的数学计算器",
+      "name": "weather",
+      "path": "bins\\weather.py",
+      "description": "Weather Skill - 获取天气信息",
       "type": "skill"
     }
   ],

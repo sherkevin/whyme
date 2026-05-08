@@ -1,14 +1,40 @@
-"""Stage 2: Hybrid Search Tests."""
+"""Stage 2: Hybrid Search Tests.
+
+PRD10 NOTICE
+============
+
+PRD4 ``agent_os.search.keyword_search`` and ``agent_os.search.hybrid_search``
+are now ``NotImplementedError`` shims (Agent 1 Milestone 2). PRD10 search
+lives in ``agent_os.search_engine`` + ``agent_os.search_engine.router_prd10``
+and has its own focused tests
+(``tests/integration/api/test_prd10_search_api.py``).
+
+This whole module is skipped at collection time. Re-enable only if a fresh
+PRD4-style hybrid-search shim is added that satisfies these assertions.
+"""
 
 import pytest
-import uuid
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_os.search.keyword_search import KeywordSearchService, search_by_keywords
-from agent_os.search.hybrid_search import HybridSearchService, hybrid_search
-from agent_os.items.models import Item, ItemType, ItemStatus
-from agent_os.items.schema import ItemCreate
+pytest.skip(
+    "Legacy PRD4 search tests; superseded by "
+    "tests/integration/api/test_prd10_search_api.py.",
+    allow_module_level=True,
+)
 
+import uuid  # noqa: E402,F401
+
+from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402,F401
+
+from agent_os.items.models import Item, ItemStatus, ItemType  # noqa: E402,F401
+from agent_os.items.schema import ItemCreate  # noqa: E402,F401
+from agent_os.search.hybrid_search import (  # noqa: E402,F401
+    HybridSearchService,
+    hybrid_search,
+)
+from agent_os.search.keyword_search import (  # noqa: E402,F401
+    KeywordSearchService,
+    search_by_keywords,
+)
 
 # ============================================================================
 # Fixtures
@@ -320,8 +346,8 @@ class TestSearchAPI:
 
     async def test_hybrid_search_endpoint(self, db_session: AsyncSession):
         """测试混合搜索 API"""
-        from fastapi.testclient import TestClient
         from agent_os.search.router import router
+        from fastapi.testclient import TestClient
 
         client = TestClient(router)
         response = client.post(
@@ -344,8 +370,8 @@ class TestSearchAPI:
 
     async def test_health_check(self):
         """测试健康检查端点"""
-        from fastapi.testclient import TestClient
         from agent_os.search.router import router
+        from fastapi.testclient import TestClient
 
         client = TestClient(router)
         response = client.get("/search/health")

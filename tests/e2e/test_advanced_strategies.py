@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import asyncio
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 
@@ -19,11 +18,11 @@ class MockLLMProvider:
 
     async def generate(
         self,
-        messages: List[Dict[str, Any]],
+        messages: list[dict[str, Any]],
         max_tokens: int = 1000,
         temperature: float = 0.7,
         **kwargs: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Mock generate method."""
         self.call_count += 1
         return {"content": self.response}
@@ -290,7 +289,7 @@ class TestKeyInfoExtractor:
         """Test fallback extraction when LLM fails."""
         # Mock LLM that raises exception
         class FailingLLM:
-            async def generate(self, *args: Any, **kwargs: Any) -> Dict[str, Any]:
+            async def generate(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
                 raise Exception("LLM failed")
 
         extractor = KeyInfoExtractor(FailingLLM(), max_tokens=50)

@@ -123,7 +123,7 @@ async def test_agent_with_tools():
         # Chat with the agent
         response = await agent.chat("What's the weather like in Beijing?")
 
-        print(f"\nAgent Response:")
+        print("\nAgent Response:")
         print(f"  {response['content']}")
 
         if "tool_calls" in response:

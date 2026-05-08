@@ -1,0 +1,243 @@
+{
+  "ran_at": "2026-05-05T08:58:30.442809Z",
+  "base_url": "http://127.0.0.1:4234",
+  "timeline": [
+    {
+      "step": "auth.register",
+      "status": 201,
+      "ok": true,
+      "sample": {
+        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwNDM3NzA5My1mM2Y4LTQwMTItYmJiOC1jMjU3MWY4YjAzNGEiLCJleHAiOjE3Nzc5NzMzMDksImlhdCI6MTc3Nzk3MTUwOSwidHlwZSI6ImFjY2VzcyJ9.tkQ_t0OWk8c-YL8tfVc-trXJpmtpYeKqez4IVo9zsiQ",
+        "token_type": "bearer"
+      }
+    },
+    {
+      "step": "capture.text",
+      "status": 200,
+      "ok": true,
+      "sample": {
+        "success": true,
+        "request_id": "req_89b0ae8ac5a7",
+        "data_keys": [
+          "inbox_item",
+          "job"
+        ]
+      }
+    },
+    {
+      "step": "today.get",
+      "status": 200,
+      "ok": true,
+      "sample": {
+        "success": true,
+        "request_id": "req_c5071aecea25",
+        "data_keys": [
+          "favorite_folders",
+          "insight_preview",
+          "quick_actions",
+          "stats",
+          "tasks",
+          "user"
+        ]
+      }
+    },
+    {
+      "step": "feed.get",
+      "status": 200,
+      "ok": true,
+      "sample": {
+        "success": true,
+        "request_id": "req_a4cae54f3485",
+        "data_keys": [
+          "facets",
+          "items",
+          "pagination",
+          "view"
+        ]
+      }
+    },
+    {
+      "step": "uploads.presign",
+      "status": 200,
+      "ok": true,
+      "sample": {
+        "success": true,
+        "request_id": "req_86242290f232",
+        "data_keys": [
+          "expires_in",
+          "file_url",
+          "upload_id",
+          "upload_method",
+          "upload_url"
+        ]
+      }
+    },
+    {
+      "step": "uploads.put_bytes",
+      "status": 200,
+      "ok": true,
+      "sample": {
+        "success": true,
+        "request_id": "req_8c4b6215ceb4",
+        "data_keys": [
+          "file_url",
+          "filename",
+          "size_bytes",
+          "upload_id"
+        ]
+      }
+    },
+    {
+      "step": "capture.file.commit",
+      "status": 200,
+      "ok": true,
+      "sample": {
+        "success": true,
+        "request_id": "req_f74271a2093c",
+        "data_keys": [
+          "document_id",
+          "inbox_item_id",
+          "job_id",
+          "source_id",
+          "status"
+        ]
+      }
+    },
+    {
+      "step": "uploads.raw",
+      "status": 200,
+      "ok": true,
+      "sample": {
+        "bytes_len": 19
+      }
+    },
+    {
+      "step": "kb.overview",
+      "status": 200,
+      "ok": true,
+      "sample": {
+        "success": true,
+        "request_id": "req_729dfe073f91",
+        "data_keys": [
+          "favorite_folders",
+          "recent_documents",
+          "stats"
+        ]
+      }
+    },
+    {
+      "step": "kb.folders",
+      "status": 200,
+      "ok": true,
+      "sample": {
+        "success": true,
+        "request_id": "req_0ff03253a5ee",
+        "data_keys": [
+          "items"
+        ]
+      }
+    },
+    {
+      "step": "kb.documents",
+      "status": 200,
+      "ok": true,
+      "sample": {
+        "success": true,
+        "request_id": "req_2203739d8c49",
+        "data_keys": [
+          "items",
+          "pagination"
+        ]
+      }
+    },
+    {
+      "step": "inbox.list",
+      "status": 200,
+      "ok": true,
+      "sample": {
+        "success": true,
+        "request_id": "req_075479a88432",
+        "data_keys": [
+          "items",
+          "pagination"
+        ]
+      }
+    },
+    {
+      "step": "inbox.patch",
+      "status": 200,
+      "ok": true,
+      "sample": {
+        "success": true,
+        "request_id": "req_6c7cb4f030ff",
+        "data_keys": [
+          "created_at",
+          "id",
+          "priority",
+          "processing_status",
+          "raw_content",
+          "source_id",
+          "source_url",
+          "status",
+          "tags",
+          "title",
+          "type",
+          "updated_at",
+          "user_id"
+        ]
+      }
+    },
+    {
+      "step": "notifications.unread_count",
+      "status": 200,
+      "ok": true,
+      "sample": {
+        "success": true,
+        "request_id": "req_51e8436bda4b",
+        "data_keys": [
+          "count"
+        ]
+      }
+    },
+    {
+      "step": "notifications.list",
+      "status": 200,
+      "ok": true,
+      "sample": {
+        "success": true,
+        "request_id": "req_07ad58ddaf47",
+        "data_keys": [
+          "items",
+          "pagination"
+        ]
+      }
+    },
+    {
+      "step": "notifications.read_all",
+      "status": 200,
+      "ok": true,
+      "sample": {
+        "success": true,
+        "request_id": "req_06784b7bfe15",
+        "data_keys": [
+          "updated"
+        ]
+      }
+    },
+    {
+      "step": "notifications.sse_stream",
+      "status": 200,
+      "ok": true,
+      "sample": {
+        "ready_seen": true,
+        "preview": "event: ready\ndata: {\"user_id\": \"04377093-f3f8-4012-bbb8-c2571f8b034a\"}\n\n"
+      }
+    }
+  ],
+  "failures": [],
+  "summary": {
+    "steps": 17,
+    "ok": 17,
+    "fail": 0
+  }
+}

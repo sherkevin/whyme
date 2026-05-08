@@ -1,9 +1,10 @@
 """Vector embedding service for knowledge cards."""
 
-import numpy as np
-from typing import List, Optional
-from sentence_transformers import SentenceTransformer
 import logging
+from typing import List, Optional
+
+import numpy as np
+from sentence_transformers import SentenceTransformer
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 class EmbeddingService:
     """Service for generating vector embeddings using sentence-transformers."""
 
-    _model: Optional[SentenceTransformer] = None
+    _model: SentenceTransformer | None = None
     _model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
     _embedding_dim: int = 384
 
@@ -33,7 +34,7 @@ class EmbeddingService:
         return cls._model
 
     @classmethod
-    def embed_text(cls, text: str) -> Optional[List[float]]:
+    def embed_text(cls, text: str) -> list[float] | None:
         """Generate embedding for a single text.
 
         Args:
@@ -69,7 +70,7 @@ class EmbeddingService:
             return None
 
     @classmethod
-    def embed_texts(cls, texts: List[str]) -> List[Optional[List[float]]]:
+    def embed_texts(cls, texts: list[str]) -> list[list[float] | None]:
         """Generate embeddings for multiple texts.
 
         Args:
@@ -101,7 +102,7 @@ class EmbeddingService:
             return [None] * len(texts)
 
     @classmethod
-    def compute_similarity(cls, embedding1: List[float], embedding2: List[float]) -> float:
+    def compute_similarity(cls, embedding1: list[float], embedding2: list[float]) -> float:
         """Compute cosine similarity between two embeddings.
 
         Args:
@@ -147,7 +148,7 @@ class EmbeddingService:
 # Utility Functions
 # =============================================================================
 
-def generate_embedding_for_card(title: str, content: str) -> Optional[List[float]]:
+def generate_embedding_for_card(title: str, content: str) -> list[float] | None:
     """Generate embedding for a card by combining title and content.
 
     Args:
@@ -162,7 +163,7 @@ def generate_embedding_for_card(title: str, content: str) -> Optional[List[float
     return EmbeddingService.embed_text(combined_text)
 
 
-def generate_embedding_for_inbox(content: str) -> Optional[List[float]]:
+def generate_embedding_for_inbox(content: str) -> list[float] | None:
     """Generate embedding for an inbox item.
 
     Args:

@@ -3,15 +3,16 @@
 Note: InboxItem endpoints are removed since we use PRD4 Item model instead.
 """
 
-from typing import Optional, List
+import uuid
+from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-import uuid
 
-from agent_os.db.base import get_db
 from agent_os.auth.dependencies import get_current_user
 from agent_os.auth.models import User
+from agent_os.db.base import get_db
 from agent_os.knowledge import crud
 
 # =============================================================================
@@ -30,20 +31,20 @@ class CardBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     content: str = Field(..., min_length=1)
     para_type: str = Field(default="concept", description="Paragraph type (concept, action, reference)")
-    tags: List[str] = Field(default_factory=list, description="Tags for the card")
+    tags: list[str] = Field(default_factory=list, description="Tags for the card")
 
 
 class CardCreate(CardBase):
     """Schema for creating a Card."""
-    source_inbox_item_id: Optional[uuid.UUID] = Field(None, description="Source Item ID")
+    source_inbox_item_id: uuid.UUID | None = Field(None, description="Source Item ID")
 
 
 class CardUpdate(BaseModel):
     """Schema for updating a Card."""
-    title: Optional[str] = Field(None, min_length=1, max_length=200)
-    content: Optional[str] = Field(None, min_length=1)
-    para_type: Optional[str] = Field(None, description="Paragraph type")
-    tags: Optional[List[str]] = Field(None, description="Tags for the card")
+    title: str | None = Field(None, min_length=1, max_length=200)
+    content: str | None = Field(None, min_length=1)
+    para_type: str | None = Field(None, description="Paragraph type")
+    tags: list[str] | None = Field(None, description="Tags for the card")
 
 
 class CardResponse(CardBase):
@@ -51,7 +52,7 @@ class CardResponse(CardBase):
     id: uuid.UUID
     workspace_id: uuid.UUID
     user_id: uuid.UUID
-    source_inbox_item_id: Optional[uuid.UUID] = None
+    source_inbox_item_id: uuid.UUID | None = None
     created_at: str
     updated_at: str
 
@@ -61,7 +62,7 @@ class CardResponse(CardBase):
 
 class CardList(BaseModel):
     """Schema for paginated Card list."""
-    items: List[CardResponse]
+    items: list[CardResponse]
     total: int
     page: int
     page_size: int
@@ -158,8 +159,8 @@ async def list_cards(
     *,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    para_type: Optional[str] = Query(None, description="Filter by paragraph type (concept, action, reference)"),
-    tags: Optional[str] = Query(None, description="Filter by tags (comma-separated)"),
+    para_type: str | None = Query(None, description="Filter by paragraph type (concept, action, reference)"),
+    tags: str | None = Query(None, description="Filter by tags (comma-separated)"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Cards per page"),
 ) -> CardList:

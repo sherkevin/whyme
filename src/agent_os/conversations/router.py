@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_os.db.base import get_db
 from agent_os.conversations import ConversationRepository
-from agent_os.conversations.models import Conversation
-
+from agent_os.db.base import get_db
 
 router = APIRouter(prefix="/api/v1/conversations", tags=["conversations"])
 
@@ -21,7 +20,7 @@ async def get_conversation_history(
     limit: int = 50,
     before_id: int | None = None,
     db: AsyncSession = Depends(get_db),
-) -> List[dict]:
+) -> list[dict]:
     """Get conversation history for a session.
 
     Args:
@@ -107,7 +106,7 @@ async def get_recent_sessions(
     user_id: int,
     limit: int = 10,
     db: AsyncSession = Depends(get_db),
-) -> List[str]:
+) -> list[str]:
     """Get recent session IDs for a user."""
     repo = ConversationRepository()
     sessions = await repo.get_recent_sessions(db, user_id, limit=limit)

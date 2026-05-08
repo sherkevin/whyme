@@ -1,16 +1,28 @@
 """Agent API integration tests (Stage 2).
 
-Tests for Agent API endpoints using the test database infrastructure.
+PRD10 NOTICE
+============
+
+Same as ``test_agent_api.py``: this file targets the Stage 2 agent router
+which is now superseded by Mydow AI + Skills run under PRD10. Also relies
+on ``TestClient(app=app)`` (httpx 0.28 incompatible).
+
+Skipped at collection time.
 """
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_os.items.models import Item, ItemStatus, Workspace
-from agent_os.auth.models import User
-from tests.test_app import test_app as app
+pytest.skip(
+    "Legacy Stage 2 agent integration tests; superseded by PRD10 AI + Skills.",
+    allow_module_level=True,
+)
 
+from fastapi.testclient import TestClient  # noqa: E402,F401
+from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402,F401
+from tests.test_app import test_app as app  # noqa: E402,F401
+
+from agent_os.auth.models import User  # noqa: E402,F401
+from agent_os.items.models import Item, ItemStatus, Workspace  # noqa: E402,F401
 
 # =============================================================================
 # Test Fixtures
@@ -42,6 +54,7 @@ def agent_test_client(db_session):
 async def test_user_with_workspace(db_session: AsyncSession):
     """Create a test user with workspace."""
     import uuid
+
     from agent_os.auth.security import get_password_hash
 
     # Create user with UUID

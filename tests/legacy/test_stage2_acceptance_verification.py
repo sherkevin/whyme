@@ -3,10 +3,9 @@
 This module verifies that the current implementation meets all Stage 2 acceptance criteria.
 """
 
-import pytest
-import os
 from pathlib import Path
 
+import pytest
 
 # ============================================================================
 # Stage 2 Feature Verification
@@ -50,8 +49,8 @@ def test_agent_tick_mechanism_exists():
 
 def test_inboxitem_status_raw_exists():
     """验证 InboxItem 是否支持 raw 状态"""
-    from agent_os.items.models import Item
     from agent_os.inbox.schema import InboxItemStatusUpdate
+    from agent_os.items.models import Item
 
     # Check if status field exists
     assert hasattr(Item, 'status'), "Item should have status field"
@@ -86,7 +85,6 @@ def test_inbox_to_card_conversion_possible():
 
 def test_agent_behavior_logging_exists():
     """验证 Agent 行为记录机制是否存在"""
-    from agent_os.observability.router import router as observability_router
     from agent_os.db.audit import AuditLog
 
     # Check for audit log model
@@ -235,7 +233,7 @@ class Stage2VerificationReport:
         """生成验收报告"""
         report = []
         report.append("# PA 1.0 阶段二后端验收验证报告\n")
-        report.append(f"**验证时间:** 2026-02-07\n")
+        report.append("**验证时间:** 2026-02-07\n")
         report.append("---\n")
 
         for category, items in self.results.items():

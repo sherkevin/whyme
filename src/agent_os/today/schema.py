@@ -1,10 +1,10 @@
 """Today module schemas for API requests and responses."""
 
 import uuid
-from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, List, Dict, Any
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
+from pydantic import BaseModel, ConfigDict, Field
 
 # ============== Today View Schemas ==============
 
@@ -12,12 +12,12 @@ class TodayItem(BaseModel):
     """An item in the Today view."""
     id: uuid.UUID
     type: str
-    title: Optional[str]
-    content: Optional[str]
+    title: str | None
+    content: str | None
     status: str
     created_at: datetime
-    updated_at: Optional[datetime]
-    source_type: Optional[str]
+    updated_at: datetime | None
+    source_type: str | None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -32,8 +32,8 @@ class TodayViewResponse(BaseModel):
     """
     workspace_id: uuid.UUID
     user_id: uuid.UUID
-    items: List[TodayItem]
-    summary: Dict[str, Any] = Field(
+    items: list[TodayItem]
+    summary: dict[str, Any] = Field(
         default_factory=dict,
         description="Summary statistics (total items, by type, by status)"
     )
@@ -45,7 +45,7 @@ class TodayViewResponse(BaseModel):
 class InsightSource(BaseModel):
     """A source item for an insight."""
     id: uuid.UUID = Field(..., description="Source item ID")
-    title: Optional[str] = Field(None, description="Source item title")
+    title: str | None = Field(None, description="Source item title")
     item_type: str = Field(..., description="Type of source item")
 
     model_config = ConfigDict(from_attributes=True)
@@ -63,11 +63,11 @@ class DailyInsightResponse(BaseModel):
     id: uuid.UUID = Field(..., description="Insight ID")
     claim: str = Field(..., description="Main claim/statement of the insight")
     rationale: str = Field(..., description="Reasoning/explanation")
-    implications: List[str] = Field(..., description="List of implications")
+    implications: list[str] = Field(..., description="List of implications")
     level: int = Field(..., ge=1, le=3, description="Insight level (1-3)")
     status: str = Field(..., description="Insight status")
     evidence_count: int = Field(..., description="Number of evidence items")
-    sources: List[InsightSource] = Field(
+    sources: list[InsightSource] = Field(
         default_factory=list,
         description="Source items supporting this insight"
     )
@@ -79,7 +79,7 @@ class DailyInsightResponse(BaseModel):
 
 class TodayInsightListResponse(BaseModel):
     """Response for today insights list endpoint."""
-    data: List[DailyInsightResponse] = Field(..., description="List of insights")
+    data: list[DailyInsightResponse] = Field(..., description="List of insights")
     day: str = Field(..., description="Date in YYYY-MM-DD format")
     total: int = Field(..., description="Total count")
 
@@ -89,4 +89,4 @@ class TodayInsightListResponse(BaseModel):
 class TodayErrorResponse(BaseModel):
     """Error response."""
     detail: str = Field(..., description="Error message")
-    error_code: Optional[str] = Field(None, description="Application-specific error code")
+    error_code: str | None = Field(None, description="Application-specific error code")

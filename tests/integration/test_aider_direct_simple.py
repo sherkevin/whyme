@@ -2,11 +2,14 @@
 
 import asyncio
 import sys
+
 sys.path.insert(0, "src")
 
-from agent_os.agent_aider import AiderAgent
-from pathlib import Path
 import time
+from pathlib import Path
+
+from agent_os.agent_aider import AiderAgent
+
 
 async def test_direct():
     """Test AiderAgent directly without WebSocket."""
@@ -37,11 +40,11 @@ async def test_direct():
     test_file = workspace / "hello_direct.txt"
     if test_file.exists():
         content = test_file.read_text(encoding='utf-8')
-        print(f"\n[SUCCESS] File created!")
+        print("\n[SUCCESS] File created!")
         print(f"Content: {content}")
         return True
     else:
-        print(f"\n[FAIL] File not created")
+        print("\n[FAIL] File not created")
 
         # Print error details
         if 'error' in result:

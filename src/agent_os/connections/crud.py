@@ -1,14 +1,13 @@
 """Connection CRUD Operations - Graph Edges Management."""
 
 import uuid
-from typing import List, Optional, Tuple
+from typing import List, Optional
+
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func
-from sqlalchemy.orm import selectinload
 
-from agent_os.items.models import Item, GraphEdge
 from agent_os.connections.engine import ConnectionEngine
-
+from agent_os.items.models import GraphEdge, Item
 
 # ============================================================================
 # Connection CRUD
@@ -58,7 +57,7 @@ async def get_connections(
     *,
     strong_only: bool = False,
     limit: int = 100
-) -> List[GraphEdge]:
+) -> list[GraphEdge]:
     """
     查询节点的所有连接
 
@@ -112,7 +111,7 @@ async def get_strong_connections(
     db: AsyncSession,
     node_id: uuid.UUID,
     limit: int = 50
-) -> List[GraphEdge]:
+) -> list[GraphEdge]:
     """
     查询节点的强连接
 
@@ -161,8 +160,8 @@ async def calculate_and_store_connection(
     db: AsyncSession,
     item_a_id: uuid.UUID,
     item_b_id: uuid.UUID,
-    engine: Optional[ConnectionEngine] = None
-) -> Optional[GraphEdge]:
+    engine: ConnectionEngine | None = None
+) -> GraphEdge | None:
     """
     计算两个Item之间的连接并存储
 
@@ -240,9 +239,9 @@ async def calculate_and_store_connection(
 async def batch_calculate_connections(
     db: AsyncSession,
     item_id: uuid.UUID,
-    candidate_ids: List[uuid.UUID],
-    engine: Optional[ConnectionEngine] = None
-) -> List[GraphEdge]:
+    candidate_ids: list[uuid.UUID],
+    engine: ConnectionEngine | None = None
+) -> list[GraphEdge]:
     """
     批量计算一个Item与多个候选Item的连接
 

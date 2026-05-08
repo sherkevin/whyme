@@ -1,12 +1,13 @@
 """Unit tests for Skill Service."""
 
-import pytest
 import uuid
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
-from agent_os.stage3.skill_service import SkillService
+import pytest
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from agent_os.stage3.models import Skill
+from agent_os.stage3.skill_service import SkillService
 
 
 @pytest.mark.asyncio

@@ -1,18 +1,20 @@
 """Tests for Task Schema validation."""
 
-import pytest
 from datetime import date, datetime
+
+import pytest
+
 from agent_os.tasks.schema import (
-    TaskCreate,
-    TaskUpdate,
-    TaskResponse,
-    TaskList,
-    TaskStatusUpdate,
-    TaskStats,
-    TodayTasksResponse,
     TaskBatchCreate,
     TaskBatchUpdate,
+    TaskCreate,
+    TaskList,
     TaskQueryParams,
+    TaskResponse,
+    TaskStats,
+    TaskStatusUpdate,
+    TaskUpdate,
+    TodayTasksResponse,
 )
 
 

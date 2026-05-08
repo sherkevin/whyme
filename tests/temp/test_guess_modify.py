@@ -3,6 +3,7 @@
 import asyncio
 import json
 import sys
+
 import websockets
 
 SESSION_ID = "f99eedc7-7016-404f-9166-08d0087f162f"
@@ -40,14 +41,14 @@ async def test_modify_guess_game():
                     content = payload.get("data", {}).get("content", "")
                     print(f"\n[AI RESPONSE] {content[:300]}")
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 break
 
         # Verify file content
         print("\n" + "="*80)
         print("Verifying guess_number.py content...")
         print("="*80)
-        with open("D:/Codes/whyme/data/workspaces/test-python-app/guess_number.py", "r", encoding="utf-8") as f:
+        with open("D:/Codes/whyme/data/workspaces/test-python-app/guess_number.py", encoding="utf-8") as f:
             content = f.read()
 
         # Check for key features
@@ -55,7 +56,7 @@ async def test_modify_guess_game():
         has_7 = "7" in content
         has_fail_message = any(keyword in content for keyword in ["失败", "fail", "超过", "exceed"])
 
-        print(f"\nFeatures found:")
+        print("\nFeatures found:")
         print(f"  - max_attempts constant: {has_max_attempts}")
         print(f"  - Number 7: {has_7}")
         print(f"  - Failure message: {has_fail_message}")

@@ -9,22 +9,22 @@ from .types import PruningReport, RuntimeContext
 class MemoryProvider(ABC):
     @abstractmethod
     async def add(
-        self, ctx: RuntimeContext, content: str, metadata: Dict[str, Any] | None = None
+        self, ctx: RuntimeContext, content: str, metadata: dict[str, Any] | None = None
     ) -> str:
         raise NotImplementedError
 
     @abstractmethod
     async def search(
         self, ctx: RuntimeContext, query: str, limit: int = 5
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         raise NotImplementedError
 
 
 class ContextManager(ABC):
     @abstractmethod
     async def process(
-        self, messages: List[Dict[str, Any]], max_tokens: int
-    ) -> tuple[List[Dict[str, Any]], PruningReport]:
+        self, messages: list[dict[str, Any]], max_tokens: int
+    ) -> tuple[list[dict[str, Any]], PruningReport]:
         raise NotImplementedError
 
 
@@ -46,7 +46,7 @@ class ExecutionEnvironment(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def list_files(self, path: str = ".") -> List[str]:
+    async def list_files(self, path: str = ".") -> list[str]:
         raise NotImplementedError
 
     @abstractmethod
@@ -56,21 +56,21 @@ class ExecutionEnvironment(ABC):
 
 class ToolRegistry(ABC):
     @abstractmethod
-    async def register_mcp(self, name: str, command: str, args: List[str]) -> None:
+    async def register_mcp(self, name: str, command: str, args: list[str]) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_definitions(self) -> List[Dict[str, Any]]:
+    async def get_definitions(self) -> list[dict[str, Any]]:
         raise NotImplementedError
 
     @abstractmethod
-    async def execute(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
+    async def execute(self, tool_name: str, arguments: dict[str, Any]) -> Any:
         raise NotImplementedError
 
 
 class CodingCapability(ABC):
     @abstractmethod
-    async def get_tool_definitions(self) -> List[Dict[str, Any]]:
+    async def get_tool_definitions(self) -> list[dict[str, Any]]:
         """Return a list of tool definitions provided by this capability."""
         raise NotImplementedError
 
@@ -85,10 +85,10 @@ class LLMProvider(ABC):
     @abstractmethod
     async def complete(
         self,
-        messages: List[Dict[str, Any]],
-        tools: List[Dict[str, Any]] | None = None,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
         **kwargs: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate a completion from the LLM.
 
         Args:
@@ -104,8 +104,8 @@ class LLMProvider(ABC):
     @abstractmethod
     async def stream_complete(
         self,
-        messages: List[Dict[str, Any]],
-        tools: List[Dict[str, Any]] | None = None,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
         **kwargs: Any,
     ):
         """Stream completions from the LLM.
@@ -122,7 +122,7 @@ class AgentCallbackHandler:
         """Called when the agent wants to log a message."""
         pass
 
-    async def on_tool_start(self, tool_name: str, args: Dict[str, Any]) -> None:
+    async def on_tool_start(self, tool_name: str, args: dict[str, Any]) -> None:
         """Called when a tool is about to run."""
         pass
 

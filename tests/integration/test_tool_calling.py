@@ -71,7 +71,7 @@ async def test_tool_calling():
     print("\n" + "="*80)
     print("TESTING TOOL CALLING WITH DeepSeek-V3.1")
     print("="*80)
-    print(f"\nModel: openai/DeepSeek-V3.1")
+    print("\nModel: openai/DeepSeek-V3.1")
     print(f"API Base: {api_base}")
     print(f"\nSending {len(messages)} messages with {len(tools)} tools...")
     print(f"\nMessage: {messages[-1]['content']}")
@@ -82,7 +82,7 @@ async def test_tool_calling():
             tools=tools
         )
 
-        print(f"\n" + "="*80)
+        print("\n" + "="*80)
         print("RESPONSE RECEIVED")
         print("="*80)
         print(f"Response keys: {list(response.keys())}")
@@ -90,17 +90,17 @@ async def test_tool_calling():
         print(f"\nTool calls present: {'tool_calls' in response}")
 
         if 'tool_calls' in response and response['tool_calls']:
-            print(f"\n[OK] SUCCESS! Tool calls detected:")
+            print("\n[OK] SUCCESS! Tool calls detected:")
             for tc in response['tool_calls']:
                 print(f"  - {tc['function']['name']}: {tc['function']['arguments'][:100]}...")
         else:
-            print(f"\n[FAIL] FAILURE! No tool calls in response.")
-            print(f"\nThe LLM responded with text instead of calling tools.")
-            print(f"This suggests either:")
-            print(f"  1. The model doesn't support function calling")
-            print(f"  2. The tool format is incompatible with the model")
-            print(f"  3. The system prompt needs to be more explicit")
-            print(f"  4. The API endpoint doesn't support function calling")
+            print("\n[FAIL] FAILURE! No tool calls in response.")
+            print("\nThe LLM responded with text instead of calling tools.")
+            print("This suggests either:")
+            print("  1. The model doesn't support function calling")
+            print("  2. The tool format is incompatible with the model")
+            print("  3. The system prompt needs to be more explicit")
+            print("  4. The API endpoint doesn't support function calling")
 
     except Exception as e:
         print(f"\n[ERROR] ERROR: {e}")
@@ -181,7 +181,7 @@ async def test_with_gpt4o():
         print(f"Tool calls present: {'tool_calls' in response}")
 
         if 'tool_calls' in response:
-            print(f"[OK] GPT-4o-mini successfully called tools!")
+            print("[OK] GPT-4o-mini successfully called tools!")
     except Exception as e:
         print(f"[ERROR] ERROR: {e}")
 

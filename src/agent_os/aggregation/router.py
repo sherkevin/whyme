@@ -2,20 +2,23 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_os.db.base import get_db
 from agent_os.conversations import ConversationRepository
-from agent_os.auth.models import User
+from agent_os.db.base import get_db
+
 # TODO: Implement InboxItem model
 # from agent_os.knowledge.models import InboxItem, Card
 from agent_os.knowledge.models import Card
 from agent_os.tasks.models import Task
 
-
-router = APIRouter(prefix="/api/v1", tags=["aggregation"])
+# PRD10 §7.1 ``GET /api/v1/today`` is owned by ``agent_os/today/router.py``.
+# This legacy aggregation surface is kept for non-PRD10 callers and is mounted
+# under ``/api/v1/legacy`` to avoid clashing with the PRD10 contract.
+router = APIRouter(prefix="/api/v1/legacy", tags=["aggregation-legacy"])
 
 
 @router.get("/today")
@@ -64,7 +67,7 @@ async def get_today_summary(
 
     async def fetch_today_tasks() -> list[dict]:
         """Get today's tasks."""
-        from sqlalchemy import select, func, date
+        from sqlalchemy import date, func, select
 
         today = date.today()
         query = select(Task).where(
@@ -89,7 +92,7 @@ async def get_today_summary(
 
     async def fetch_knowledge_context() -> dict:
         """Get relevant knowledge cards from today."""
-        from sqlalchemy import select, func, date
+        from sqlalchemy import date, func, select
 
         today = date.today()
         query = select(Card).where(
