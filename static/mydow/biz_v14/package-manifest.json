@@ -43,6 +43,11 @@
       "path": "Mydow_Web_AI工作台优化说明_v1.3.md",
       "role": "ai-workspace-note",
       "description": "AI workspace optimization note."
+    },
+    {
+      "path": "vendor/darkreader.min.js",
+      "role": "dark-mode-engine",
+      "description": "Pinned Dark Reader 4.9.105 browser bundle used for high-quality dynamic dark mode."
     }
   ],
   "importantHooks": [

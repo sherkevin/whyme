@@ -6423,6 +6423,99 @@
   //   effect (DB write / route change / preference patch).
   // ═════════════════════════════════════════════════════════════════════════
 
+  const DARK_READER_THEME_V21 = {
+    mode: 1,
+    brightness: 100,
+    contrast: 92,
+    sepia: 6,
+    grayscale: 0,
+    useFont: false,
+    textStroke: 0,
+    darkSchemeBackgroundColor: "#0e1117",
+    darkSchemeTextColor: "#e8edf7",
+    lightSchemeBackgroundColor: "#f7f9fd",
+    lightSchemeTextColor: "#25324a",
+    scrollbarColor: "#252b36",
+    selectionColor: "auto",
+  };
+
+  const DARK_READER_FIXES_V21 = {
+    css: `
+      html[data-theme="dark"],
+      body.theme-dark {
+        color-scheme: dark;
+      }
+      body.mydow-darkreader-active {
+        background: #0e1117 !important;
+      }
+      body.mydow-darkreader-active .search,
+      body.mydow-darkreader-active .capture,
+      body.mydow-darkreader-active .ai-composer,
+      body.mydow-darkreader-active .surface-layer .modal-card,
+      body.mydow-darkreader-active .drawer-layer .detail-drawer {
+        box-shadow: 0 22px 70px rgba(0,0,0,.24) !important;
+      }
+      body.mydow-darkreader-active .segmented-control button.active,
+      body.mydow-darkreader-active .toggle-switch.active,
+      body.mydow-darkreader-active .skill-chip.active,
+      body.mydow-darkreader-active .topic-pill.active,
+      body.mydow-darkreader-active nav a.active,
+      body.mydow-darkreader-active .sidebar a.active,
+      body.mydow-darkreader-active [aria-current="page"] {
+        background: rgba(142, 162, 255, .16) !important;
+        border-color: rgba(142, 162, 255, .34) !important;
+        color: #edf1ff !important;
+      }
+      body.mydow-darkreader-active img,
+      body.mydow-darkreader-active video,
+      body.mydow-darkreader-active canvas {
+        filter: brightness(.92) contrast(1.02);
+      }
+    `,
+    ignoreInlineStyle: [
+      ".ai-input",
+      ".doc-editor-surface",
+      "[contenteditable]",
+    ],
+    ignoreImageAnalysis: [
+      ".avatar",
+      ".user-avatar",
+      ".profile-avatar",
+    ],
+  };
+
+  function _darkReaderApiV21() {
+    return window.DarkReader && typeof window.DarkReader.enable === "function"
+      ? window.DarkReader
+      : null;
+  }
+
+  function _enableDarkReaderV21() {
+    const darkReader = _darkReaderApiV21();
+    if (!darkReader) {
+      injectDarkThemeCssV20();
+      return false;
+    }
+    try {
+      if (typeof darkReader.setFetchMethod === "function" && window.fetch) {
+        darkReader.setFetchMethod(window.fetch.bind(window));
+      }
+      darkReader.enable(DARK_READER_THEME_V21, DARK_READER_FIXES_V21);
+      return true;
+    } catch (error) {
+      console.warn("[mydow] DarkReader enable failed; using CSS fallback", error);
+      injectDarkThemeCssV20();
+      return false;
+    }
+  }
+
+  function _disableDarkReaderV21() {
+    const darkReader = _darkReaderApiV21();
+    if (!darkReader || typeof darkReader.disable !== "function") return;
+    try { darkReader.disable(); }
+    catch (error) { console.warn("[mydow] DarkReader disable failed", error); }
+  }
+
   function injectDarkThemeCssV20() {
     if (document.getElementById("mydow-dark-theme-v20")) return;
     const style = document.createElement("style");
@@ -6718,16 +6811,20 @@
 
   // §15.39.theme — 主题切换（写 localStorage + html dataset，不依赖后端）
   function _applyTheme(name) {
-    injectDarkThemeCssV20();
     const root = document.documentElement;
     if (name === "dark") {
       root.dataset.theme = "dark";
       document.body.classList.add("theme-dark");
       document.body.classList.remove("theme-light");
+      document.body.classList.add("mydow-darkreader-active");
+      const usedDarkReader = _enableDarkReaderV21();
+      document.body.classList.toggle("mydow-darkreader-fallback", !usedDarkReader);
     } else {
       root.dataset.theme = "light";
       document.body.classList.add("theme-light");
       document.body.classList.remove("theme-dark");
+      document.body.classList.remove("mydow-darkreader-active", "mydow-darkreader-fallback");
+      _disableDarkReaderV21();
     }
     try { window.localStorage.setItem("mydow_v14_theme", name); } catch (_e) {}
   }

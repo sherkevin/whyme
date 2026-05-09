@@ -1072,7 +1072,13 @@ async def test_biz_v14_html_injects_bridge_v14_script(client):
     assert r.status_code == 200
     body = r.text
     assert 'data-mydow-bridge-v14="true"' in body
+    assert 'data-mydow-darkreader="true"' in body
+    assert 'src="/mydow/biz_v14/vendor/darkreader.min.js"' in body
     assert 'src="/mydow/biz_v14/bridge_v14.js"' in body
+
+    darkreader = await client.get("/mydow/biz_v14/vendor/darkreader.min.js")
+    assert darkreader.status_code == 200
+    assert "DarkReader" in darkreader.text
 
 
 def test_biz_v14_ext_exposes_six_state_runtime():
@@ -1131,6 +1137,24 @@ def test_biz_v14_profile_preferences_are_real_controls():
     missing_ext = [token for token in ext_tokens if token not in ext]
     assert not missing_bridge, f"biz_v14 bridge missing §18.1 preference tokens: {missing_bridge}"
     assert not missing_ext, f"biz_v14 ext missing §18.1 preference tokens: {missing_ext}"
+
+
+def test_biz_v14_dark_mode_uses_darkreader_library():
+    """Dark mode uses the mature Dark Reader engine instead of hand recoloring only."""
+
+    bridge = (MYDOW_DIR / "biz_v14" / "bridge_v14.js").read_text(encoding="utf-8")
+    vendor = MYDOW_DIR / "biz_v14" / "vendor" / "darkreader.min.js"
+    assert vendor.exists(), "Dark Reader vendor bundle missing"
+    tokens = [
+        "DARK_READER_THEME_V21",
+        "DARK_READER_FIXES_V21",
+        "darkReader.enable(DARK_READER_THEME_V21, DARK_READER_FIXES_V21)",
+        "darkReader.disable()",
+        "mydow-darkreader-active",
+        "setFetchMethod(window.fetch.bind(window))",
+    ]
+    missing = [token for token in tokens if token not in bridge]
+    assert not missing, f"biz_v14 bridge missing Dark Reader integration tokens: {missing}"
 
 
 def test_biz_v14_account_security_uses_real_api_state():

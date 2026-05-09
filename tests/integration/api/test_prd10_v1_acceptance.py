@@ -416,8 +416,14 @@ class TestMydowStaticBundle:
         text = page.text
         assert "<title>" in text
         # bridge_v14.js must be auto-injected by the FastAPI handler.
+        assert 'data-mydow-darkreader="true"' in text
+        assert 'src="/mydow/biz_v14/vendor/darkreader.min.js"' in text
         assert 'data-mydow-bridge-v14="true"' in text
         assert 'src="/mydow/biz_v14/bridge_v14.js"' in text
+
+        darkreader = await acceptance_client.get("/mydow/biz_v14/vendor/darkreader.min.js")
+        assert darkreader.status_code == 200
+        assert "DarkReader" in darkreader.text
 
         bridge = await acceptance_client.get("/mydow/biz_v14/bridge_v14.js")
         assert bridge.status_code == 200

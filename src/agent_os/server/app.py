@@ -1217,12 +1217,12 @@ async def get_mydow_default_entry():
 @app.get("/mydow/biz_v14/")
 async def get_mydow_biz_v14() -> HTMLResponse:
     """PRD10 §15.30 / §15.32 — serve the v1.4 business prototype with
-    bridge_v14.js auto-injected before ``</body>``.
+    Dark Reader + bridge_v14.js auto-injected before ``</body>``.
 
     The v1.4 prototype (``static/mydow/biz_v14/index.html``, 461 KB) ships
     as a high-fidelity static page with ``simulateAction`` placeholders.
     We do **not** modify the original HTML — instead we inject a single
-    ``<script defer src="/mydow/biz_v14/bridge_v14.js">`` immediately before
+    Dark Reader and ``<script defer src="/mydow/biz_v14/bridge_v14.js">`` immediately before
     ``</body>`` so the bridge can run after the page's IIFE registers
     its own listeners (capture-phase + bubble-phase coexistence).
 
@@ -1239,6 +1239,8 @@ async def get_mydow_biz_v14() -> HTMLResponse:
     with open(v14_index, encoding="utf-8") as f:
         html = f.read()
     bridge_tag = (
+        '<script defer src="/mydow/biz_v14/vendor/darkreader.min.js" '
+        'data-mydow-darkreader="true"></script>\n'
         '<script defer src="/mydow/biz_v14/bridge_v14.js" '
         'data-mydow-bridge-v14="true"></script>\n'
         '  <script defer src="/mydow/biz_v14/bridge_v14_ext.js" '
