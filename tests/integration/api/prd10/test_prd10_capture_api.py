@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import uuid
 import importlib
+import uuid
 
 import pytest
 from sqlalchemy import select
@@ -102,18 +102,20 @@ async def test_capture_text_auto_process_false_skips_job(prd10_client):
 
 
 async def test_capture_link_creates_source_and_finishes(prd10_client, monkeypatch):
-    async def fake_fetch_page(self, url):
-        return {
-            "url": url,
-            "title": "Example Article",
-            "description": "A real fetched article summary.",
-            "content": "<html><title>Example Article</title><body><main>Fetched article body about AI product research.</main></body></html>",
-            "content_type": "text/html",
-            "links": [],
-        }
+    async def fake_fetch_link_content(url):
+        from agent_os.capture.link_service import LinkFetchResult
+
+        return LinkFetchResult(
+            url=url,
+            title="Example Article",
+            description="A real fetched article summary.",
+            text="Fetched article body about AI product research.",
+            content_type="text/html",
+            links=[],
+        )
 
     capture_router = importlib.import_module("agent_os.capture.router")
-    monkeypatch.setattr(capture_router.WebCrawler, "fetch_page", fake_fetch_page)
+    monkeypatch.setattr(capture_router, "fetch_link_content", fake_fetch_link_content)
     response = await prd10_client.post(
         "/api/v1/capture/link",
         json={

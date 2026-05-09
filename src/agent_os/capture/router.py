@@ -33,6 +33,12 @@ from agent_os.capture.llm_pipeline import (
     enrich_capture_with_llm,
     patch_card_with_enrichment,
 )
+from agent_os.capture.link_service import (
+    build_link_enrichment_content,
+    fetch_link_content,
+    link_source_extra,
+    merge_capture_tags,
+)
 from agent_os.capture.pipeline import reload_job, simulate_failure, simulate_processing
 from agent_os.common import ApiErrorCode, error_json_response, paginated_response, success_response
 from agent_os.db.base import get_db
@@ -43,7 +49,6 @@ from agent_os.inbox.prd10_models import (
     InboxItemType,
     Prd10InboxItem,
 )
-from agent_os.integrations.crawler import WebCrawler
 from agent_os.jobs import JobType, create_job
 from agent_os.kb.models import Document, DocumentStatus, DocumentType
 from agent_os.knowledge.models import Card
@@ -418,50 +423,24 @@ async def capture_link(
     db.add(source)
     await db.flush()
 
-    crawled: dict[str, Any] | None = None
-    page_text = ""
-    fetched_title = ""
-    fetched_description = ""
+    fetched = None
     if payload.auto_process and not payload.simulate_failure:
-        crawler = WebCrawler(timeout=15)
-        crawled = await crawler.fetch_page(str(payload.url))
-        if crawled is not None:
-            fetched_title = (crawled.get("title") or "").strip()
-            fetched_description = (crawled.get("description") or "").strip()
-            raw_page = str(crawled.get("content") or "")
-            if "html" in str(crawled.get("content_type") or "").lower():
-                page_text = crawler.extract_text_content(raw_page, max_length=16000)
-            else:
-                page_text = raw_page.strip()[:16000]
-            source.name = fetched_title or source.name
-            source.extra = {
-                **(source.extra or {}),
-                "note": payload.note,
-                "fetched_title": fetched_title,
-                "description": fetched_description,
-                "content_type": crawled.get("content_type"),
-                "text_excerpt": page_text[:1000],
-            }
+        fetched = await fetch_link_content(str(payload.url))
+        if fetched is not None:
+            source.name = fetched.title or source.name
+            source.extra = {**(source.extra or {}), **link_source_extra(note=payload.note, fetched=fetched)}
 
     enrichment = None
     if payload.auto_process and not payload.simulate_failure:
-        seed = (payload.note or "").strip()
-        fetched_block = page_text or fetched_description or ""
-        enrichment_content = "\n".join(
-            part
-            for part in [
-                f"URL: {payload.url}",
-                f"网页标题: {fetched_title}" if fetched_title else "",
-                f"用户备注: {seed}" if seed else "",
-                f"网页正文:\n{fetched_block}" if fetched_block else "",
-            ]
-            if part
-        )
         enrichment = await enrich_capture_with_llm(
             db,
             user_id=current_user.id,
-            content=enrichment_content,
-            fallback_title=payload.note or fetched_title,
+            content=build_link_enrichment_content(
+                url=str(payload.url),
+                note=payload.note,
+                fetched=fetched,
+            ),
+            fallback_title=payload.note or (fetched.title if fetched else None),
             hint_tags=list(payload.tags or []),
         )
 
@@ -472,15 +451,10 @@ async def capture_link(
         or (enrichment.title if enrichment else None)
         or None
     )
-    user_tags = list(payload.tags or [])
-    if enrichment and enrichment.tags:
-        merged: list[str] = []
-        for t in user_tags + list(enrichment.tags):
-            if t and t not in merged:
-                merged.append(t)
-        merged_tags = merged[:8]
-    else:
-        merged_tags = user_tags
+    merged_tags = merge_capture_tags(
+        list(payload.tags or []),
+        list(enrichment.tags if enrichment and enrichment.tags else []),
+    )
 
     target_folder_id = payload.target_folder_id
     if (
@@ -512,19 +486,19 @@ async def capture_link(
     await db.flush()
 
     document: Document | None = None
-    if payload.auto_process and not payload.simulate_failure and crawled is not None:
+    if payload.auto_process and not payload.simulate_failure and fetched is not None:
         summary_for_doc = (
             enrichment.summary
             if enrichment and enrichment.summary
-            else (fetched_description or (page_text[:240] if page_text else None))
+            else (fetched.description or (fetched.text[:240] if fetched.text else None))
         )
         document = Document(
             user_id=current_user.id,
             folder_id=target_folder_id,
             source_id=source.id,
-            title=enriched_title or fetched_title or str(payload.url),
+            title=enriched_title or fetched.title or str(payload.url),
             summary=summary_for_doc,
-            content=page_text or str(payload.url),
+            content=fetched.text or str(payload.url),
             document_type=DocumentType.LINK.value,
             status=DocumentStatus.PROCESSING.value,
             tags=merged_tags,
@@ -532,8 +506,8 @@ async def capture_link(
                 "kind": "capture_link",
                 "url": str(payload.url),
                 "note": payload.note,
-                "fetched_title": fetched_title,
-                "description": fetched_description,
+                "fetched_title": fetched.title,
+                "description": fetched.description,
                 "llm_used": bool(enrichment and enrichment.used_llm),
                 "model": getattr(enrichment, "model", "") if enrichment else "",
             },
@@ -569,7 +543,7 @@ async def capture_link(
                 message=payload.simulate_failure,
             )
             fetch_status = "failed"
-        elif crawled is None:
+        elif fetched is None:
             await simulate_failure(
                 db,
                 inbox_item=inbox,
@@ -583,9 +557,9 @@ async def capture_link(
             summary_text = (
                 enrichment.summary
                 if enrichment and enrichment.summary
-                else (fetched_description or payload.note or page_text[:240] or str(payload.url))
+                else (fetched.description or payload.note or fetched.text[:240] or str(payload.url))
             )
-            inbox.raw_content = page_text or str(payload.url)
+            inbox.raw_content = fetched.text or str(payload.url)
             card = await simulate_processing(
                 db,
                 inbox_item=inbox,
@@ -613,9 +587,9 @@ async def capture_link(
         "job_id": str(inbox.job_id) if inbox.job_id else None,
         "job": job_dict,
         "fetch_status": fetch_status,
-        "fetched_title": fetched_title,
-        "fetched_description": fetched_description,
-        "content_excerpt": page_text[:1000],
+        "fetched_title": fetched.title if fetched else "",
+        "fetched_description": fetched.description if fetched else "",
+        "content_excerpt": (fetched.text if fetched else "")[:1000],
     }
     if card is not None:
         card_payload = card.to_prd10_dict()
