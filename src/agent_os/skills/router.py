@@ -480,8 +480,10 @@ async def list_skill_runs(
     for run in rows:
         output = run.output or {}
         content = ""
+        document_id = run.output_object_id if run.output_object_type == "document" else None
         if isinstance(output, dict):
             content = str(output.get("content") or "")
+            document_id = document_id or output.get("document_id") or output.get("saved_object_id")
         items.append(
             {
                 "id": str(run.id),
@@ -494,6 +496,9 @@ async def list_skill_runs(
                 ),
                 "created_at": run.created_at.isoformat() if run.created_at else None,
                 "output_preview": content[:240] if content else "",
+                "document_id": str(document_id) if document_id else None,
+                "output_object_type": run.output_object_type,
+                "output_object_id": str(run.output_object_id) if run.output_object_id else None,
                 "save_output": run.save_output,
             }
         )

@@ -1158,6 +1158,31 @@ def test_biz_v14_account_security_uses_real_api_state():
     assert not stale, f"biz_v14 bridge still has fake account security toasts: {stale}"
 
 
+def test_biz_v14_latest_no_silent_fake_success_regressions():
+    """Latest browser findings: key buttons must use real endpoints or hard fail."""
+
+    bridge = (MYDOW_DIR / "biz_v14" / "bridge_v14.js").read_text(encoding="utf-8")
+    required = [
+        'await openKbDocumentEditorV20(docId)',
+        'data.fetch_status === "failed"',
+        'data.fetch_error',
+        'isVisible(document.querySelector(".ai-main, .ai-workspace-canvas"))',
+        'apiFetch("/billing/overview")',
+        'apiFetch("/billing/subscription"',
+        'permission_acl_mode: "owner_only"',
+        'title: "数字花园节点: " + subject.title.slice(0, 48)',
+    ]
+    missing = [token for token in required if token not in bridge]
+    assert not missing, f"biz_v14 bridge missing latest real-linkage tokens: {missing}"
+    forbidden = [
+        "后端待支持永久删除",
+        "付费门户在 V2 上线",
+        "权限矩阵编辑器在 V2 上线",
+    ]
+    stale = [token for token in forbidden if token in bridge]
+    assert not stale, f"biz_v14 bridge still has fake-success copy: {stale}"
+
+
 def test_biz_v14_ai_stream_refreshes_session_before_send():
     """Section 18.2: AI streaming send recovers from stale browser tokens."""
 

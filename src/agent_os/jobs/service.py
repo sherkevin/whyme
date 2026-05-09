@@ -38,7 +38,8 @@ from agent_os.inbox.prd10_models import (
     Prd10InboxItem,
 )
 from agent_os.jobs.models import Job, JobStatus, JobType
-from agent_os.kb.models import Chunk, Document, DocumentStatus, DocumentType
+from agent_os.kb.auto_route import route_generated_document
+from agent_os.kb.models import Chunk, Document, DocumentStatus, DocumentType, Folder
 from agent_os.notifications.models import NotificationType
 from agent_os.notifications.service import create_notification
 from agent_os.skills.runs import SkillRun, SkillRunStatus
@@ -334,16 +335,28 @@ async def _materialize_ai_message_to_kb(db: AsyncSession, job: Job) -> Job:
     job.started_at = datetime.now(UTC)
     await db.flush()
 
-    title = str(payload.get("title") or "AI 杈撳嚭").strip() or "AI 杈撳嚭"
-    folder_id = _uuid_or_none(payload.get("folder_id"))
-    tags = list(payload.get("tags") or [])
+    requested_folder_id = _uuid_or_none(payload.get("folder_id"))
+    requested_tags = [str(t).strip() for t in (payload.get("tags") or []) if str(t).strip()]
+    route = await route_generated_document(
+        db,
+        user_id=job.user_id,
+        workspace_id=job.workspace_id,
+        content=content,
+        fallback_title=str(payload.get("title") or "AI 输出"),
+        hint_tags=requested_tags or ["AI 生成"],
+        explicit_folder_id=requested_folder_id,
+    )
+    explicit_title = str(payload.get("title") or "").strip()
+    title = explicit_title or route.title
+    folder_id = route.folder_id
+    tags = route.tags or requested_tags
 
     document = Document(
         user_id=job.user_id,
         workspace_id=job.workspace_id,
         folder_id=folder_id,
         title=title,
-        summary=_summary(content),
+        summary=route.summary or _summary(content),
         content=content,
         document_type=DocumentType.NOTE.value,
         status=DocumentStatus.READY.value,
@@ -354,6 +367,12 @@ async def _materialize_ai_message_to_kb(db: AsyncSession, job: Job) -> Job:
             "message_id": payload.get("message_id"),
             "conversation_id": payload.get("conversation_id"),
             "job_id": str(job.id),
+            "auto_route": {
+                "folder_hint": route.folder_hint,
+                "folder_name": route.folder_name,
+                "used_llm": route.used_llm,
+                "model": route.model,
+            },
         },
     )
     db.add(document)
@@ -723,6 +742,28 @@ async def _materialize_skill_run(db: AsyncSession, job: Job) -> Job:
     await db.flush()
 
     user_input: dict[str, Any] = dict(payload.get("input") or {})
+    output_folder_uuid = _uuid_or_none(
+        user_input.get("folder_id")
+        or user_input.get("output_folder_id")
+        or payload.get("folder_id")
+    )
+    if output_folder_uuid is not None:
+        folder_row = (
+            await db.execute(
+                select(Folder).where(
+                    Folder.id == output_folder_uuid,
+                    Folder.user_id == job.user_id,
+                    Folder.deleted_at.is_(None),
+                )
+            )
+        ).scalar_one_or_none()
+        if folder_row is None:
+            return await mark_job_failed(
+                db,
+                job.id,
+                error={"code": "NOT_FOUND", "message": "folder_id invalid"},
+                retryable=False,
+            )
 
     doc_for_transform: Document | None = None
     tgt_doc_uuid = _uuid_or_none(user_input.get("document_id"))
@@ -910,24 +951,39 @@ async def _materialize_skill_run(db: AsyncSession, job: Job) -> Job:
             extra_artifacts["document_id"] = str(primary.id)
             extra_artifacts["transformed"] = True
         else:
+            route = await route_generated_document(
+                db,
+                user_id=job.user_id,
+                workspace_id=job.workspace_id,
+                content=content,
+                fallback_title=(
+                    f"{skill.name} "
+                    f"{datetime.now(UTC).strftime('%Y-%m-%d %H:%M')}"
+                ),
+                hint_tags=["skill", skill.category or "skill", skill.name],
+                explicit_folder_id=output_folder_uuid,
+            )
             document = Document(
                 user_id=job.user_id,
                 workspace_id=job.workspace_id,
-                folder_id=getattr(doc_for_transform, "folder_id", None),
-                title=(
-                    f"{skill.name} 路 "
-                    f"{datetime.now(UTC).strftime('%Y-%m-%d %H:%M')}"
-                ),
-                summary=_summary(content),
+                folder_id=route.folder_id,
+                title=route.title,
+                summary=route.summary or _summary(content),
                 content=content,
                 document_type=DocumentType.NOTE.value,
                 status=DocumentStatus.READY.value,
-                tags=["skill", skill.category or "skill", skill.name],
+                tags=route.tags or ["skill", skill.category or "skill", skill.name],
                 word_count=len(content),
                 extra={
                     "source": "skill_run",
                     "skill_id": str(skill.id),
                     "job_id": str(job.id),
+                    "auto_route": {
+                        "folder_hint": route.folder_hint,
+                        "folder_name": route.folder_name,
+                        "used_llm": route.used_llm,
+                        "model": route.model,
+                    },
                 },
             )
             db.add(document)

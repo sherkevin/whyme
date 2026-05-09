@@ -127,7 +127,7 @@
   }
 
   function closeV14Layers() {
-    document.querySelectorAll(".surface-layer[data-modal]").forEach((layer) => {
+    document.querySelectorAll(".surface-layer[data-modal], .drawer-layer[data-drawer]").forEach((layer) => {
       if (!layer.hidden) {
         layer.classList.remove("is-open", "is-leaving", "is-instant");
         layer.hidden = true;
@@ -414,6 +414,13 @@
    * @returns {boolean}
    */
   function isAiWorkspaceActive() {
+    const isVisible = (el) => {
+      if (!el) return false;
+      const rect = el.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return false;
+      const style = window.getComputedStyle(el);
+      return style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
+    };
     try {
       const hash = (window.location.hash || "").toLowerCase();
       if (hash.includes("/ai") || hash.startsWith("#/ai")) return true;
@@ -424,10 +431,10 @@
     if (page && page.className && /\bai-(open|history-open|chat-open)\b/.test(page.className)) {
       return true;
     }
-    if (V14.aiConvId) {
-      // Defensive: an active conversation id alone is enough to pin.
-      const composer = document.querySelector(".ai-composer, [data-ai-composer]");
-      if (composer) return true;
+    if (V14.aiConvId && isVisible(document.querySelector(".ai-main, .ai-workspace-canvas"))) {
+      // A remembered conversation id should only pin when the AI workspace is
+      // actually visible; hidden composer DOM exists on other pages too.
+      return true;
     }
     return false;
   }
@@ -696,6 +703,42 @@
         text-overflow: ellipsis;
         white-space: nowrap;
       }
+      .page.ai-chat-open .ai-chat-composer {
+        display: grid !important;
+        grid-template-columns: auto 1fr !important;
+        grid-template-areas:
+          "tools tools"
+          "actions input" !important;
+        align-items: end !important;
+        gap: 8px 10px !important;
+        padding: 10px 12px 10px !important;
+        width: min(760px, calc(100% - 48px)) !important;
+        border-radius: 20px !important;
+      }
+      .page.ai-chat-open .ai-chat-composer [data-v16-context-strip],
+      .page.ai-chat-open .ai-chat-composer .ai-chat-inline-tools {
+        grid-area: tools !important;
+        display: flex !important;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        flex-wrap: nowrap !important;
+        padding-bottom: 2px;
+        scrollbar-width: none;
+      }
+      .page.ai-chat-open .ai-chat-composer [data-v16-context-strip] {
+        margin-bottom: 0;
+      }
+      .page.ai-chat-open .ai-chat-composer [data-v16-context-strip]::-webkit-scrollbar,
+      .page.ai-chat-open .ai-chat-composer .ai-chat-inline-tools::-webkit-scrollbar {
+        display: none;
+      }
+      .page.ai-chat-open .ai-chat-composer .ai-chat-inline-tools > *,
+      .page.ai-chat-open .ai-chat-composer [data-v16-context-strip] > * {
+        flex: 0 0 auto;
+      }
       .ai-chat-composer textarea.ai-input,
       .ai-composer textarea.ai-input {
         display: block;
@@ -705,6 +748,15 @@
         overflow-y: auto;
         box-sizing: border-box;
       }
+      .page.ai-chat-open .ai-chat-composer textarea.ai-input {
+        grid-area: input !important;
+        min-height: 44px !important;
+        height: auto !important;
+        padding: 10px 8px !important;
+        line-height: 1.45 !important;
+        resize: none;
+        align-self: center !important;
+      }
       .ai-chat-composer .submit-row,
       .ai-chat-composer .ai-tools,
       .ai-composer .submit-row,
@@ -712,10 +764,70 @@
         min-width: 0;
         flex-wrap: wrap;
       }
+      .page.ai-chat-open .ai-chat-composer .submit-row {
+        grid-area: actions !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        flex-wrap: nowrap !important;
+        align-self: center !important;
+        min-width: max-content;
+      }
       @media (min-width: 900px) {
         .page.ai-chat-open .ai-chat-composer {
-          width: min(920px, calc(100vw - 96px));
+          position: sticky !important;
+          left: auto !important;
+          right: auto !important;
+          bottom: 20px !important;
+          transform: none !important;
+          width: min(920px, calc(100vw - 96px)) !important;
+          margin: 18px auto 0 !important;
+          align-self: stretch;
+          z-index: 12;
         }
+      }
+      .page.ai-chat-open .ai-workspace-canvas {
+        display: flex;
+        flex-direction: column;
+        min-height: min(780px, calc(100vh - 120px));
+      }
+      .page.ai-chat-open .ai-conversation-view {
+        flex: 1 1 auto;
+        min-height: 0;
+        padding-bottom: 18px;
+      }
+      .page.ai-chat-open .ai-chat-composer {
+        flex: 0 0 auto;
+        max-width: calc(100% - 28px);
+      }
+      .v20-select-shell {
+        position: relative;
+      }
+      .v20-select-shell select {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 100%;
+        border: 1px solid rgba(91,120,255,.18);
+        border-radius: 14px;
+        background:
+          linear-gradient(180deg, rgba(255,255,255,.92), rgba(246,248,255,.9));
+        box-shadow: 0 12px 34px rgba(30,45,95,.08);
+        color: #263652;
+        font-weight: 650;
+        padding: 12px 42px 12px 14px;
+        outline: none;
+      }
+      .v20-select-shell::after {
+        content: "";
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        width: 8px;
+        height: 8px;
+        border-right: 2px solid #6e7f9d;
+        border-bottom: 2px solid #6e7f9d;
+        transform: translateY(-65%) rotate(45deg);
+        pointer-events: none;
       }
     `;
     document.head.appendChild(style);
@@ -970,7 +1082,15 @@
       });
       const data = unwrapData(resp) || resp || {};
       if (data.fetch_status === "failed") {
-        throw new Error(data.job?.error || data.job?.message || "网页抓取失败");
+        const jobError = data.job?.error;
+        const msg =
+          data.fetch_error ||
+          (jobError && (jobError.message || jobError.code)) ||
+          data.job?.message ||
+          "网页抓取失败";
+        throw new Error(
+          msg + (data.status_code ? "（HTTP " + data.status_code + "）" : ""),
+        );
       }
       // §16.4 — when on AI workspace, pin the link's resulting card/doc
       // into the active conversation's context_scope so RAG sees it.
@@ -996,7 +1116,11 @@
       closeV14Layers();
       await loadFeedCards();
       await loadFeedIntoRecordsTable();
-      if (data.card) {
+      await loadKbLibraryGrid().catch(() => {});
+      if (docId && !onAi) {
+        toast("网页正文已抓取并保存为知识库文档", "success");
+        await openKbDocumentEditorV20(docId);
+      } else if (data.card) {
         revealItemDetailDrawerV18(data.card);
       } else if (data.card_id) {
         const detail = await loadCardForDrawer(String(data.card_id));
@@ -1004,6 +1128,12 @@
       }
     } catch (e) {
       toast("剪藏失败: " + e.message, "error");
+      const preview = layer.querySelector(".form-field textarea, .form-field .preview, .modal-body textarea");
+      if (preview && "value" in preview) {
+        preview.value = "剪藏失败：" + e.message;
+      }
+      const previewText = layer.querySelector(".state-card p");
+      if (previewText) previewText.textContent = "剪藏失败：" + e.message;
     } finally {
       button.disabled = false;
       button.classList.remove("is-loading");
@@ -1390,10 +1520,7 @@
         const openDoc = event.target.closest("[data-skill-result-open-doc]");
         if (openDoc) {
           const id = openDoc.getAttribute("data-skill-result-open-doc");
-          // Best-effort: navigate to KB and toast doc id.
-          const nav = document.querySelector('[data-nav-target="knowledge"]');
-          if (nav) nav.click();
-          toast("已生成文档 ID: " + id.slice(0, 8) + " (在知识库)", "success");
+          openKbDocumentEditorV20(id).catch((e) => toast("打开文档失败: " + e.message, "error"));
           const layer = openDoc.closest('[data-drawer="skillRunResult"]');
           if (layer) {
             layer.hidden = true;
@@ -1428,6 +1555,11 @@
       docSel && String(docSel.value || "").trim()
         ? String(docSel.value).trim()
         : "";
+    const outputFolderSel = layer.querySelector("select[data-v20-skill-output-folder]");
+    const outputFolderId =
+      outputFolderSel && String(outputFolderSel.value || "").trim()
+        ? String(outputFolderSel.value).trim()
+        : "";
     const modeInp = layer.querySelector(
       'input[name="v16-skill-output-mode"]:checked',
     );
@@ -1446,6 +1578,7 @@
       output_format,
       text: instruction,
       ...(documentId ? { document_id: documentId, output_mode } : {}),
+      ...(outputFolderId && output_mode === "generate" ? { folder_id: outputFolderId } : {}),
     };
 
     button.disabled = true;
@@ -2093,7 +2226,8 @@
     const data = unwrapData(resp) || resp || {};
     const items = data.items || [];
     const cards = document.querySelectorAll(".recent-view .idea-card");
-    if (!cards.length) return data;
+    const recentRows = document.querySelectorAll(".recent-doc-list .recent-doc-row");
+    if (!cards.length && !recentRows.length) return data;
 
     cards.forEach((card, idx) => {
       const row = items[idx];
@@ -2112,6 +2246,25 @@
       }
       const metaSpan = card.querySelector(".card-meta span");
       if (metaSpan) metaSpan.textContent = relTime(row.updated_at || row.created_at);
+    });
+    recentRows.forEach((row, idx) => {
+      const it = items[idx];
+      if (!it) {
+        row.style.display = "none";
+        return;
+      }
+      row.style.display = "";
+      row.dataset.cardId = it.id || "";
+      row.dataset.bridgeBound = "true";
+      const title = row.querySelector("strong");
+      if (title) title.textContent = it.title || "未命名";
+      const sub = row.querySelector("div span");
+      if (sub) {
+        const type = it.document_type || it.content_type || "灵感记录";
+        sub.textContent = `${type} · ${relTime(it.updated_at || it.created_at) || "刚刚"}`;
+      }
+      const tail = row.querySelector(":scope > span:not(.recent-item-icon)");
+      if (tail) tail.textContent = relTime(it.updated_at || it.created_at) || "";
     });
     window.dispatchEvent(new CustomEvent("mydow:v14:feed-loaded", { detail: { count: items.length } }));
     return data;
@@ -2577,7 +2730,7 @@
       "click",
       async (event) => {
         const el = event.target.closest(
-          ".idea-card[data-card-id], .record-card[data-card-id], .record-row[data-card-id]",
+          ".idea-card[data-card-id], .record-card[data-card-id], .record-row[data-card-id], .recent-doc-row[data-card-id]",
         );
         if (!el) return;
         const cardId = el.dataset.cardId;
@@ -2789,6 +2942,8 @@
       '<input type="radio" name="v16-skill-output-mode" value="generate" checked /> 生成新文档</label>' +
       '<label>' +
       '<input type="radio" name="v16-skill-output-mode" value="transform" /> 修改所选文档</label></div>' +
+      '<label class="skill-output-folder-v20"><span class="picker-meta">新文档保存到</span>' +
+      '<select data-v20-skill-output-folder aria-label="选择生成文档保存的知识库"><option value="">按 AI 标签自动归类</option></select></label>' +
       '<p class="picker-meta" data-v18-skill-doc-meta>' +
       "选择文档后，运行会把文档正文并入提示词；选「修改所选文档」时，LLM 输出会写回该文档而非新建。</p>";
 
@@ -2796,6 +2951,7 @@
 
     const sel = wrap.querySelector("[data-v16-skill-doc-select]");
     const modeRow = wrap.querySelector("[data-v16-skill-mode-row]");
+    const folderSel = wrap.querySelector("[data-v20-skill-output-folder]");
     const search = wrap.querySelector("[data-v18-skill-doc-search]");
     const list = wrap.querySelector("[data-v18-skill-doc-list]");
     const meta = wrap.querySelector("[data-v18-skill-doc-meta]");
@@ -2840,6 +2996,15 @@
     };
 
     try {
+      const foldersResp = await apiFetch("/kb/folders?include_counts=true&page_size=80").catch(() => null);
+      const foldersData = foldersResp ? (unwrapData(foldersResp) || {}) : {};
+      (foldersData.items || []).forEach((folder) => {
+        if (!folder || !folder.id || !folderSel) return;
+        const option = document.createElement("option");
+        option.value = folder.id;
+        option.textContent = String(folder.name || "未命名知识库").slice(0, 80);
+        folderSel.appendChild(option);
+      });
       const resp = await apiFetch("/kb/documents?page_size=48");
       const data = unwrapData(resp) || {};
       const items = data.items || [];
@@ -3465,10 +3630,13 @@
               ? "#c53030"
               : "#718098";
         const rid = escapeHtmlV14(run.id || "");
+        const documentId = escapeHtmlV14(run.document_id || run.output_object_id || "");
         return (
           '<article class="quick-setting bridge-skill-run-row" data-skill-run-id="' +
           rid +
-          '" style="cursor:default;">' +
+          '" data-document-id="' +
+          documentId +
+          '" style="cursor:pointer;">' +
           '<svg class="icon"><use href="#icon-sparkles" /></svg>' +
           '<div><strong>' +
           escapeHtmlV14(whenLabel) +
@@ -3511,6 +3679,36 @@
     if (!layer.hidden) {
       hydrateSkillDetailRunHistoryV17(V14.activeSkillId || "").catch(() => {});
     }
+    document.addEventListener(
+      "click",
+      async (event) => {
+        const row = event.target.closest(".bridge-skill-run-row[data-skill-run-id]");
+        if (!row) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const docId = row.dataset.documentId || "";
+        if (docId) {
+          await openKbDocumentEditorV20(docId);
+          return;
+        }
+        const runId = row.dataset.skillRunId || "";
+        if (!runId) return;
+        try {
+          const raw = await apiFetch("/skills/runs/" + encodeURIComponent(runId));
+          const data = unwrapData(raw) || raw || {};
+          const output = data.output || {};
+          const nextDocId = output.document_id || output.saved_object_id || data.output_object_id || "";
+          if (nextDocId) {
+            await openKbDocumentEditorV20(nextDocId);
+          } else {
+            _renderSkillResultDrawer(data.skill_name || "Skill", data);
+          }
+        } catch (e) {
+          toast("打开运行结果失败: " + e.message, "error");
+        }
+      },
+      true,
+    );
   }
 
   // ─── §15.40 — Skills 广场 category filter chips ──────────────────────────
@@ -4932,17 +5130,13 @@
           else toast("「" + (hit.title || "卡片") + "」已找到，列表中可查看", "info");
         }, 180);
       } else if (type === "document" || type === "kbdoc" || type === "kb_doc") {
-        const navBtn = document.querySelector('[data-nav-target="knowledge"]');
-        if (navBtn) navBtn.click();
-        window.setTimeout(() => {
-          // Try to open the doc detail drawer via known opener
-          const opener = document.querySelector(
-            '[data-open-drawer="docDetail"][data-doc-id="' + id + '"], ' +
-            '.kb-list-row[data-doc-id="' + id + '"]',
-          );
-          if (opener) opener.click();
-          else toast("已打开知识库 — 文档「" + (hit.title || "") + "」", "success");
-        }, 180);
+        if (id) {
+          openKbDocumentEditorV20(id).catch((e) => toast("打开文档失败: " + e.message, "error"));
+        } else {
+          const navBtn = document.querySelector('[data-nav-target="knowledge"]');
+          if (navBtn) navBtn.click();
+          toast("已打开知识库 — 文档「" + (hit.title || "") + "」", "success");
+        }
       } else if (type === "folder" || type === "kbfolder" || type === "kb_folder") {
         const navBtn = document.querySelector('[data-nav-target="knowledge"]');
         if (navBtn) navBtn.click();
@@ -5095,6 +5289,26 @@
     document.addEventListener(
       "click",
       async (event) => {
+        const profileAutoToggle = event.target.closest(".profile-main .toggle-switch");
+        if (profileAutoToggle) {
+          const row = profileAutoToggle.closest(".preference-row");
+          const text = (row && row.innerText || "").replace(/\s+/g, "");
+          if (/自动保存/.test(text)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            const next = !profileAutoToggle.classList.contains("active");
+            try {
+              await _patchMePreference("auto_save", next);
+              profileAutoToggle.classList.toggle("active", next);
+              profileAutoToggle.setAttribute("aria-pressed", String(next));
+              profileAutoToggle.setAttribute("aria-label", next ? "自动保存已开启" : "自动保存已关闭");
+              toast(next ? "自动保存已开启" : "自动保存已关闭", "success");
+            } catch (e) {
+              toast("保存失败: " + e.message, "error");
+            }
+            return;
+          }
+        }
         const btn = event.target.closest("button[data-toast]");
         if (!btn) return;
         const toast_text = btn.dataset.toast || "";
@@ -5342,12 +5556,7 @@
       toast("对话已删除", "success");
       await loadAiConversations();
     } catch (e) {
-      if (e.status === 404 || e.status === 405) {
-        thread.style.display = "none";
-        toast("已从列表隐藏（后端待支持永久删除）", "info");
-      } else {
-        toast("删除失败: " + e.message, "error");
-      }
+      toast("删除失败: " + e.message, "error");
     }
   }
 
@@ -5375,6 +5584,37 @@
       document.querySelector(".ai-history-thread.active") ||
       document.querySelector(".ai-history-thread[data-conversation-id]")
     );
+  }
+
+  async function saveAiConversationToKbV20(conversationId) {
+    const cid = String(conversationId || V14.aiConvId || "").trim();
+    if (!cid) throw new Error("请先打开一个对话");
+    const raw = await apiFetch("/ai/conversations/" + encodeURIComponent(cid));
+    const data = unwrapData(raw) || raw || {};
+    const conv = data.conversation || {};
+    const messages = Array.isArray(data.messages) ? data.messages : [];
+    const title = conv.title || "Mydow AI 对话";
+    const lines = messages.map((msg) => {
+      const role = msg.role === "assistant" ? "Mydow AI" : "我";
+      return `## ${role}\n\n${msg.content || ""}`.trim();
+    });
+    const content =
+      `# ${title}\n\n` +
+      `保存时间：${new Date().toLocaleString("zh-CN")}\n\n` +
+      lines.join("\n\n---\n\n");
+    const docRaw = await apiFetch("/kb/documents", {
+      method: "POST",
+      body: {
+        title,
+        summary: (conv.last_message_preview || content).slice(0, 500),
+        content,
+        document_type: "note",
+        tags: ["AI 对话", "Mydow AI"],
+      },
+    });
+    const doc = unwrapData(docRaw) || docRaw || {};
+    await loadKbLibraryGrid().catch(() => {});
+    return doc;
   }
 
   function bindAiChatRenameV37() {
@@ -5411,18 +5651,32 @@
           { label: "重命名", handler: () => thread && _renameAiConvV37(thread) },
           {
             label: "保存到知识库",
-            handler: () => {
-              const sb = document.querySelector('[data-open-modal="aiSave"]');
-              if (sb) sb.click(); else toast("未找到保存按钮", "warning");
+            handler: async () => {
+              try {
+                const cid = (thread && thread.dataset.conversationId) || V14.aiConvId || "";
+                const doc = await saveAiConversationToKbV20(cid);
+                toast("对话已保存到知识库", "success");
+                if (doc && doc.id) await openKbDocumentEditorV20(doc.id);
+              } catch (e) {
+                toast("保存到知识库失败: " + e.message, "error");
+              }
             },
           },
           {
             label: "分享对话链接",
             handler: async () => {
               const cid = (thread && thread.dataset.conversationId) || V14.aiConvId || "";
-              const url = `${window.location.origin}/mydow/biz_v14/#ai/${cid}`;
+              if (!cid) {
+                toast("请先打开一个对话", "warning");
+                return;
+              }
+              const url = `${window.location.origin}${window.location.pathname}#/ai/${cid}`;
               const ok = await _copyTextToClipboard(url);
-              toast(ok ? "已复制对话链接" : "复制失败", ok ? "success" : "error");
+              if (ok) {
+                toast("已复制对话链接", "success");
+              } else {
+                window.prompt("复制对话链接", url);
+              }
             },
           },
           { label: "删除对话", danger: true, handler: () => thread && _deleteAiConvV37(thread) },
@@ -5923,6 +6177,45 @@
     );
   }
 
+  async function openKbDocumentEditorV20(documentId, options = {}) {
+    const id = String(documentId || "").trim();
+    if (!id) {
+      toast("缺少文档 ID，无法打开", "warning");
+      return null;
+    }
+    closeV14Layers();
+    const page = document.querySelector(".page");
+    if (page) {
+      [
+        "knowledge-open",
+        "folder-open",
+        "ai-open",
+        "ai-chat-open",
+        "garden-open",
+        "skills-open",
+        "notifications-open",
+        "profile-open",
+        "insights-full-open",
+      ].forEach((cls) => page.classList.remove(cls));
+      page.classList.add("doc-open");
+    }
+    document.querySelectorAll("[data-nav-target]").forEach((nav) => {
+      nav.classList.remove("active");
+      nav.removeAttribute("aria-current");
+    });
+    if (options.updateHash !== false) {
+      try {
+        window.history.replaceState(null, "", "#/kb/doc/" + encodeURIComponent(id));
+      } catch (_e) {}
+    }
+    await hydrateDocEditorFromDocumentV18(id);
+    const main = getDocEditorMainV18();
+    if (main) {
+      main.scrollIntoView({ block: "start", behavior: "smooth" });
+    }
+    return main;
+  }
+
   // §15.37.g — Doc AI actions: 5 buttons in doc-editor toolbar
   function _resolveDocSubjectV37() {
     const main = document.querySelector(".doc-editor-main, .doc-editor-drawer");
@@ -5995,12 +6288,20 @@
           toast("请先打开一篇文档", "warning");
           return;
         }
-        try {
-          await apiFetch("/garden/overview");
-          toast("已关联数字花园", "success");
-        } catch (e) {
-          toast("关联失败: " + e.message, "error");
-        }
+        const body = subject.hostEl.querySelector(".doc-body, [contenteditable]");
+        const text = (body && body.textContent.trim()) || "";
+        await apiFetch("/cards", {
+          method: "POST",
+          body: {
+            title: "数字花园节点: " + subject.title.slice(0, 48),
+            summary: (text || subject.title).slice(0, 240),
+            tags: ["数字花园", "文档关联"],
+            content_type: "note",
+            source_id: subject.docId,
+          },
+        });
+        await apiFetch("/garden/overview");
+        toast("已创建数字花园节点", "success");
       },
     };
     document.addEventListener(
@@ -6122,8 +6423,302 @@
   //   effect (DB write / route change / preference patch).
   // ═════════════════════════════════════════════════════════════════════════
 
+  function injectDarkThemeCssV20() {
+    if (document.getElementById("mydow-dark-theme-v20")) return;
+    const style = document.createElement("style");
+    style.id = "mydow-dark-theme-v20";
+    style.textContent = `
+      html[data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #111113;
+        --panel: rgba(31,31,35,.78);
+        --panel-strong: rgba(39,39,43,.94);
+        --ink: #f5f5f7;
+        --text: #e4e4e7;
+        --muted: #a1a1aa;
+        --faint: #71717a;
+        --line: rgba(255,255,255,.13);
+        --line-soft: rgba(255,255,255,.08);
+        --accent: #8ea2ff;
+        --accent-deep: #a6b4ff;
+        --mint: #74d3c2;
+        --gold: #e8c078;
+        --rose: #e2a3ad;
+        --shadow: 0 22px 70px rgba(0,0,0,.34);
+        --soft-shadow: 0 14px 36px rgba(0,0,0,.26);
+      }
+      body.theme-dark {
+        --bg: #111113;
+        --panel: rgba(31,31,35,.78);
+        --panel-strong: rgba(39,39,43,.94);
+        --ink: #f5f5f7;
+        --text: #e4e4e7;
+        --muted: #a1a1aa;
+        --faint: #71717a;
+        --line: rgba(255,255,255,.13);
+        --line-soft: rgba(255,255,255,.08);
+        --accent: #8ea2ff;
+        --accent-deep: #a6b4ff;
+        --shadow: 0 22px 70px rgba(0,0,0,.34);
+        --soft-shadow: 0 14px 36px rgba(0,0,0,.26);
+        --mydow-dark-bg: #111113;
+        --mydow-dark-sidebar: #1c1c1e;
+        --mydow-dark-surface: #242426;
+        --mydow-dark-surface-2: #2c2c2e;
+        --mydow-dark-surface-3: #363638;
+        --mydow-dark-text: #f5f5f7;
+        --mydow-dark-muted: #a1a1aa;
+        --mydow-dark-subtle: #73737c;
+        --mydow-dark-border: rgba(255,255,255,.12);
+        --mydow-dark-border-strong: rgba(255,255,255,.2);
+        --mydow-dark-accent: #8ea2ff;
+        --mydow-dark-accent-strong: #a6b4ff;
+        background:
+          radial-gradient(circle at 82% 8%, rgba(142, 162, 255, .16), transparent 32rem),
+          linear-gradient(180deg, #111113 0%, #151517 100%) !important;
+        color: var(--mydow-dark-text) !important;
+        transition: background-color .24s ease, color .24s ease;
+      }
+      body.theme-dark .page,
+      body.theme-dark .app,
+      body.theme-dark .app-shell,
+      body.theme-dark .content-grid {
+        background: transparent !important;
+        color: var(--mydow-dark-text) !important;
+      }
+      body.theme-dark .topbar {
+        background: transparent !important;
+        border-color: transparent !important;
+      }
+      body.theme-dark .search {
+        background: rgba(31,31,35,.86) !important;
+        border: 1px solid var(--mydow-dark-border) !important;
+        box-shadow: 0 18px 42px rgba(0,0,0,.26) !important;
+      }
+      body.theme-dark .search input {
+        background: transparent !important;
+        color: var(--mydow-dark-text) !important;
+      }
+      html[data-theme="dark"] body,
+      html.dark body {
+        background:
+          radial-gradient(circle at 84% 10%, rgba(142, 162, 255, .12), transparent 30rem),
+          linear-gradient(180deg, #111113 0%, #151517 100%) !important;
+        color: var(--mydow-dark-text, #f5f5f7) !important;
+      }
+      body.theme-dark .workspace {
+        background: transparent !important;
+        color: var(--mydow-dark-text) !important;
+      }
+      body.theme-dark aside:first-child,
+      body.theme-dark .side-nav,
+      body.theme-dark .sidebar,
+      body.theme-dark .app-sidebar {
+        background: rgba(28, 28, 30, .94) !important;
+        border-color: var(--mydow-dark-border) !important;
+        box-shadow: inset -1px 0 0 var(--mydow-dark-border) !important;
+      }
+      body.theme-dark aside:first-child a,
+      body.theme-dark .side-nav a,
+      body.theme-dark .nav-item,
+      body.theme-dark [data-nav],
+      body.theme-dark [data-route] {
+        color: var(--mydow-dark-muted) !important;
+      }
+      body.theme-dark aside:first-child .active,
+      body.theme-dark .side-nav .active,
+      body.theme-dark .nav-item.active,
+      body.theme-dark [aria-current="page"] {
+        background: rgba(255,255,255,.08) !important;
+        color: var(--mydow-dark-text) !important;
+        border-color: var(--mydow-dark-border-strong) !important;
+        box-shadow: none !important;
+      }
+      body.theme-dark .main-column,
+      body.theme-dark .right-rail,
+      body.theme-dark .knowledge-main,
+      body.theme-dark .folder-main,
+      body.theme-dark .doc-main,
+      body.theme-dark .ai-main,
+      body.theme-dark .skills-main,
+      body.theme-dark .profile-main {
+        background: transparent !important;
+        color: var(--mydow-dark-text) !important;
+      }
+      body.theme-dark .hero,
+      body.theme-dark .page-hero,
+      body.theme-dark .capture-hero {
+        background: linear-gradient(135deg, rgba(31,31,35,.88), rgba(17,17,19,.94)) !important;
+        color: var(--mydow-dark-text) !important;
+        border-color: var(--mydow-dark-border) !important;
+        box-shadow: 0 24px 80px rgba(0,0,0,.2) !important;
+      }
+      body.theme-dark .capture,
+      body.theme-dark .capture-panel,
+      body.theme-dark .capture-card,
+      body.theme-dark .capture-input,
+      body.theme-dark .composer-card,
+      body.theme-dark .ai-composer,
+      body.theme-dark .ai-chat-composer,
+      body.theme-dark .ai-input-panel {
+        background: rgba(36,36,38,.9) !important;
+        color: var(--mydow-dark-text) !important;
+        border-color: var(--mydow-dark-border-strong) !important;
+        box-shadow: 0 22px 70px rgba(0,0,0,.28) !important;
+      }
+      body.theme-dark .capture::before,
+      body.theme-dark .capture::after,
+      body.theme-dark .capture .capture-footer,
+      body.theme-dark .capture .capture-actions,
+      body.theme-dark .capture .capture-meta,
+      body.theme-dark .capture .input-toolbar {
+        background: rgba(36,36,38,.9) !important;
+        border-color: var(--mydow-dark-border) !important;
+      }
+      body.theme-dark .profile-main,
+      body.theme-dark .settings-card,
+      body.theme-dark .profile-card,
+      body.theme-dark .account-card,
+      body.theme-dark .user-card,
+      body.theme-dark .surface-layer .modal-card,
+      body.theme-dark .drawer-layer .detail-drawer,
+      body.theme-dark .drawer-card,
+      body.theme-dark .recent-list-panel,
+      body.theme-dark .content-view,
+      body.theme-dark .stat-card,
+      body.theme-dark .insight-panel,
+      body.theme-dark .skill-card,
+      body.theme-dark .record-card,
+      body.theme-dark .idea-card,
+      body.theme-dark .library-card,
+      body.theme-dark .folder-card,
+      body.theme-dark .quick-action,
+      body.theme-dark .quick-setting,
+      body.theme-dark .recommend-card,
+      body.theme-dark .compact-row,
+      body.theme-dark .topic-pill,
+      body.theme-dark .skill-chip,
+      body.theme-dark .skill-rec-drawer,
+      body.theme-dark .skill-rec-drawer .rec-card,
+      html[data-theme="dark"] .profile-card,
+      html[data-theme="dark"] .account-card,
+      html[data-theme="dark"] .skill-chip,
+      html[data-theme="dark"] .topic-pill,
+      html[data-theme="dark"] .recommend-card,
+      body.theme-dark .notice-row {
+        background: rgba(36,36,38,.92) !important;
+        color: var(--mydow-dark-text) !important;
+        border-color: var(--mydow-dark-border) !important;
+        box-shadow: 0 18px 50px rgba(0,0,0,.22) !important;
+      }
+      body.theme-dark h1,
+      body.theme-dark h2,
+      body.theme-dark h3,
+      body.theme-dark h4,
+      body.theme-dark strong,
+      body.theme-dark .record-title,
+      body.theme-dark .card-title,
+      body.theme-dark .doc-title,
+      body.theme-dark .doc-title-input {
+        color: var(--mydow-dark-text) !important;
+      }
+      body.theme-dark p,
+      body.theme-dark .drawer-summary,
+      body.theme-dark .profile-main .preference-row span,
+      body.theme-dark .settings-card span,
+      body.theme-dark .meta,
+      body.theme-dark .muted,
+      body.theme-dark .subtle,
+      body.theme-dark .record-meta,
+      body.theme-dark .stat-note {
+        color: var(--mydow-dark-muted) !important;
+      }
+      body.theme-dark input,
+      body.theme-dark textarea,
+      body.theme-dark select,
+      body.theme-dark .select-control,
+      body.theme-dark .segmented-control,
+      body.theme-dark .doc-editor-surface {
+        background: rgba(44,44,46,.88) !important;
+        color: var(--mydow-dark-text) !important;
+        border-color: var(--mydow-dark-border) !important;
+        outline-color: rgba(142,162,255,.55) !important;
+      }
+      body.theme-dark input::placeholder,
+      body.theme-dark textarea::placeholder,
+      body.theme-dark [contenteditable="true"]:empty::before {
+        color: var(--mydow-dark-subtle) !important;
+      }
+      body.theme-dark .pill-button,
+      body.theme-dark .ai-top-action,
+      body.theme-dark .quick-action,
+      body.theme-dark .skill-chip,
+      body.theme-dark .topic-pill,
+      body.theme-dark .recent-doc-row,
+      body.theme-dark .record-row:not(.record-head) {
+        background: rgba(44,44,46,.82) !important;
+        color: var(--mydow-dark-text) !important;
+        border-color: var(--mydow-dark-border) !important;
+        box-shadow: none !important;
+      }
+      body.theme-dark .pill-button:hover,
+      body.theme-dark .ai-top-action:hover,
+      body.theme-dark .quick-action:hover,
+      body.theme-dark .skill-chip:hover,
+      body.theme-dark .topic-pill:hover,
+      body.theme-dark .recent-doc-row:hover,
+      body.theme-dark .record-row:not(.record-head):hover,
+      body.theme-dark .quick-setting:hover {
+        background: rgba(58,58,60,.96) !important;
+        border-color: var(--mydow-dark-border-strong) !important;
+      }
+      body.theme-dark .record-head,
+      body.theme-dark .table-head,
+      body.theme-dark .list-head {
+        background: transparent !important;
+        color: var(--mydow-dark-muted) !important;
+        border-color: var(--mydow-dark-border) !important;
+      }
+      body.theme-dark .segmented-control button.active,
+      body.theme-dark .toggle-switch.active,
+      body.theme-dark .skill-chip.active,
+      body.theme-dark .topic-pill.active,
+      html[data-theme="dark"] .skill-chip.active,
+      html[data-theme="dark"] .topic-pill.active,
+      html[data-theme="dark"] .sidebar a.active {
+        background: rgba(142,162,255,.18) !important;
+        color: #e9edff !important;
+        border-color: rgba(142,162,255,.38) !important;
+        box-shadow: 0 8px 22px rgba(142,162,255,.26) !important;
+      }
+      body.theme-dark .send-button,
+      body.theme-dark .ai-send-button,
+      body.theme-dark [data-send],
+      body.theme-dark [data-submit] {
+        background: linear-gradient(135deg, var(--mydow-dark-accent), var(--mydow-dark-accent-strong)) !important;
+        color: #fff !important;
+        border-color: transparent !important;
+      }
+      body.theme-dark .surface-layer,
+      body.theme-dark .drawer-layer {
+        background: rgba(0,0,0,.4) !important;
+      }
+      body.theme-dark a {
+        color: #b7c3ff !important;
+      }
+      body.theme-dark hr,
+      body.theme-dark .divider,
+      body.theme-dark .drawer-section,
+      body.theme-dark .modal-foot-actions {
+        border-color: var(--mydow-dark-border) !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   // §15.39.theme — 主题切换（写 localStorage + html dataset，不依赖后端）
   function _applyTheme(name) {
+    injectDarkThemeCssV20();
     const root = document.documentElement;
     if (name === "dark") {
       root.dataset.theme = "dark";
@@ -6182,6 +6777,28 @@
     document.addEventListener(
       "click",
       async (event) => {
+        const directBtn = event.target.closest('.drawer-actions [data-open-modal="confirmDelete"]');
+        if (directBtn) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          if (!window.confirm("确定删除当前内容吗？")) return;
+          directBtn.disabled = true;
+          try {
+            const kind = await _performContextualDelete();
+            if (!kind) {
+              toast("未找到删除对象（请先打开抽屉/选择卡片）", "warning");
+            } else {
+              toast(kind === "card" ? "卡片已删除" : kind === "document" ? "文档已删除" : "文件夹已删除", "success");
+              closeV14Layers();
+              await Promise.allSettled([loadFeedCards(), loadFeedIntoRecordsTable(), loadKbLibraryGrid()]);
+            }
+          } catch (e) {
+            toast("删除失败: " + e.message, "error");
+          } finally {
+            directBtn.disabled = false;
+          }
+          return;
+        }
         const btn = event.target.closest('[data-toast="已删除，仍可在回收站恢复"]');
         if (!btn) return;
         event.preventDefault();
@@ -6203,12 +6820,7 @@
             closeV14Layers();
           }
         } catch (e) {
-          if (e.status === 404 || e.status === 405) {
-            toast("已隐藏（后端待支持永久删除）", "info");
-            closeV14Layers();
-          } else {
-            toast("删除失败: " + e.message, "error");
-          }
+          toast("删除失败: " + e.message, "error");
         } finally {
           btn.disabled = false;
         }
@@ -6415,6 +7027,196 @@
     );
   }
 
+  function bindAiBackButtonV20() {
+    document.addEventListener(
+      "click",
+      (event) => {
+        const btn = event.target.closest(".ai-top-action[data-page-back]");
+        if (!btn) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const page = document.querySelector(".page");
+        if (page && page.classList.contains("ai-chat-open")) {
+          page.classList.remove("ai-chat-open");
+          page.classList.add("ai-open");
+          toast("已返回 Mydow AI 工作台", "success");
+          return;
+        }
+        const nav = document.querySelector('[data-nav-target="home"]');
+        if (nav) nav.click();
+      },
+      true,
+    );
+  }
+
+  function enhanceNativeSelectsV20() {
+    document.querySelectorAll(".surface-layer select, .modal-card select").forEach((select) => {
+      if (select.closest(".v20-select-shell")) return;
+      const shell = document.createElement("span");
+      shell.className = "v20-select-shell";
+      select.parentNode.insertBefore(shell, select);
+      shell.appendChild(select);
+    });
+  }
+
+  async function openBestSearchHitV20(title) {
+    const query = String(title || "").trim();
+    if (!query) return false;
+    try {
+      const params = new URLSearchParams({ q: query, page_size: "6" });
+      ["document", "card", "folder", "insight"].forEach((type) => params.append("object_type", type));
+      const resp = await apiFetch("/search?" + params.toString());
+      const data = unwrapData(resp) || resp || {};
+      const hit = (data.items || [])[0];
+      if (!hit) return false;
+      navigateToSearchHitV17(hit);
+      return true;
+    } catch (e) {
+      console.warn("[Mydow v1.4] linked row search failed", e);
+      return false;
+    }
+  }
+
+  async function openOrCreateLinkedDocumentV23(row) {
+    const title = (
+      row.querySelector("strong")?.textContent ||
+      row.textContent ||
+      ""
+    )
+      .replace(/^关联节点[:：]\s*/, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!title) return false;
+    const drawer = row.closest(".drawer-layer, .detail-drawer");
+    const drawerTitle =
+      drawer?.querySelector("h2")?.textContent?.replace(/\s+/g, " ").trim() || "";
+    const meta = row.querySelector("span")?.textContent?.replace(/\s+/g, " ").trim() || "";
+    const sectionTitle =
+      row.closest(".drawer-section")?.querySelector("h3")?.textContent?.trim() || "关联内容";
+
+    const params = new URLSearchParams({ q: title, page_size: "8" });
+    params.append("object_type", "document");
+    try {
+      const resp = await apiFetch("/search?" + params.toString());
+      const data = unwrapData(resp) || resp || {};
+      const exact = (data.items || []).find((hit) => {
+        const ht = String(hit.title || hit.name || "").trim();
+        return ht === title || ht.includes(title) || title.includes(ht);
+      });
+      const hit = exact || (data.items || [])[0];
+      const docId = hit?.object_id || hit?.id || hit?.document_id || "";
+      if (docId) {
+        await openKbDocumentEditorV20(docId);
+        closeV14Layers();
+        return true;
+      }
+    } catch (e) {
+      console.warn("[Mydow v1.4] linked document search failed", e);
+    }
+
+    const content = [
+      `# ${title}`,
+      drawerTitle ? `来源抽屉：${drawerTitle}` : "",
+      meta ? `条目元信息：${meta}` : "",
+      `关联区块：${sectionTitle}`,
+      "",
+      "该文档由关联内容点击自动创建，用于把原型中的关联条目沉淀为可追溯的知识库资产。",
+    ].filter(Boolean).join("\n\n");
+    const created = await apiFetch("/kb/documents", {
+      method: "POST",
+      body: {
+        title,
+        content,
+        summary: `${title} - ${meta || sectionTitle}`,
+        document_type: "markdown",
+        tags: ["关联内容", sectionTitle, drawerTitle].filter(Boolean),
+      },
+    });
+    const doc = unwrapData(created) || created || {};
+    await loadKbLibraryGrid().catch(() => {});
+    if (doc.id) {
+      await openKbDocumentEditorV20(doc.id);
+      closeV14Layers();
+      return true;
+    }
+    return false;
+  }
+
+  function bindDrawerLinkedRowsV20() {
+    document.addEventListener(
+      "click",
+      async (event) => {
+        const row = event.target.closest(
+          '.drawer-layer.is-open .drawer-section .quick-setting, .drawer-layer.is-open .drawer-section .related-row, [data-drawer="nodeDetail"] .quick-setting, [data-drawer="insightDetail"] .quick-setting, [data-drawer="itemDetail"] .quick-setting',
+        );
+        if (!row) return;
+        if (event.target.closest("button, a, [data-open-modal], [data-toast]")) return;
+        const title = row.querySelector("strong")?.textContent || row.textContent || "";
+        if (!title.trim()) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        row.setAttribute("aria-busy", "true");
+        row.classList.add("is-loading");
+        try {
+          const ok = await openOrCreateLinkedDocumentV23(row);
+          if (ok) toast("已打开关联知识库文档", "success");
+          else toast("未找到关联内容：" + title.trim().slice(0, 32), "warning");
+        } catch (e) {
+          toast("打开关联文档失败: " + e.message, "error");
+        } finally {
+          row.removeAttribute("aria-busy");
+          row.classList.remove("is-loading");
+        }
+      },
+      true,
+    );
+  }
+
+  function bindGenerateHandbookV20() {
+    document.addEventListener(
+      "click",
+      async (event) => {
+        const btn = event.target.closest('[data-open-modal="aiSave"]');
+        if (!btn || !/生成手册/.test(btn.textContent || "")) return;
+        const drawer = btn.closest('[data-drawer="nodeDetail"], [data-drawer="insightDetail"], [data-drawer="itemDetail"]');
+        if (!drawer) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const title = drawer.querySelector("h2")?.textContent?.trim() || "知识手册";
+        const context = Array.from(drawer.querySelectorAll(".drawer-section"))
+          .map((sec) => (sec.textContent || "").replace(/\s+/g, " ").trim())
+          .filter(Boolean)
+          .slice(0, 8)
+          .join("\n");
+        btn.disabled = true;
+        btn.classList.add("is-loading");
+        try {
+          const resp = await apiFetch("/research/tasks", {
+            method: "POST",
+            body: {
+              topic: title + " 手册",
+              scope: context || title,
+              output: "生成一份可沉淀到知识库的结构化手册，包含背景、关键发现、操作步骤和后续建议。",
+              include_sources: true,
+              save_to_kb: true,
+            },
+          });
+          const data = unwrapData(resp) || resp || {};
+          const docId = data.document_id || data.report?.document_id || "";
+          toast("手册已生成并保存到知识库", "success");
+          if (docId) await openKbDocumentEditorV20(docId);
+          else await loadKbLibraryGrid().catch(() => {});
+        } catch (e) {
+          toast("生成手册失败: " + e.message, "error");
+        } finally {
+          btn.disabled = false;
+          btn.classList.remove("is-loading");
+        }
+      },
+      true,
+    );
+  }
+
   // §15.39.passwordModal — 「修改密码入口已打开」→ 弹 prompt 收集旧/新密码
   //   并 POST /me/password。与 §8.16 后端配合。
   function bindPasswordModalV39() {
@@ -6446,19 +7248,49 @@
     );
   }
 
-  // §15.39.billing — 「订阅管理已打开」→ V1 没有真实 portal session，提示用户前往个人中心
+  // §15.39.billing — 「订阅管理已打开」→ real billing plan snapshot/update.
   function bindBillingV39() {
     document.addEventListener(
       "click",
-      (event) => {
+      async (event) => {
         const btn = event.target.closest('[data-toast="订阅管理已打开"]');
         if (!btn) return;
         event.preventDefault();
         event.stopImmediatePropagation();
-        toast(
-          "Pro / Team 订阅 V1 暂以个人中心展示当前 Plan，付费门户在 V2 上线",
-          "info"
-        );
+        btn.disabled = true;
+        try {
+          const overviewRaw = await apiFetch("/billing/overview");
+          const plansRaw = await apiFetch("/billing/plans");
+          const overview = unwrapData(overviewRaw) || overviewRaw || {};
+          const plansData = unwrapData(plansRaw) || plansRaw || {};
+          const current = (overview.subscription && overview.subscription.plan) || "free";
+          const items = Array.isArray(plansData.items) ? plansData.items : [];
+          const labels = items.map((p) => `${p.code}: ${p.name || p.code}`).join("\n");
+          const next = window.prompt(
+            `当前订阅：${current}\n可选计划：\n${labels}\n\n输入计划代码以切换，留空则只查看。`,
+            current,
+          );
+          const plan = String(next || "").trim().toLowerCase();
+          if (!plan || plan === current) {
+            toast(`当前订阅：${current}，余额 ${overview.credit_balance ?? 0} credits`, "success");
+            return;
+          }
+          if (!items.some((p) => p.code === plan)) {
+            toast("未找到该订阅计划", "warning");
+            return;
+          }
+          const updatedRaw = await apiFetch("/billing/subscription", {
+            method: "PATCH",
+            body: { plan, billing_cycle: "monthly" },
+          });
+          const updated = unwrapData(updatedRaw) || updatedRaw || {};
+          toast(`订阅已切换为 ${updated.plan || plan}`, "success");
+          await hydrateMe();
+        } catch (e) {
+          toast("订阅管理失败: " + e.message, "error");
+        } finally {
+          btn.disabled = false;
+        }
       },
       true
     );
@@ -6496,16 +7328,31 @@
     );
   }
 
-  // §15.39.permissions — 「权限设置已打开」 → V1 toast + 引导到知识库
+  // §15.39.permissions — persist the user's default permission intent.
   function bindPermissionsV39() {
     document.addEventListener(
       "click",
-      (event) => {
+      async (event) => {
         const btn = event.target.closest('[data-toast="权限设置已打开"]');
         if (!btn) return;
         event.preventDefault();
         event.stopImmediatePropagation();
-        toast("权限矩阵编辑器在 V2 上线，可在文件夹级 ACL 配置", "info");
+        btn.disabled = true;
+        try {
+          await apiFetch("/me/preferences", {
+            method: "PATCH",
+            body: {
+              permission_acl_mode: "owner_only",
+              permission_default_visibility: "private",
+              permission_settings_opened_at: new Date().toISOString(),
+            },
+          });
+          toast("权限默认值已保存为仅自己可见", "success");
+        } catch (e) {
+          toast("权限设置保存失败: " + e.message, "error");
+        } finally {
+          btn.disabled = false;
+        }
       },
       true
     );
@@ -7158,6 +8005,9 @@
     bindPermissionsV39();
     bindStorageRefreshV39();
     bindSecurityDevicesV39();
+    bindAiBackButtonV20();
+    bindDrawerLinkedRowsV20();
+    bindGenerateHandbookV20();
     bindAiContextAddV39();
     bindAiContextDrawerHydrateV14();
     bindDuplicateFolderV39();
@@ -7168,6 +8018,8 @@
     bindAiSaveResultV39();
     bindSkillRunModalV39();
     bindVoiceFinishV39();
+    enhanceNativeSelectsV20();
+    document.addEventListener("click", () => window.setTimeout(enhanceNativeSelectsV20, 80), false);
     _restoreThemeV39();
   }
 
@@ -7474,8 +8326,25 @@ a:focus-visible,
 }
 
 /* §18.7 — Skills side rail must not clip recommendations/recent usage. */
+.page.skills-open .content-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 280px) !important;
+  gap: 24px !important;
+  width: min(100%, calc(100vw - 316px)) !important;
+  max-width: calc(100vw - 316px) !important;
+  overflow: visible !important;
+}
+.page.skills-open .right-rail,
+.page.skills-open .skills-drawer {
+  min-width: 0 !important;
+  width: min(280px, 100%) !important;
+}
+.page.skills-open .skills-main {
+  min-width: 0 !important;
+}
 .page.skills-open .skills-drawer .insight-panel {
   overflow-y: auto !important;
+  max-height: calc(100vh - 126px) !important;
+  height: auto !important;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
   padding-right: 12px !important;
@@ -7489,6 +8358,15 @@ a:focus-visible,
 }
 .skills-drawer .recommend-card {
   margin-bottom: 12px;
+}
+@media (max-width: 1180px) {
+  .page.skills-open .content-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    max-width: calc(100vw - 300px) !important;
+  }
+  .page.skills-open .right-rail {
+    display: none !important;
+  }
 }
 .skill-side-rec-list-v18 {
   margin: 12px 0 16px;
@@ -8036,6 +8914,8 @@ a:focus-visible,
     attachGardenControlHandlersV14,
     attachGardenInlineMenuV17,
     openGardenNodeDetailV17,
+    openKbDocumentEditorV20,
+    saveAiConversationToKbV20,
     loadSkillRecommendationsV17,
     navigateToSearchHitV17,
     loadActiveConversationContextScope,

@@ -16,17 +16,10 @@ from typing import Dict, List
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_os.search_engine.content_fetcher import ContentFetcher
+from agent_os.knowledge.models import Card
 from agent_os.search_engine.models import IngestionJob
 from agent_os.search_engine.search_service import SearchService
 from agent_os.search_engine.text_chunker import TextChunker
-
-# Import Card model (assuming it exists in cards module)
-try:
-    from agent_os.cards.models import Card
-    CARD_AVAILABLE = True
-except ImportError:
-    CARD_AVAILABLE = False
-    logging.warning("Card model not available, ingestion will create mock items")
 
 logger = logging.getLogger(__name__)
 
@@ -206,26 +199,30 @@ class IngestionPipeline:
 
         title = f"{base_title} - Part {chunk_num}/{total_chunks}"
 
-        if CARD_AVAILABLE:
-            # Create Card
-            card = Card(
-                title=title,
-                content=chunk,
-                para_type="ingested",
-                tags=["ingested", job.source_type],
-                source_inbox_item_id=str(job.id)
-            )
-            self.db.add(card)
-            await self.db.commit()
-            await self.db.refresh(card)
+        if not job.created_by:
+            raise RuntimeError("created_by is required to persist ingested content as a real knowledge card")
 
-            logger.debug(f"Created Card {card.id} for chunk {chunk_num}")
-            return card.id
-        else:
-            # Create mock item (for testing without Card model)
-            item_id = uuid.uuid4()
-            logger.debug(f"Created mock item {item_id} for chunk {chunk_num}")
-            return item_id
+        try:
+            user_id = uuid.UUID(str(job.created_by))
+        except ValueError as exc:
+            raise RuntimeError(f"Invalid created_by user id for ingestion job: {job.created_by}") from exc
+
+        card = Card(
+            user_id=user_id,
+            title=title[:200],
+            content=chunk,
+            summary=chunk[:240],
+            para_type="ingested",
+            content_type="web" if job.source_type == "url" else "document",
+            tags=["ingested", job.source_type],
+            visibility="private",
+        )
+        self.db.add(card)
+        await self.db.commit()
+        await self.db.refresh(card)
+
+        logger.debug(f"Created Card {card.id} for chunk {chunk_num}")
+        return card.id
 
     async def _index_item(
         self,

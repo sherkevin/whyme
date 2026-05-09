@@ -81,15 +81,20 @@ async def main(argv: list[str] | None = None) -> int:
     sessionmaker = async_sessionmaker(engine, expire_on_commit=False)
 
     async with sessionmaker() as db:
+        seed_username = args.email.split("@")[0] or f"seed_{uuid.uuid4().hex[:6]}"
         user = (
             await db.execute(select(User).where(User.email == args.email))
         ).scalar_one_or_none()
+        if user is None:
+            user = (
+                await db.execute(select(User).where(User.username == seed_username))
+            ).scalar_one_or_none()
         created_user = False
         if user is None:
             user = User(
                 id=uuid.uuid4(),
                 email=args.email,
-                username=args.email.split("@")[0] or f"seed_{uuid.uuid4().hex[:6]}",
+                username=seed_username,
                 password_hash=get_password_hash(args.password),
                 full_name=args.full_name,
                 is_active=True,
@@ -100,6 +105,16 @@ async def main(argv: list[str] | None = None) -> int:
             await db.commit()
             await db.refresh(user)
             created_user = True
+        else:
+            user.email = args.email
+            user.username = seed_username
+            user.password_hash = get_password_hash(args.password)
+            user.full_name = args.full_name
+            user.is_active = True
+            user.is_verified = True
+            user.settings = {**(user.settings or {}), "seed": True}
+            await db.commit()
+            await db.refresh(user)
 
         if args.reset or not created_user:
             await _wipe_existing_seed(

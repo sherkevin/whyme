@@ -573,21 +573,24 @@ def _build_chat_messages(
 async def _invoke_llm_complete(
     messages: list[dict[str, Any]],
 ) -> tuple[str, dict[str, Any] | None, str | None]:
-    """Call the configured LLM provider; degrade gracefully on failure.
+    """Call the configured LLM provider.
 
-    Returns ``(content, usage, error)``. On error, ``content`` falls back to
-    the placeholder reply so the persisted shape stays stable.
+    Returns ``(content, usage, error)``. When the real provider fails we
+    surface the failure to the caller instead of fabricating a placeholder
+    answer; product flows must never persist fake AI output as successful.
     """
 
     try:
         provider = get_provider()
         result = await provider.complete(messages)
-        content = (result or {}).get("content", "") or _PLACEHOLDER_REPLY
+        content = str((result or {}).get("content") or "").strip()
+        if not content:
+            return "", (result or {}).get("usage"), "LLM provider returned empty content"
         usage = (result or {}).get("usage")
         return content, usage, None
     except Exception as exc:  # pragma: no cover - defensive
-        logger.warning("LLM provider failed, falling back to placeholder: %s", exc)
-        return _PLACEHOLDER_REPLY, None, str(exc)
+        logger.warning("LLM provider failed: %s", exc)
+        return "", None, str(exc)
 
 
 def _uuid_values(values: list[Any] | None) -> list[uuid.UUID]:
@@ -838,10 +841,75 @@ async def _load_related_context(
             return await _enrich_with_chunks_and_folder(
                 db, rows, query_text, query_vec, folder_id_set, limit
             )
+        try:
+            folder_uuid_values = _uuid_values(folder_ids)
+            if folder_uuid_values:
+                docs = (
+                    await db.execute(
+                        select(KBDocument)
+                        .where(
+                            KBDocument.user_id == user.id,
+                            KBDocument.deleted_at.is_(None),
+                            KBDocument.folder_id.in_(folder_uuid_values),
+                        )
+                        .order_by(KBDocument.updated_at.desc().nulls_last())
+                        .limit(max(limit * 2, 10))
+                    )
+                ).scalars().all()
+            else:
+                docs = []
+            if docs:
+                folder_rows = (
+                    await db.execute(
+                        select(KBFolder).where(KBFolder.id.in_(folder_uuid_values))
+                    )
+                ).scalars().all()
+                folder_name_by_id = {str(f.id): f.name for f in folder_rows}
+                return [
+                    _doc_context_item(
+                        doc,
+                        query=query_text,
+                        score=1.0 - (idx * 0.01),
+                        folder_name=folder_name_by_id.get(str(doc.folder_id)),
+                    )
+                    for idx, doc in enumerate(docs[:limit])
+                ]
+        except SQLAlchemyError:
+            return []
 
     # ── Path 2 — folder pin ────────────────────────────────────────────
     if folder_ids:
         try:
+            folder_uuid_values = _uuid_values(folder_ids)
+            if folder_uuid_values:
+                docs = (
+                    await db.execute(
+                        select(KBDocument)
+                        .where(
+                            KBDocument.user_id == user.id,
+                            KBDocument.deleted_at.is_(None),
+                            KBDocument.folder_id.in_(folder_uuid_values),
+                        )
+                        .order_by(KBDocument.updated_at.desc().nulls_last())
+                        .limit(max(limit * 2, 10))
+                    )
+                ).scalars().all()
+                if docs:
+                    folder_rows = (
+                        await db.execute(
+                            select(KBFolder).where(KBFolder.id.in_(folder_uuid_values))
+                        )
+                    ).scalars().all()
+                    folder_name_by_id = {str(f.id): f.name for f in folder_rows}
+                    return [
+                        _doc_context_item(
+                            doc,
+                            query=query_text,
+                            score=1.0 - (idx * 0.01),
+                            folder_name=folder_name_by_id.get(str(doc.folder_id)),
+                        )
+                        for idx, doc in enumerate(docs[:limit])
+                    ]
             folder_clause = or_(
                 *[
                     cast(SearchIndex.search_metadata, String).ilike(f"%{fid}%")
@@ -1231,6 +1299,15 @@ async def post_message(
                 "code": "AI_PROVIDER_ERROR",
                 "message": error,
             }
+            assistant_content = (
+                "AI 调用失败，请检查 LLM API 配置或稍后重试："
+                + str(error)
+            )
+            assistant_model = "litellm"
+            output_tokens = 0
+            latency_ms = elapsed_ms
+            job.status = JobStatus.FAILED.value
+            job.error = error_payload
         else:
             assistant_content = content
             assistant_model = "litellm"
@@ -1246,7 +1323,11 @@ async def post_message(
         user_id=current_user.id,
         role=AIMessageRole.ASSISTANT.value,
         content=assistant_content,
-        status=AIMessageStatus.COMPLETED.value,
+        status=(
+            AIMessageStatus.FAILED.value
+            if error_payload
+            else AIMessageStatus.COMPLETED.value
+        ),
         citations=[_citation_from_context(item) for item in related_context],
         tool_calls=[],
         parent_message_id=user_msg.id,
@@ -1614,11 +1695,17 @@ async def post_message_stream(
         except Exception as exc:  # pragma: no cover - defensive
             error_payload = {"code": "AI_PROVIDER_ERROR", "message": str(exc)}
             yield _sse_event("error", error_payload)
-            if not accumulated:
-                accumulated.append(_PLACEHOLDER_REPLY)
 
         elapsed_ms = int((time.perf_counter() - started) * 1000)
-        final_content = "".join(accumulated) or _PLACEHOLDER_REPLY
+        final_content = "".join(accumulated)
+        if not final_content:
+            if error_payload:
+                final_content = (
+                    "AI 调用失败，请检查 LLM API 配置或稍后重试："
+                    + str(error_payload.get("message") or "")
+                )
+            else:
+                final_content = _PLACEHOLDER_REPLY
 
         citation_items = react_citations
         if citation_items is None:
@@ -1846,9 +1933,9 @@ async def regenerate_message(
             },
         )
 
-    # Reuse the regular send-message reply flow shape: queue a Job and
-    # produce a deterministic placeholder assistant reply (the streaming
-    # variant is a separate endpoint).
+    # Reuse the regular send-message reply flow shape: queue a Job and, when
+    # LLM is enabled, generate a fresh answer instead of replaying any stored
+    # assistant content.
     context_scope = conv.context_scope or {}
     related_context = await _load_related_context(
         db, current_user, context_scope, query=user_msg.content, limit=5
@@ -1870,27 +1957,75 @@ async def regenerate_message(
     db.add(job)
     await db.flush()
 
+    assistant_content = _PLACEHOLDER_REPLY
+    assistant_model = "placeholder"
+    input_tokens = 0
+    output_tokens = len(_PLACEHOLDER_REPLY)
+    latency_ms = 0
+    error_payload: dict[str, Any] | None = None
+
+    if is_llm_enabled():
+        history_stmt = (
+            select(AIMessage)
+            .where(AIMessage.conversation_id == conv.id)
+            .where(AIMessage.created_at < user_msg.created_at)
+            .order_by(AIMessage.created_at.asc())
+        )
+        history = (await db.execute(history_stmt)).scalars().all()
+        chat_messages = _build_chat_messages(
+            conv, list(history), user_msg.content, related_context
+        )
+        started = time.perf_counter()
+        content, usage, error = await _invoke_llm_complete(chat_messages)
+        elapsed_ms = int((time.perf_counter() - started) * 1000)
+        assistant_model = "litellm"
+        latency_ms = elapsed_ms
+        if error:
+            error_payload = {
+                "code": "AI_PROVIDER_ERROR",
+                "message": error,
+            }
+            assistant_content = (
+                "AI 调用失败，请检查 LLM API 配置或稍后重试："
+                + str(error)
+            )
+            output_tokens = 0
+            job.status = JobStatus.FAILED.value
+            job.error = error_payload
+        else:
+            assistant_content = content
+            if usage:
+                input_tokens = int(usage.get("prompt_tokens") or 0)
+                output_tokens = int(usage.get("completion_tokens") or 0)
+            else:
+                output_tokens = len(assistant_content)
+
     assistant_msg = AIMessage(
         conversation_id=conv.id,
         user_id=current_user.id,
         role=AIMessageRole.ASSISTANT.value,
-        content=_PLACEHOLDER_REPLY,
-        status=AIMessageStatus.COMPLETED.value,
+        content=assistant_content,
+        status=(
+            AIMessageStatus.FAILED.value
+            if error_payload
+            else AIMessageStatus.COMPLETED.value
+        ),
         citations=[
             _citation_from_context(item) for item in related_context
         ] if related_context else [],
         tool_calls=[],
         parent_message_id=user_msg.id,
         job_id=job.id,
-        model="placeholder",
-        input_tokens=0,
-        output_tokens=len(_PLACEHOLDER_REPLY),
-        latency_ms=0,
+        model=assistant_model,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        latency_ms=latency_ms,
+        error=error_payload,
     )
     db.add(assistant_msg)
 
     conv.message_count = int(conv.message_count or 0) + 1
-    conv.last_message_preview = _PLACEHOLDER_REPLY[:120]
+    conv.last_message_preview = assistant_content[:120]
 
     await db.commit()
     await db.refresh(user_msg)

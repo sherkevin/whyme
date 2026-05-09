@@ -38,7 +38,7 @@ services:
     container_name: mydow-app
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "${APP_PORT:-8000}:8000"
     environment:
       # 数据库：在 Postgres 适配 legacy conversations.user_id INTEGER→UUID
       # 之前（§2.22 / §6.9 类似工作未完成），临时使用 SQLite 落库；持久化到
@@ -131,7 +131,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agentos}
       POSTGRES_DB: ${POSTGRES_DB:-agentos_db}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -149,7 +149,7 @@ services:
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-redis123}"]
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_HOST_PORT:-6379}:6379"
     volumes:
       - redis-data:/data
     healthcheck:

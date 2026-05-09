@@ -18,6 +18,8 @@ dependencies = [
     "rich",
     "python-dotenv",
     "httpx",
+    "aiohttp",
+    "beautifulsoup4",
     "pyyaml",
     "aider-chat>=0.60.0",
     "python-jose[cryptography]",
@@ -29,6 +31,8 @@ dependencies = [
     "sentence-transformers",
     "PyJWT",
     "sentry-sdk>=2.0",
+    "trafilatura>=2.0.0",
+    "PyPDF2>=3.0.0",
 ]
 
 [project.optional-dependencies]

@@ -426,12 +426,14 @@ async def capture_link(
     fetched = None
     if payload.auto_process and not payload.simulate_failure:
         fetched = await fetch_link_content(str(payload.url))
-        if fetched is not None:
+        if fetched is not None and fetched.ok:
             source.name = fetched.title or source.name
             source.extra = {**(source.extra or {}), **link_source_extra(note=payload.note, fetched=fetched)}
 
     enrichment = None
-    if payload.auto_process and not payload.simulate_failure:
+    if payload.auto_process and not payload.simulate_failure and (
+        fetched is None or fetched.ok or (payload.note or "").strip()
+    ):
         enrichment = await enrich_capture_with_llm(
             db,
             user_id=current_user.id,
@@ -486,7 +488,7 @@ async def capture_link(
     await db.flush()
 
     document: Document | None = None
-    if payload.auto_process and not payload.simulate_failure and fetched is not None:
+    if payload.auto_process and not payload.simulate_failure and fetched is not None and fetched.ok:
         summary_for_doc = (
             enrichment.summary
             if enrichment and enrichment.summary
@@ -543,14 +545,19 @@ async def capture_link(
                 message=payload.simulate_failure,
             )
             fetch_status = "failed"
-        elif fetched is None:
+        elif fetched is None or not fetched.ok:
+            fetch_error = (
+                fetched.fetch_error
+                if fetched is not None and fetched.fetch_error
+                else f"Unable to fetch URL: {payload.url}"
+            )
             await simulate_failure(
                 db,
                 inbox_item=inbox,
                 job=job,
                 source=source,
                 document=document,
-                message=f"Unable to fetch URL: {payload.url}",
+                message=fetch_error,
             )
             fetch_status = "failed"
         else:
@@ -589,6 +596,9 @@ async def capture_link(
         "fetch_status": fetch_status,
         "fetched_title": fetched.title if fetched else "",
         "fetched_description": fetched.description if fetched else "",
+        "status_code": fetched.status_code if fetched else None,
+        "final_url": fetched.final_url if fetched else "",
+        "fetch_error": fetched.fetch_error if fetched else "",
         "content_excerpt": (fetched.text if fetched else "")[:1000],
     }
     if card is not None:

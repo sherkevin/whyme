@@ -138,6 +138,18 @@ async def ensure_prd10_performance_indexes(conn) -> None:
     if dialect == "sqlite":
         await _ensure_sqlite_column(
             conn,
+            table_name="kb_folders",
+            column_name="source_id",
+            column_sql="source_id CHAR(32)",
+        )
+        await _ensure_sqlite_column(
+            conn,
+            table_name="kb_folders",
+            column_name="workspace_id",
+            column_sql="workspace_id CHAR(32)",
+        )
+        await _ensure_sqlite_column(
+            conn,
             table_name="kb_chunks",
             column_name="source_id",
             column_sql="source_id CHAR(32)",
@@ -193,6 +205,9 @@ async def ensure_prd10_performance_indexes(conn) -> None:
         await _execute_many(
             conn,
             [
+                "ALTER TABLE kb_folders ADD COLUMN IF NOT EXISTS source_id "
+                "UUID REFERENCES prd10_sources(id) ON DELETE SET NULL",
+                "ALTER TABLE kb_folders ADD COLUMN IF NOT EXISTS workspace_id UUID",
                 "ALTER TABLE kb_chunks ADD COLUMN IF NOT EXISTS source_id "
                 "UUID REFERENCES prd10_sources(id) ON DELETE SET NULL",
                 "UPDATE kb_chunks AS c SET source_id = d.source_id "

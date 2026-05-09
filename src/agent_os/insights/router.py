@@ -1,4 +1,4 @@
-"""PRD10 §12 Insights & §12.3-§12.4 Reports endpoints.
+﻿"""PRD10 §12 Insights & §12.3-§12.4 Reports endpoints.
 
 * ``GET  /api/v1/insights/summary``     — PRD10 §12.1
 * ``GET  /api/v1/insights``             — PRD10 §12.2
@@ -40,6 +40,7 @@ from agent_os.insights.research_service import (
     synthesize_research_draft,
 )
 from agent_os.jobs.models import Job, JobStatus, JobType
+from agent_os.kb.auto_route import route_generated_document
 from agent_os.kb.models import Document, DocumentStatus, DocumentType
 from agent_os.knowledge.models import Card
 
@@ -952,19 +953,35 @@ async def create_deep_research_task(
 
     document: Document | None = None
     if payload.save_to_kb:
+        route = await route_generated_document(
+            db,
+            user_id=current_user.id,
+            workspace_id=None,
+            content=draft.body,
+            fallback_title=f"深度研究：{topic}",
+            hint_tags=["深度研究", topic[:24]],
+            explicit_folder_id=None,
+        )
         document = Document(
             user_id=current_user.id,
-            title=f"深度研究：{topic}",
-            summary=draft.summary,
+            folder_id=route.folder_id,
+            title=route.title,
+            summary=route.summary or draft.summary,
             content=draft.body,
             document_type=DocumentType.MARKDOWN.value,
             status=DocumentStatus.READY.value,
-            tags=["深度研究", topic[:24]],
+            tags=route.tags or ["deep_research", topic[:24]],
             extra={
                 "kind": "deep_research",
                 "insight_id": str(insight.id),
                 "used_llm": draft.used_llm,
                 "model": draft.model,
+                "auto_route": {
+                    "folder_hint": route.folder_hint,
+                    "folder_name": route.folder_name,
+                    "used_llm": route.used_llm,
+                    "model": route.model,
+                },
             },
         )
         db.add(document)
@@ -1008,6 +1025,16 @@ async def create_deep_research_task(
             "body": insight.body,
             "used_llm": draft.used_llm,
             "model": draft.model,
+            "auto_route": (
+                {
+                    "folder_hint": route.folder_hint,
+                    "folder_name": route.folder_name,
+                    "used_llm": route.used_llm,
+                    "model": route.model,
+                }
+                if document is not None
+                else None
+            ),
             "source_counts": {
                 "cards": len(sources.cards),
                 "documents": len(sources.documents),

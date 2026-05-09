@@ -244,6 +244,9 @@ PRD10_SETTINGS_WHITELIST = frozenset({
     "daily_report_time",
     "notification_enabled",
     "notification_channels",
+    "permission_acl_mode",
+    "permission_default_visibility",
+    "permission_settings_opened_at",
     # §15.26 biz-prototype editProfile modal lets the user override the
     # plan-derived role label (Pro/Team/Free Plan 用户) with their own
     # text. Stored as a free-form display string on User.settings so it

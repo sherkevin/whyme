@@ -153,13 +153,44 @@ async def demo_login(request: Request, db: AsyncSession = Depends(get_db)):
 
     if user is None:
         # Lazy create on first hit so a fresh dev DB still works without
-        # running the seed script up front.
-        user = await crud.create_user(
-            db=db,
-            username=_DEMO_USERNAME_DEFAULT,
-            email=_DEMO_EMAIL_DEFAULT,
-            password=_DEMO_PASSWORD_DEFAULT,
-        )
+        # running the seed script up front. Seeded PRD10/demo databases may
+        # already contain ``username=demo`` with an older email, so reuse and
+        # normalize that row instead of tripping the unique username index.
+        existing_by_email = await crud.get_user_by_email(db, _DEMO_EMAIL_DEFAULT)
+        existing_by_username = await crud.get_user_by_username(db, _DEMO_USERNAME_DEFAULT)
+        user = existing_by_email or existing_by_username
+
+        if user is None:
+            user = await crud.create_user(
+                db=db,
+                username=_DEMO_USERNAME_DEFAULT,
+                email=_DEMO_EMAIL_DEFAULT,
+                password=_DEMO_PASSWORD_DEFAULT,
+            )
+        else:
+            from agent_os.auth.security import get_password_hash
+
+            if existing_by_username is None or existing_by_username.id == user.id:
+                user.username = _DEMO_USERNAME_DEFAULT
+            if existing_by_email is None or existing_by_email.id == user.id:
+                user.email = _DEMO_EMAIL_DEFAULT
+            user.password_hash = get_password_hash(_DEMO_PASSWORD_DEFAULT)
+            user.is_active = True
+            user.is_verified = True
+            settings = {
+                "daily_goal": 10,
+                "theme": "light",
+                "language": "zh",
+                **dict(user.settings or {}),
+            }
+            settings["email_verified"] = True
+            user.settings = settings
+            await db.commit()
+            await db.refresh(user)
+
+    user.last_login_at = datetime.now(UTC)
+    await db.commit()
+    await db.refresh(user)
 
     access_token = create_access_token(user_id=user.id)
     refresh_token = create_refresh_token(user_id=user.id)

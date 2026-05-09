@@ -15,6 +15,7 @@ from agent_os.auth.dependencies import get_current_user
 from agent_os.auth.models import User
 from agent_os.common import ApiErrorCode, paginated_response, success_response
 from agent_os.db.base import get_db
+from agent_os.kb.auto_route import route_generated_document
 from agent_os.kb.models import Chunk, Document, DocumentStatus, Folder
 from agent_os.knowledge.models import Card
 from agent_os.sources.models import Source
@@ -529,17 +530,44 @@ async def create_document(
         explicit_content = ""
 
     word_count = len([w for w in explicit_content.split() if w]) if explicit_content else 0
+    folder_id = payload.folder_id
+    summary = payload.summary
+    tags = list(payload.tags or [])
+    auto_route_extra: dict[str, object] | None = None
+    if folder_id is None and explicit_content.strip():
+        route = await route_generated_document(
+            db,
+            user_id=current_user.id,
+            workspace_id=None,
+            content=explicit_content,
+            fallback_title=payload.title,
+            hint_tags=tags,
+            explicit_folder_id=None,
+        )
+        folder_id = route.folder_id
+        summary = summary or route.summary
+        tags = route.tags or tags
+        auto_route_extra = {
+            "folder_hint": route.folder_hint,
+            "folder_name": route.folder_name,
+            "used_llm": route.used_llm,
+            "model": route.model,
+        }
 
     document = Document(
         user_id=current_user.id,
-        folder_id=payload.folder_id,
+        folder_id=folder_id,
         title=payload.title,
-        summary=payload.summary,
+        summary=summary,
         content=explicit_content,
         document_type=payload.document_type,
         status=DocumentStatus.READY.value,
-        tags=list(payload.tags or []),
-        extra={"created_via": "manual_modal", "template": payload.template or "blank"},
+        tags=tags,
+        extra={
+            "created_via": "manual_modal",
+            "template": payload.template or "blank",
+            **({"auto_route": auto_route_extra} if auto_route_extra else {}),
+        },
         is_favorite=payload.is_favorite,
         word_count=word_count,
     )
