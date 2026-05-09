@@ -252,15 +252,19 @@ async def test_v14_buttons_emit_real_api_calls(v14_server: str) -> None:
 
             # ── 4. 语音记录已保存 → POST /capture/text ──
             await page.evaluate(
-                """async () => {
-                  const btn = document.createElement('button');
-                  btn.setAttribute('data-toast', '语音记录已保存');
-                  document.body.appendChild(btn);
-                  btn.click();
-                  await new Promise(r => setTimeout(r, 350));
-                  btn.remove();
+                """() => {
+                  document
+                    .querySelectorAll('.drawer-layer.is-open,.surface-layer.is-open')
+                    .forEach((el) => el.classList.remove('is-open'));
                 }"""
             )
+            await page.get_by_role("link", name="灵感采集").click()
+            await page.get_by_role("button", name="语音输入").click()
+            transcript = page.locator("[data-v18-voice-transcript]")
+            await transcript.fill(
+                "E2E voice transcript: this should be persisted through capture/text."
+            )
+            await page.get_by_role("button", name="结束并保存").click()
 
             # Wait for trailing requests to settle.
             await page.wait_for_timeout(400)

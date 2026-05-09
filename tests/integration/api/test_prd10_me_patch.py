@@ -402,6 +402,9 @@ async def test_patch_me_preferences_flat_body_merges_into_settings(
             "auto_save": True,
             "default_ai_model": "Mydow Pro",
             "default_input_mode": "voice",
+            "ai_response_style": "academic",
+            "ai_detail_level": "deep",
+            "cite_knowledge_by_default": False,
         },
     )
     assert resp.status_code == 200, resp.text
@@ -410,6 +413,9 @@ async def test_patch_me_preferences_flat_body_merges_into_settings(
     assert settings["auto_save"] is True
     assert settings["default_ai_model"] == "Mydow Pro"
     assert settings["default_input_mode"] == "voice"
+    assert settings["ai_response_style"] == "academic"
+    assert settings["ai_detail_level"] == "deep"
+    assert settings["cite_knowledge_by_default"] is False
     # Pre-existing keys from seed are preserved (shallow merge).
     assert settings["locale"] == "zh-CN"
     assert settings["timezone"] == "Asia/Shanghai"

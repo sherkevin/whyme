@@ -214,6 +214,9 @@ class TestConversationsCRUD:
         resp = await client.get(f"/api/v1/ai/conversations/{cid}")
         body = resp.json()
         assert resp.status_code == 200
+        assert body["data"]["conversation"]["context_scope"]["document_ids"] == [
+            str(document_id)
+        ]
         assert body["data"]["related_context"][0]["object_type"] == "document"
         assert body["data"]["related_context"][0]["object_id"] == str(document_id)
 

@@ -1,9 +1,9 @@
-"""Helpers for creating and updating PRD10 ``Job`` rows.
+﻿"""Helpers for creating and updating PRD10 ``Job`` rows.
 
 This module is the single write surface that capture / KB / AI domains use to
 record jobs. Keeping it small avoids duplicate transitions.
 
-PRD10 §12.7 (todo-tasks.md) — failure retry + dead-letter queue:
+PRD10 §12.7 (todo-tasks.md) - failure retry + dead-letter queue:
 
 * When a materializer raises (or marks a job ``failed`` because of a
   transient validation issue), we re-enqueue the job up to ``max_retries``
@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# §12.7 — retry / dead-letter knobs
+# §12.7 - retry / dead-letter knobs
 # ---------------------------------------------------------------------------
 
 
@@ -193,7 +193,7 @@ async def mark_job_failed(
     moves back to ``queued`` with an exponential backoff stamped on
     ``input.next_attempt_at`` so :func:`process_pending_jobs` skips it
     until the next attempt window is open. Once we exhaust the retry
-    budget — or a caller passes ``retryable=False`` — the job stays in
+    budget, or a caller passes ``retryable=False``, the job stays in
     ``failed`` with a dead-letter ``error.code``.
     """
 
@@ -249,7 +249,7 @@ async def process_job_once(db: AsyncSession, job_id: uuid.UUID) -> Job | None:
     Unsupported jobs are left untouched so other domain workers can consume
     them later.
 
-    PRD10 §12.7 — unexpected exceptions thrown by the materializer are
+    PRD10 §12.7 - unexpected exceptions thrown by the materializer are
     caught here so we can re-enqueue with backoff (instead of crashing the
     whole worker tick).
     """
@@ -292,7 +292,7 @@ async def list_dead_letter_jobs(
     limit: int = 50,
     user_id: uuid.UUID | None = None,
 ) -> list[Job]:
-    """PRD10 §12.7 helper — list jobs that exhausted the retry budget."""
+    """PRD10 §12.7 helper - list jobs that exhausted the retry budget."""
 
     stmt = (
         select(Job)
@@ -315,7 +315,7 @@ async def _materialize_ai_message_to_kb(db: AsyncSession, job: Job) -> Job:
     payload = job.input or {}
     content = str(payload.get("content") or "").strip()
     if not content:
-        # PRD10 §12.7 — validation errors go through the retry budget so a
+        # PRD10 §12.7 - validation errors go through the retry budget so a
         # transient row-write race (e.g. job created before AI streaming
         # finishes pushing the assistant content) can self-heal; only after
         # max_retries the worker dead-letters with ``MAX_RETRIES_EXCEEDED``.
@@ -334,7 +334,7 @@ async def _materialize_ai_message_to_kb(db: AsyncSession, job: Job) -> Job:
     job.started_at = datetime.now(UTC)
     await db.flush()
 
-    title = str(payload.get("title") or "AI 输出").strip() or "AI 输出"
+    title = str(payload.get("title") or "AI 杈撳嚭").strip() or "AI 杈撳嚭"
     folder_id = _uuid_or_none(payload.get("folder_id"))
     tags = list(payload.get("tags") or [])
 
@@ -529,7 +529,7 @@ async def process_pending_jobs(
     ``(job_type, input.kind)`` pair has a materializer registered above.
     The caller controls ``limit`` to stay polite under load.
 
-    PRD10 §12.7 — rows whose ``input.next_attempt_at`` is still in the
+    PRD10 §12.7 - rows whose ``input.next_attempt_at`` is still in the
     future are skipped here so the exponential backoff actually pauses
     the worker rather than tight-looping the same row every tick.
     """
@@ -556,7 +556,7 @@ async def process_pending_jobs(
     for job in rows:
         when = _next_attempt_at(job)
         if when is not None and when > now:
-            # Backoff window not yet open — leave row for the next tick.
+            # Backoff window not yet open - leave row for the next tick.
             continue
         result = await process_job_once(db, job.id)
         if result is None or result.status == JobStatus.QUEUED.value:
@@ -590,69 +590,60 @@ def _uuid_or_none(value: Any) -> uuid.UUID | None:
 
 
 # ---------------------------------------------------------------------------
-# §16 — Skills real execution worker
+# §16 - Skills real execution worker
 # ---------------------------------------------------------------------------
 
 
 _AGENT_ACTION_PROMPTS: dict[str, str] = {
     "extract_insights": (
         "你是访谈洞察分析师。从用户提供的访谈记录中提炼："
-        "1) 三条核心洞察（每条 1 句）；"
-        "2) 三句最有代表性的引用（保留原文）；"
-        "3) 五项可立即跟进的行动。用 Markdown 输出。"
+        "1) 三条核心洞察；2) 三句代表性原文引用；3) 五项可立即跟进的行动。"
+        "用 Markdown 输出。"
     ),
     "weekly_report": (
-        "你是周报助理。基于用户提供的本周记录、卡片或要点，生成周报："
-        "1) 本周成果（3-5 条）；2) 学到 / 发现（2-3 条）；3) 下周重点 / 风险。"
-        "用中文 Markdown 输出，不超过 600 字。"
+        "你是周报助手。基于用户提供的本周记录、卡片或要点生成周报："
+        "本周成果、学到/发现、下周重点/风险。用中文 Markdown 输出，不超过 600 字。"
     ),
     "research_expand": (
-        "你是研究助理。围绕用户给出的主题给出："
-        "1) 五个值得深入的子方向；2) 每个方向 2 条关键资料 / 概念 / 案例；"
-        "3) 一段 80 字以内的总览。用 Markdown 输出。"
+        "你是研究助手。围绕用户主题给出五个可深入方向、每个方向两条资料/概念/案例，"
+        "最后给出 80 字内总览。用 Markdown 输出。"
     ),
     "markdown_polish": (
-        "你是文字编辑。把用户提交的草稿润色为高质量 Markdown："
-        "1) 标题层级 H2/H3；2) 适当代码块 / 引用 / 列表；"
-        "3) 不改变原意；保留中文语气；末尾保留原信息密度。"
+        "你是文字编辑。把用户草稿润色为高质量 Markdown：整理标题层级、列表、引用和代码块，"
+        "不改变原意并保留信息密度。"
     ),
     "rate_ideas": (
-        "你是产品评审。对用户给出的多条想法，按可行性 / 影响力 / 创新度三维度"
-        "（1-10 分）逐条打分并给出 1 句点评，最后给出推荐执行顺序。"
-        "用 Markdown 表格输出。"
+        "你是产品评审。按可行性、影响力、创新度三维度为每条想法打 1-10 分，"
+        "给一句点评并给出推荐执行顺序。用 Markdown 表格输出。"
     ),
     "meeting_minutes": (
-        "你是会议秘书。从用户提供的会议文字稿中生成 5W1H 纪要："
-        "1) 时间 / 地点 / 出席者；2) 议题与决策；3) 待办清单（含负责人 / 截止）。"
+        "你是会议秘书。从会议文字稿生成 5W1H 纪要、议题与决策、待办清单，"
+        "待办包含负责人和截止时间。"
     ),
     "competitor_compare": (
-        "你是竞品分析师。给用户列出的 3-5 个竞品做：功能 / 价格 / 用户评价 / "
-        "差异点四列对比。用 Markdown 表格输出，最后给一段 80 字内总结。"
+        "你是竞品分析师。对用户列出的 3-5 个竞品做功能、价格、用户评价、差异点对比，"
+        "用 Markdown 表格输出，最后给 80 字内总结。"
     ),
     "knowledge_cards": (
-        "你是知识卡片设计师。从用户文本中提炼 3 张可独立阅读的卡片，类型分别为："
-        "概念卡 / 案例卡 / 金句卡；每张含 标题、要点（2-3 句）、关联标签。"
+        "你是知识卡片设计师。从用户文本中提炼 3 张可独立阅读的卡片：概念卡、案例卡、金句卡；"
+        "每张包含标题、2-3 个要点和关联标签。"
     ),
     "code_review": (
-        "你是高级工程师。对用户提交的代码做 Review："
-        "1) 可读性；2) 性能；3) 安全；4) 测试覆盖。每项给 1 条具体建议，"
-        "最后给出整体评分（A/B/C）。用 Markdown 输出。"
+        "你是高级工程师。对用户代码从可读性、性能、安全、测试覆盖四方面做 Review，"
+        "每项给具体建议，最后给整体评级 A/B/C。"
     ),
     "email_polish": (
-        "你是商务文书编辑。把用户的邮件草稿润色为专业版："
-        "1) 称呼合适；2) 段落结构清晰（背景/目的/请求/感谢）；"
-        "3) 保留中文语气；4) 末尾给签名行。"
+        "你是商务文书编辑。把口语化邮件草稿润色成专业版，包含称呼、背景、目的、请求、感谢和签名。"
     ),
     "okr_breakdown": (
-        "你是 OKR 教练。把用户的目标拆成 3-5 个 KR，每个 KR 配 2-3 条 Action。"
-        "KR 必须可量化、可验证；用 Markdown 列表输出。"
+        "你是 OKR 教练。把用户目标拆成 3-5 个可量化 KR，每个 KR 配 2-3 个 Action。"
+        "用 Markdown 列表输出。"
     ),
     "interview_outline": (
-        "你是用户调研专家。围绕调研主题生成 8-12 个访谈问题，"
-        "包含 5 个开放式问题 + 3 个量化问题 + 2 个跟进问题。用 Markdown 编号列表。"
+        "你是用户调研专家。围绕调研主题生成 8-12 个访谈问题，包含开放式、量化和追问问题。"
     ),
     "summarize": (
-        "你是 Mydow AI。把输入整理为：1) 一句话摘要；2) 3-5 个要点；3) 下一步建议。"
+        "你是 Mydow AI。把输入整理为：一句话摘要、3-5 个要点、下一步建议。"
     ),
 }
 
@@ -696,7 +687,7 @@ def _build_skill_prompt(skill: Skill, user_input: dict[str, Any]) -> tuple[str, 
 
 
 async def _materialize_skill_run(db: AsyncSession, job: Job) -> Job:
-    """§16 — Run a Skill end-to-end: LLM call + persist output."""
+    """§16 - Run a Skill end-to-end: LLM call + persist output."""
 
     payload = job.input or {}
     skill_id = _uuid_or_none(payload.get("skill_id"))
@@ -766,7 +757,7 @@ async def _materialize_skill_run(db: AsyncSession, job: Job) -> Job:
         ).strip()
         base_doc = (doc_row.content or "").strip()
         merged = (
-            f"{merged_head}\n\n---\n【知识库原文】《{doc_row.title or '文档'}》\n{base_doc}"
+            f"{merged_head}\n\n---\n【知识库原文《{doc_row.title or '文档'}》】\n{base_doc}"
             if base_doc
             else merged_head
         )
@@ -778,36 +769,43 @@ async def _materialize_skill_run(db: AsyncSession, job: Job) -> Job:
     from agent_os.ai.llm_provider import get_provider, is_llm_enabled
 
     if not is_llm_enabled():
-        content = (
-            f"# {skill.name} 输出（占位）\n\n"
-            "由于当前未启用真实 LLM（设置 AGENTOS_AI_LLM=on 启用），"
-            "下面是基于 Skill 描述的占位输出：\n\n"
-            f"- {skill.description or ''}\n"
-            f"- 用户指令: {user_input.get('instruction', '（未提供）')}"
-        )
-        usage: dict[str, Any] = {
-            "prompt_tokens": 0,
-            "completion_tokens": len(content),
+        error_payload = {
+            "code": "LLM_DISABLED",
+            "message": "Skills 试用需要启用真实 LLM（设置 AGENTOS_AI_LLM=on 或配置测试 provider）。",
         }
-    else:
-        provider = get_provider()
-        try:
-            result = await provider.complete(
-                [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ]
-            )
-        except Exception as exc:  # noqa: BLE001
-            logger.exception("[jobs] skill_run LLM call failed")
-            return await mark_job_failed(
-                db,
-                job.id,
-                error={"code": "AI_PROVIDER_ERROR", "message": str(exc)},
-                retryable=True,
-            )
-        content = (result or {}).get("content") or ""
-        usage = (result or {}).get("usage") or {}
+        if skill_run is not None:
+            skill_run.status = SkillRunStatus.FAILED.value
+            skill_run.error = error_payload
+            skill_run.completed_at = datetime.now(UTC)
+        return await mark_job_failed(
+            db,
+            job.id,
+            error=error_payload,
+            retryable=False,
+        )
+    provider = get_provider()
+    try:
+        result = await provider.complete(
+            [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ]
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("[jobs] skill_run LLM call failed")
+        error_payload = {"code": "AI_PROVIDER_ERROR", "message": str(exc)}
+        if skill_run is not None:
+            skill_run.status = SkillRunStatus.FAILED.value
+            skill_run.error = error_payload
+            skill_run.completed_at = datetime.now(UTC)
+        return await mark_job_failed(
+            db,
+            job.id,
+            error=error_payload,
+            retryable=False,
+        )
+    content = (result or {}).get("content") or ""
+    usage = (result or {}).get("usage") or {}
 
     output_payload: dict[str, Any] = {
         "kind": "skill_run",
@@ -917,7 +915,7 @@ async def _materialize_skill_run(db: AsyncSession, job: Job) -> Job:
                 workspace_id=job.workspace_id,
                 folder_id=getattr(doc_for_transform, "folder_id", None),
                 title=(
-                    f"{skill.name} · "
+                    f"{skill.name} 路 "
                     f"{datetime.now(UTC).strftime('%Y-%m-%d %H:%M')}"
                 ),
                 summary=_summary(content),
@@ -974,7 +972,7 @@ async def _materialize_skill_run(db: AsyncSession, job: Job) -> Job:
 
     notif_obj_id: str | None = str(skill_run.id) if skill_run else None
     notif_title = f"Skill 运行完成 · {skill.name}"
-    notif_body = (content[:160] + "…") if len(content) > 160 else content
+    notif_body = (content[:160] + "...") if len(content) > 160 else content
     await create_notification(
         db,
         user_id=job.user_id,

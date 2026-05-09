@@ -378,13 +378,12 @@ async def enrich_capture_with_llm(
 
     provider = get_provider()
     completion: dict[str, Any] | None = None
-    # Prefer CAPTURE_ENRICH_MODEL / MODEL_FALLBACK; otherwise default to a
-    # fast non-reasoning model on paratera (GLM-4.5-* emits chain-of-thought
-    # in `content` and breaks strict JSON extraction unless max_tokens is huge).
+    # Prefer the app-wide LLM model unless capture explicitly overrides it.
     enrich_model = (
         (os.environ.get("CAPTURE_ENRICH_MODEL") or "").strip()
-        or (os.environ.get("MODEL_FALLBACK") or "").strip()
-        or "GLM-4-Flash"
+        or (os.environ.get("AGENTOS_AI_MODEL") or "").strip()
+        or (os.environ.get("DEEPSEEK_MODEL") or "").strip()
+        or "deepseek-v4-flash"
     )
     complete_kwargs: dict[str, Any] = {
         "messages": [

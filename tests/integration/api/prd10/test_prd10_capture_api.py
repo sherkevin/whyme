@@ -3,13 +3,28 @@
 from __future__ import annotations
 
 import uuid
+import importlib
 
 import pytest
 from sqlalchemy import select
 
+from agent_os.ai import llm_provider
 from agent_os.search_engine.models import SearchIndex
 
 pytestmark = pytest.mark.asyncio
+
+
+class CaptureJsonProvider:
+    async def complete(self, messages, tools=None, **kwargs):
+        return {
+            "content": (
+                '{"title":"真实灵感标题","summary":"这是由测试 LLM 生成的真实摘要",'
+                '"tags":["产品洞察","AI"],"folder_hint":"产品设计",'
+                '"content_type":"insight","entities":["Mydow"]}'
+            ),
+            "role": "assistant",
+            "model": "fake-capture-llm",
+        }
 
 
 async def test_capture_text_creates_inbox_item_and_completes_job(
@@ -86,7 +101,19 @@ async def test_capture_text_auto_process_false_skips_job(prd10_client):
     assert body["data"]["job"] is None
 
 
-async def test_capture_link_creates_source_and_finishes(prd10_client):
+async def test_capture_link_creates_source_and_finishes(prd10_client, monkeypatch):
+    async def fake_fetch_page(self, url):
+        return {
+            "url": url,
+            "title": "Example Article",
+            "description": "A real fetched article summary.",
+            "content": "<html><title>Example Article</title><body><main>Fetched article body about AI product research.</main></body></html>",
+            "content_type": "text/html",
+            "links": [],
+        }
+
+    capture_router = importlib.import_module("agent_os.capture.router")
+    monkeypatch.setattr(capture_router.WebCrawler, "fetch_page", fake_fetch_page)
     response = await prd10_client.post(
         "/api/v1/capture/link",
         json={
@@ -102,6 +129,28 @@ async def test_capture_link_creates_source_and_finishes(prd10_client):
     assert uuid.UUID(data["source_id"])
     assert data["fetch_status"] == "completed"
     assert data["job"]["status"] == "completed"
+    assert uuid.UUID(data["document_id"])
+    assert uuid.UUID(data["card_id"])
+    assert "Fetched article body" in data["content_excerpt"]
+
+
+async def test_capture_text_uses_llm_before_return(prd10_client):
+    llm_provider.set_test_provider(CaptureJsonProvider())
+    try:
+        response = await prd10_client.post(
+            "/api/v1/capture/text",
+            json={"content": "这是一段很长的产品灵感，需要 AI 生成标题、摘要和标签。"},
+        )
+    finally:
+        llm_provider.set_test_provider(None)
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["enrichment"]["used_llm"] is True
+    assert data["enrichment"]["title"] == "真实灵感标题"
+    assert data["card"]["title"] == "真实灵感标题"
+    assert data["card"]["summary"] == "这是由测试 LLM 生成的真实摘要"
+    assert "产品洞察" in data["card"]["tags"]
 
 
 async def test_uploads_presign_returns_local_url(prd10_client):
@@ -170,3 +219,23 @@ async def test_capture_writes_completion_notification(prd10_client):
     assert listing.status_code == 200
     items = listing.json()["data"]["items"]
     assert any(item["type"] == "job_completed" for item in items)
+async def test_capture_text_accepts_voice_alias_and_persists_transcript(
+    prd10_client,
+):
+    response = await prd10_client.post(
+        "/api/v1/capture/text",
+        json={
+            "content": "voice transcript should be stored as a real text asset",
+            "title": "Voice transcript",
+            "tags": ["voice"],
+            "type": "voice",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["data"]["inbox_item"]["type"] == "text"
+    assert body["data"]["inbox_item"]["raw_content"] == (
+        "voice transcript should be stored as a real text asset"
+    )
+    assert body["data"]["document_id"]

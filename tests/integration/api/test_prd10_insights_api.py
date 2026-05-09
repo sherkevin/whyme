@@ -25,6 +25,7 @@ import agent_os.db.sqlite_compat  # noqa: F401
 # Side-effect imports so create_all sees every table the router walks.
 import agent_os.notifications.models  # noqa: F401
 import agent_os.sources.models  # noqa: F401
+from agent_os.ai import llm_provider
 from agent_os.auth.dependencies import get_current_user
 from agent_os.auth.models import User
 from agent_os.db.base import Base, get_db
@@ -39,6 +40,15 @@ from agent_os.insights.models import InsightType, Prd10Insight
 from agent_os.insights.router import router as insights_router
 from agent_os.kb.models import Document, DocumentStatus, DocumentType
 from agent_os.knowledge.models import Card
+
+
+class FakeResearchProvider:
+    async def complete(self, messages, tools=None, **kwargs):
+        return {
+            "content": "## 结论摘要\n基于真实知识资产生成的深度研究报告。\n\n## 下一步建议\n- 完成全链路联调。",
+            "role": "assistant",
+            "model": "fake-research-llm",
+        }
 
 
 @pytest_asyncio.fixture
@@ -256,6 +266,58 @@ async def test_generate_report_persists_insight_and_job(
     payload = detail.json()["data"]
     assert payload["insight_type"] == "daily_summary"
     assert "stats" in payload["report"]
+
+
+@pytest.mark.asyncio
+async def test_deep_research_task_uses_llm_and_saves_document(
+    client, sessionmaker, fixture_user
+):
+    async with sessionmaker() as session:
+        session.add(
+            Card(
+                user_id=fixture_user.id,
+                title="Mydow 数据链路",
+                summary="灵感采集、网页剪藏、RAG 和 Skills 需要全链路联调。",
+                content="所有结果必须落库并可追溯。",
+                content_type="insight",
+                tags=["Mydow", "RAG"],
+            )
+        )
+        session.add(
+            Document(
+                user_id=fixture_user.id,
+                title="网页剪藏验收",
+                summary="网页剪藏需要抓取正文并保存为知识库文档。",
+                content="剪藏正文、标题、摘要、标签都必须来自真实处理。",
+                document_type=DocumentType.MARKDOWN.value,
+                status=DocumentStatus.READY.value,
+                tags=["网页剪藏"],
+            )
+        )
+        await session.commit()
+
+    llm_provider.set_test_provider(FakeResearchProvider())
+    try:
+        resp = await client.post(
+            "/api/v1/research/tasks",
+            json={"topic": "Mydow 数据链路", "scope": "知识库", "output": "研究报告"},
+        )
+    finally:
+        llm_provider.set_test_provider(None)
+
+    assert resp.status_code == 202, resp.text
+    data = resp.json()["data"]
+    assert data["status"] == "completed"
+    assert data["used_llm"] is True
+    assert data["model"] == "fake-research-llm"
+    assert uuid.UUID(data["report_id"])
+    assert uuid.UUID(data["document_id"])
+
+    async with sessionmaker() as session:
+        saved = await session.get(Document, uuid.UUID(data["document_id"]))
+        assert saved is not None
+        assert saved.extra["kind"] == "deep_research"
+        assert "深度研究" in saved.tags
 
 
 @pytest.mark.asyncio

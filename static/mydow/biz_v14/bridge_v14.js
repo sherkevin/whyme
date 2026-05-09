@@ -28,7 +28,10 @@
    *     notes: string[]
    *   },
    *   contextDocsCache: Record<string, { id: string, title: string, folder_id?: string }>,
+   *   contextFoldersCache: Record<string, { id: string, title: string }>,
    *   skillRunDoneIds: Record<string, string>,
+   *   allSkills: any[],
+   *   activeSkillFilter: string,
    * }} */
   const V14 = {
     notifFilter: "all",
@@ -46,8 +49,14 @@
     contextScope: { document_ids: [], folder_ids: [], sources: [], notes: [] },
     /** §16.4 — cached doc summaries for chip rendering ({id → {id,title,folder_id}}). */
     contextDocsCache: {},
+    /** §18.3 — cached folder summaries for AI context chips. */
+    contextFoldersCache: {},
     /** §16.6 — skill id → saved document id (or "1" if none) after a completed run. */
     skillRunDoneIds: {},
+    /** §18.8 — full real `/skills` cache used by the category chips. */
+    allSkills: [],
+    /** §18.8 — current Skills filter label, synced to the URL hash. */
+    activeSkillFilter: "",
   };
 
   const INSIGHT_TAG_LABELS_V14 = {
@@ -298,6 +307,32 @@
     return fetch(API_BASE + path, Object.assign({ cache: "no-store" }, init, { headers }));
   }
 
+  async function fetchAiStreamWithSession(path, body, signal) {
+    await ensureSession();
+    const buildInit = () => {
+      const headers = {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+      };
+      const tok = getToken();
+      if (tok) headers.Authorization = "Bearer " + tok;
+      return {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+        signal,
+        cache: "no-store",
+      };
+    };
+    let resp = await fetch(API_BASE + path, buildInit());
+    if (resp.status === 401) {
+      setToken("");
+      const refreshed = await ensureSession();
+      if (refreshed) resp = await fetch(API_BASE + path, buildInit());
+    }
+    return resp;
+  }
+
   async function ensureSession() {
     if (getToken()) {
       try {
@@ -520,6 +555,37 @@
     }
   }
 
+  async function unpinFolderFromActiveConversation(folderId) {
+    const cid = V14.aiConvId;
+    const id = String(folderId || "");
+    if (!cid || !id) return;
+    const folderIds = (V14.contextScope.folder_ids || []).map(String);
+    if (!folderIds.includes(id)) return;
+    const nextFolderIds = folderIds.filter((x) => x !== id);
+    try {
+      await apiFetch("/ai/conversations/" + cid, {
+        method: "PATCH",
+        body: {
+          context_scope: mergedContextScopeV16({
+            document_ids: (V14.contextScope.document_ids || []).map(String),
+            folder_ids: nextFolderIds,
+            sources: (V14.contextScope.sources || []).filter(
+              (s) => !(s && String(s.ref) === id),
+            ),
+          }),
+        },
+      });
+      V14.contextScope.folder_ids = nextFolderIds;
+      V14.contextScope.sources = (V14.contextScope.sources || []).filter(
+        (s) => !(s && String(s.ref) === id),
+      );
+      delete V14.contextFoldersCache[id];
+      renderContextChipsV16();
+    } catch (e) {
+      toast("移除上下文失败：" + e.message, "error");
+    }
+  }
+
   /**
    * Render the in-composer chip strip showing all pinned documents so users
    * always know what RAG context the next prompt will see. Each chip has an
@@ -533,7 +599,8 @@
     composers.forEach((composer) => {
       let strip = composer.querySelector("[data-v16-context-strip]");
       const ids = (V14.contextScope.document_ids || []).map(String);
-      if (ids.length === 0) {
+      const folderIds = (V14.contextScope.folder_ids || []).map(String);
+      if (ids.length === 0 && folderIds.length === 0) {
         if (strip) strip.remove();
         return;
       }
@@ -553,11 +620,11 @@
         composer.insertBefore(strip, composer.firstChild);
       }
       strip.innerHTML = "";
-      ids.forEach((docId) => {
-        const meta = V14.contextDocsCache[docId] || { id: docId, title: docId.slice(0, 8) };
+      const appendChip = (id, meta, kind) => {
         const chip = document.createElement("button");
         chip.type = "button";
-        chip.dataset.contextDocId = docId;
+        if (kind === "folder") chip.dataset.contextFolderId = id;
+        else chip.dataset.contextDocId = id;
         chip.title = `已附加：${meta.title}`;
         chip.style.cssText = [
           "display:inline-flex",
@@ -570,20 +637,88 @@
           "color:#3548a6",
           "font-size:12px",
           "cursor:pointer",
+          "max-width:min(280px,100%)",
+          "min-width:0",
+          "flex:0 1 auto",
         ].join(";");
         chip.innerHTML = `
-          <svg class="icon" style="width:12px;height:12px;"><use href="#icon-link" /></svg>
-          <span>${escapeHtmlV14(meta.title)}</span>
+          <svg class="icon" style="width:12px;height:12px;"><use href="${kind === "folder" ? "#icon-folder" : "#icon-link"}" /></svg>
+          <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtmlV14(meta.title)}</span>
           <span aria-hidden="true" style="opacity:0.6;font-weight:600;">×</span>
         `;
         chip.addEventListener("click", (ev) => {
           ev.preventDefault();
           ev.stopPropagation();
-          unpinDocumentFromActiveConversation(docId);
+          if (kind === "folder") unpinFolderFromActiveConversation(id);
+          else unpinDocumentFromActiveConversation(id);
         });
         strip.appendChild(chip);
+      };
+      ids.forEach((docId) => {
+        const meta = V14.contextDocsCache[docId] || { id: docId, title: docId.slice(0, 8) };
+        appendChip(docId, meta, "doc");
+      });
+      folderIds.forEach((folderId) => {
+        const meta = V14.contextFoldersCache[folderId] || { id: folderId, title: folderId.slice(0, 8) };
+        appendChip(folderId, meta, "folder");
       });
     });
+  }
+
+  function injectAiComposerLayoutFixV18() {
+    if (document.getElementById("mydow-ai-composer-layout-fix-v18")) return;
+    const style = document.createElement("style");
+    style.id = "mydow-ai-composer-layout-fix-v18";
+    style.textContent = `
+      .ai-composer,
+      .ai-chat-composer {
+        box-sizing: border-box;
+        min-width: 0;
+      }
+      .ai-composer [data-v16-context-strip],
+      .ai-chat-composer [data-v16-context-strip],
+      .ai-context-chips {
+        max-width: 100%;
+        min-width: 0;
+      }
+      .ai-composer [data-v16-context-strip] button,
+      .ai-chat-composer [data-v16-context-strip] button,
+      .ai-context-chip {
+        max-width: min(280px, 100%);
+        min-width: 0;
+        flex: 0 1 auto;
+      }
+      .ai-composer [data-v16-context-strip] button span:first-of-type,
+      .ai-chat-composer [data-v16-context-strip] button span:first-of-type,
+      .ai-context-chip span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .ai-chat-composer textarea.ai-input,
+      .ai-composer textarea.ai-input {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        max-height: 180px;
+        overflow-y: auto;
+        box-sizing: border-box;
+      }
+      .ai-chat-composer .submit-row,
+      .ai-chat-composer .ai-tools,
+      .ai-composer .submit-row,
+      .ai-composer .ai-tools {
+        min-width: 0;
+        flex-wrap: wrap;
+      }
+      @media (min-width: 900px) {
+        .page.ai-chat-open .ai-chat-composer {
+          width: min(920px, calc(100vw - 96px));
+        }
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   /**
@@ -597,6 +732,7 @@
     if (!cid) {
       V14.contextScope = { document_ids: [], folder_ids: [], sources: [], notes: [] };
       V14.contextDocsCache = {};
+      V14.contextFoldersCache = {};
       renderContextChipsV16();
       return;
     }
@@ -616,6 +752,16 @@
       sources: Array.isArray(scope.sources) ? scope.sources.slice() : [],
       notes: Array.isArray(scope.notes) ? scope.notes.slice() : [],
     };
+    V14.contextFoldersCache = {};
+    V14.contextScope.sources.forEach((src) => {
+      if (!src || typeof src !== "object") return;
+      if (src.type === "folder" && src.ref) {
+        V14.contextFoldersCache[String(src.ref)] = {
+          id: String(src.ref),
+          title: String(src.label || "知识库文件夹"),
+        };
+      }
+    });
     // Hydrate doc cache so chips render with real titles.
     const ids = V14.contextScope.document_ids;
     if (ids.length > 0) {
@@ -637,6 +783,24 @@
         });
       } catch (_e) {
         /* ignore — chips will fall back to id slices */
+      }
+    }
+    const folderIds = V14.contextScope.folder_ids;
+    if (folderIds.length > 0) {
+      try {
+        const resp = await apiFetch("/kb/folders?include_counts=true");
+        const items = (unwrapData(resp)?.items) || [];
+        items.forEach((f) => {
+          const id = String(f.id);
+          if (folderIds.includes(id)) {
+            V14.contextFoldersCache[id] = {
+              id,
+              title: String(f.name || "知识库文件夹"),
+            };
+          }
+        });
+      } catch (_e) {
+        /* best effort; source labels already cover most cases */
       }
     }
     renderContextChipsV16();
@@ -805,6 +969,9 @@
         body: { url, auto_process: true },
       });
       const data = unwrapData(resp) || resp || {};
+      if (data.fetch_status === "failed") {
+        throw new Error(data.job?.error || data.job?.message || "网页抓取失败");
+      }
       // §16.4 — when on AI workspace, pin the link's resulting card/doc
       // into the active conversation's context_scope so RAG sees it.
       const onAi = isAiWorkspaceActive();
@@ -829,6 +996,12 @@
       closeV14Layers();
       await loadFeedCards();
       await loadFeedIntoRecordsTable();
+      if (data.card) {
+        revealItemDetailDrawerV18(data.card);
+      } else if (data.card_id) {
+        const detail = await loadCardForDrawer(String(data.card_id));
+        if (detail) revealItemDetailDrawerV18(detail);
+      }
     } catch (e) {
       toast("剪藏失败: " + e.message, "error");
     } finally {
@@ -848,23 +1021,28 @@
     button.disabled = true;
     button.classList.add("is-loading");
     try {
+      const resp = await apiFetch("/research/tasks", {
+        method: "POST",
+        body: { topic, scope, output, include_sources: true, save_to_kb: true },
+      });
+      const data = unwrapData(resp) || resp || {};
       const conv = await apiFetch("/ai/conversations", {
         method: "POST",
-        body: { title: "深度研究：" + topic, mode: "report" },
+        body: { title: data.title || "深度研究：" + topic, mode: "report" },
       });
       const cdata = unwrapData(conv) || conv || {};
       const cid = cdata.id || cdata.conversation_id;
-      if (!cid) throw new Error("会话创建失败");
-      const seedMessage = ["主题: " + topic, scope ? "范围: " + scope : "", output ? "输出: " + output : ""]
-        .filter(Boolean)
-        .join("\n");
-      await apiFetch(`/ai/conversations/${cid}/messages`, {
-        method: "POST",
-        body: { content: seedMessage },
-      });
-      toast("深度研究任务已排队", "success");
+      if (cid && data.summary) {
+        await apiFetch(`/ai/conversations/${cid}/messages`, {
+          method: "POST",
+          body: { content: `${data.title || "深度研究：" + topic}\n\n${data.summary}` },
+        });
+      }
+      toast(data.used_llm ? "深度研究报告已生成" : "深度研究已基于真实资料生成（LLM 未启用）", data.used_llm ? "success" : "warning");
       closeV14Layers();
       await loadAiConversations();
+      await loadKbLibraryGrid();
+      await refreshInsightsFullV14();
       await refreshNotificationBadge();
     } catch (e) {
       toast("研究创建失败: " + e.message, "error");
@@ -874,10 +1052,151 @@
     }
   }
 
-  function handleVoicePlaceholder(button) {
+  let voiceRecognitionV18 = null;
+
+  function hydrateVoiceInputModalV18(layer) {
+    if (!layer || layer.dataset.v18VoiceHydrated === "true") return;
+    const panel = layer.querySelector(".voice-panel");
+    if (!panel) return;
+    layer.dataset.v18VoiceHydrated = "true";
+    panel.innerHTML = `
+      <div class="voice-wave" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      <strong data-v18-voice-status>准备听写</strong>
+      <p style="margin:0;color:#7d8aa0">可使用浏览器语音识别，或直接粘贴已转写文本。保存后会作为语音记录写入最近捕捉和知识库处理链路。</p>
+      <textarea data-v18-voice-transcript rows="5" placeholder="在这里输入或粘贴语音转写文本..." style="width:100%;margin-top:12px;border:1px solid rgba(111,128,160,.18);border-radius:14px;padding:12px 14px;resize:vertical;font:inherit;color:#25324a;background:rgba(255,255,255,.88);outline:none;"></textarea>
+      <button class="pill-button small" type="button" data-v18-voice-start style="margin-top:10px;">开始听写</button>
+    `;
+    const status = panel.querySelector("[data-v18-voice-status]");
+    const transcript = panel.querySelector("[data-v18-voice-transcript]");
+    const startBtn = panel.querySelector("[data-v18-voice-start]");
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      if (status) status.textContent = "当前浏览器不支持自动听写";
+      if (startBtn) {
+        startBtn.disabled = true;
+        startBtn.textContent = "请手动输入转写文本";
+      }
+      return;
+    }
+    startBtn?.addEventListener("click", () => {
+      try {
+        if (voiceRecognitionV18) {
+          voiceRecognitionV18.stop();
+          voiceRecognitionV18 = null;
+        }
+        const recognition = new SpeechRecognition();
+        recognition.lang = "zh-CN";
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        let finalText = transcript.value || "";
+        recognition.onstart = () => {
+          if (status) status.textContent = "正在听写";
+          startBtn.textContent = "重新开始听写";
+        };
+        recognition.onresult = (event) => {
+          let interim = "";
+          for (let i = event.resultIndex; i < event.results.length; i += 1) {
+            const chunk = event.results[i][0]?.transcript || "";
+            if (event.results[i].isFinal) finalText += chunk;
+            else interim += chunk;
+          }
+          transcript.value = (finalText + interim).trim();
+        };
+        recognition.onerror = (event) => {
+          if (status) status.textContent = "听写失败，可手动输入";
+          toast("语音听写失败：" + (event.error || "请检查麦克风权限"), "warning");
+        };
+        recognition.onend = () => {
+          if (status && status.textContent === "正在听写") status.textContent = "听写已停止";
+        };
+        voiceRecognitionV18 = recognition;
+        recognition.start();
+      } catch (e) {
+        toast("无法启动语音听写：" + e.message, "warning");
+      }
+    });
+  }
+
+  async function handleVoiceInputModal(button, layer) {
     if (button.dataset.toast !== "语音记录已保存") return;
-    toast("语音录入：演示环境仍走占位，后续接 MediaRecorder", "info");
-    closeV14Layers();
+    hydrateVoiceInputModalV18(layer);
+    if (voiceRecognitionV18) {
+      try { voiceRecognitionV18.stop(); } catch (_e) { /* noop */ }
+      voiceRecognitionV18 = null;
+    }
+    const transcript = layer.querySelector("[data-v18-voice-transcript]");
+    const content = (transcript && transcript.value.trim()) || "";
+    if (!content) {
+      toast("请先录入或粘贴语音转写文本", "warning");
+      transcript?.focus();
+      return;
+    }
+    button.disabled = true;
+    button.classList.add("is-loading");
+    try {
+      await apiFetch("/capture/text", {
+        method: "POST",
+        body: {
+          content,
+          title: "语音记录 " + new Date().toLocaleString("zh-CN", { hour12: false }),
+          tags: ["语音"],
+          type: "voice",
+          auto_process: true,
+        },
+      });
+      toast("语音记录已保存到最近捕捉", "success");
+      closeV14Layers();
+      await Promise.allSettled([
+        loadFeedCards(),
+        refreshHomeRightRailStatCardsV14(),
+        refreshHomeRecentList(),
+        loadKbLibraryGrid(),
+      ]);
+    } catch (e) {
+      toast("语音记录保存失败：" + e.message, "error");
+    } finally {
+      button.disabled = false;
+      button.classList.remove("is-loading");
+    }
+  }
+
+  function bindVoiceInputModalV18() {
+    document.addEventListener(
+      "click",
+      (event) => {
+        const opener = event.target.closest('[data-open-modal="voiceInput"]');
+        if (opener) {
+          window.setTimeout(() => {
+            hydrateVoiceInputModalV18(document.querySelector('.surface-layer[data-modal="voiceInput"]'));
+          }, 0);
+          return;
+        }
+        const pause = event.target.closest('[data-toast="录音已暂停"]');
+        if (pause) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          if (voiceRecognitionV18) {
+            try { voiceRecognitionV18.stop(); } catch (_e) { /* noop */ }
+            voiceRecognitionV18 = null;
+          }
+          const layer = pause.closest('.surface-layer[data-modal="voiceInput"]');
+          const status = layer?.querySelector("[data-v18-voice-status]");
+          if (status) status.textContent = "听写已暂停";
+          toast("语音听写已暂停", "success");
+          return;
+        }
+        const finish = event.target.closest('[data-toast="语音记录已保存"]');
+        const layer = finish?.closest('.surface-layer[data-modal="voiceInput"]');
+        if (finish && layer) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          Promise.resolve(handleVoiceInputModal(finish, layer)).catch((e) =>
+            console.error("[v14] voice input", e),
+          );
+        }
+      },
+      true,
+    );
   }
 
   async function handleNewFolderModal(button, layer) {
@@ -1237,30 +1556,40 @@
   }
 
   async function handleAiPersonalizeModal(button, layer) {
-    // §15.39 — write AI personalization preferences into User.settings via
-    // PATCH /me. The v1.4 modal collects 4 toggles and 1 select (preferred
-    // model). Map to settings.ai_preferences.* so the backend keeps a clean
-    // namespace; refreshProfileChip() picks them up at boot.
-    const settings = { ai_preferences: {} };
-    const ai = settings.ai_preferences;
+    // §18.4 — persist AI personalization into the canonical PRD10
+    // preferences shape. Earlier code wrote a nested settings object through
+    // PATCH /me, but the backend whitelist intentionally dropped it.
+    const payload = {};
+    const readSelectValue = (pattern, fallback) => {
+      const field = Array.from(layer.querySelectorAll(".form-field")).find((node) =>
+        pattern.test(node.querySelector("label")?.textContent || ""),
+      );
+      const select = field && field.querySelector("select");
+      return (select && select.value) || fallback;
+    };
+    payload.ai_response_style = readSelectValue(/默认回答风格/, "concise_structured");
+    payload.ai_detail_level = readSelectValue(/输出详细程度/, "balanced");
+    payload.language = readSelectValue(/常用语言/, "zh-CN");
     layer.querySelectorAll(".toggle-switch").forEach((sw) => {
       const active =
         sw.classList.contains("active") ||
-        sw.getAttribute("aria-checked") === "true";
+        sw.getAttribute("aria-checked") === "true" ||
+        sw.getAttribute("aria-pressed") === "true";
       const article = sw.closest("article, .quick-setting, .form-row");
       const label = (
         (article && article.querySelector("strong, label, .form-label")) || sw
       ).textContent.trim();
-      if (label.includes("自动建议")) ai.auto_suggest = active;
-      else if (label.includes("引用上下文")) ai.cite_context = active;
-      else if (label.includes("流式")) ai.streaming = active;
-      else if (label.includes("中文")) ai.prefer_zh = active;
+      if (label.includes("默认引用知识库") || label.includes("引用上下文")) {
+        payload.cite_knowledge_by_default = active;
+      } else if (label.includes("自动建议")) {
+        payload.ai_auto_suggest = active;
+      } else if (label.includes("流式")) {
+        payload.ai_streaming = active;
+      }
     });
-    const sel = layer.querySelector("select");
-    if (sel && sel.value) ai.preferred_model = sel.value;
     button.disabled = true;
     try {
-      await apiFetch("/me", { method: "PATCH", body: { settings } });
+      await apiFetch("/me/preferences", { method: "PATCH", body: payload });
       toast("AI 个性化设置已保存", "success");
       closeV14Layers();
       await refreshProfileChip();
@@ -1269,6 +1598,295 @@
     } finally {
       button.disabled = false;
     }
+  }
+
+  const AI_PERSONALIZE_SELECTS_V18 = {
+    ai_response_style: [
+      { value: "concise_structured", label: "清晰、直接、可执行", desc: "适合日常问答和任务推进" },
+      { value: "concise", label: "简洁", desc: "只保留结论和关键步骤" },
+      { value: "detailed", label: "更具创意", desc: "补充发散选项与启发式建议" },
+      { value: "academic", label: "更正式专业", desc: "适合研究、方案与报告语气" },
+    ],
+    ai_detail_level: [
+      { value: "balanced", label: "适中", desc: "默认长度，兼顾速度和信息量" },
+      { value: "brief", label: "简洁", desc: "短回答、少解释" },
+      { value: "deep", label: "详细", desc: "包含背景、推理和下一步" },
+    ],
+    language: [
+      { value: "zh-CN", label: "中文 简体", desc: "默认使用简体中文" },
+      { value: "en-US", label: "English", desc: "Prefer English responses" },
+    ],
+  };
+
+  function injectAiPersonalizeStylesV18() {
+    if (document.getElementById("mydow-ai-personalize-v18")) return;
+    const style = document.createElement("style");
+    style.id = "mydow-ai-personalize-v18";
+    style.textContent = `
+      [data-modal="aiPersonalize"] .form-field { position: relative; }
+      [data-modal="aiPersonalize"] select[data-v18-native-select] {
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+      .v18-ai-select-button {
+        width: 100%;
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 8px 12px 8px 14px;
+        border: 1px solid rgba(111, 128, 160, .18);
+        border-radius: 15px;
+        color: #23324b;
+        background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(247,249,255,.94));
+        box-shadow: 0 12px 30px rgba(42, 56, 95, .08), inset 0 1px 0 rgba(255,255,255,.9);
+        cursor: pointer;
+        transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+      }
+      .v18-ai-select-button:hover,
+      .v18-ai-select-button[aria-expanded="true"],
+      .v18-ai-select-button:focus-visible {
+        transform: translateY(-1px);
+        border-color: rgba(91,120,255,.42);
+        box-shadow: 0 18px 42px rgba(42, 56, 95, .13);
+        outline: 0;
+      }
+      .v18-ai-select-button strong {
+        display: block;
+        color: #21304a;
+        font-size: 13px;
+        line-height: 1.2;
+      }
+      .v18-ai-select-button small {
+        display: block;
+        margin-top: 2px;
+        color: #7c899e;
+        font-size: 11px;
+        font-weight: 620;
+      }
+      .v18-ai-select-panel {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: calc(100% + 8px);
+        z-index: 90;
+        display: grid;
+        gap: 5px;
+        padding: 8px;
+        border: 1px solid rgba(111, 128, 160, .18);
+        border-radius: 18px;
+        background: rgba(255,255,255,.98);
+        box-shadow: 0 24px 70px rgba(23, 34, 58, .18);
+        backdrop-filter: blur(18px);
+      }
+      .v18-ai-select-panel[hidden] { display: none; }
+      .v18-ai-select-panel button {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 11px;
+        border: 0;
+        border-radius: 13px;
+        background: transparent;
+        text-align: left;
+        color: #26354f;
+        cursor: pointer;
+      }
+      .v18-ai-select-panel button:hover,
+      .v18-ai-select-panel button[aria-selected="true"],
+      .v18-ai-select-panel button:focus-visible {
+        background: linear-gradient(135deg, rgba(239,244,255,.98), rgba(247,251,255,.94));
+        color: #3655c8;
+        outline: 0;
+      }
+      .v18-ai-select-panel button[aria-selected="true"]::after {
+        content: "✓";
+        font-weight: 900;
+        color: #4d6df1;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function aiPersonalizeFieldKeyV18(field) {
+    const label = field?.querySelector("label")?.textContent || "";
+    if (/默认回答风格/.test(label)) return "ai_response_style";
+    if (/输出详细程度/.test(label)) return "ai_detail_level";
+    if (/常用语言/.test(label)) return "language";
+    return "";
+  }
+
+  function aiPersonalizeOptionV18(key, value) {
+    const opts = AI_PERSONALIZE_SELECTS_V18[key] || [];
+    return opts.find((opt) => opt.value === value) || opts[0] || { value, label: value, desc: "" };
+  }
+
+  function setAiPersonalizeSelectValueV18(field, key, value) {
+    const select = field.querySelector("select");
+    const btn = field.querySelector(".v18-ai-select-button");
+    const panel = field.querySelector(".v18-ai-select-panel");
+    const opt = aiPersonalizeOptionV18(key, value);
+    if (select) select.value = opt.value;
+    if (btn) {
+      btn.dataset.value = opt.value;
+      btn.innerHTML =
+        `<span><strong>${escapeHtmlV14(opt.label)}</strong><small>${escapeHtmlV14(opt.desc || "")}</small></span>` +
+        '<svg class="icon" aria-hidden="true" style="width:14px;height:14px"><use href="#icon-chevron-down" /></svg>';
+    }
+    if (panel) {
+      panel.querySelectorAll("button[data-value]").forEach((item) => {
+        item.setAttribute("aria-selected", String(item.dataset.value === opt.value));
+      });
+    }
+  }
+
+  function prepareAiPersonalizeSelectV18(field, key, value) {
+    const select = field.querySelector("select");
+    if (!select || !key) return;
+    injectAiPersonalizeStylesV18();
+    select.dataset.v18NativeSelect = "true";
+    const opts = AI_PERSONALIZE_SELECTS_V18[key] || [];
+    select.innerHTML = opts
+      .map((opt) => `<option value="${escapeHtmlV14(opt.value)}">${escapeHtmlV14(opt.label)}</option>`)
+      .join("");
+    let btn = field.querySelector(".v18-ai-select-button");
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "v18-ai-select-button";
+      btn.dataset.v18AiSelect = key;
+      btn.setAttribute("aria-haspopup", "listbox");
+      btn.setAttribute("aria-expanded", "false");
+      select.insertAdjacentElement("afterend", btn);
+    }
+    let panel = field.querySelector(".v18-ai-select-panel");
+    if (!panel) {
+      panel = document.createElement("div");
+      panel.className = "v18-ai-select-panel";
+      panel.setAttribute("role", "listbox");
+      panel.hidden = true;
+      panel.innerHTML = opts
+        .map((opt) =>
+          `<button type="button" role="option" data-value="${escapeHtmlV14(opt.value)}">` +
+          `<span><strong>${escapeHtmlV14(opt.label)}</strong><small>${escapeHtmlV14(opt.desc || "")}</small></span>` +
+          `</button>`,
+        )
+        .join("");
+      field.appendChild(panel);
+    }
+    setAiPersonalizeSelectValueV18(field, key, value);
+  }
+
+  async function hydrateAiPersonalizeControlsV18() {
+    const layer = document.querySelector('.surface-layer[data-modal="aiPersonalize"]');
+    if (!layer) return;
+    let prefs = {};
+    try {
+      prefs = unwrapData(await apiFetch("/me/preferences")) || {};
+    } catch (_e) {
+      prefs = {};
+    }
+    layer.querySelectorAll(".form-field").forEach((field) => {
+      const key = aiPersonalizeFieldKeyV18(field);
+      if (!key) return;
+      const fallback =
+        key === "ai_response_style" ? "concise_structured" :
+        key === "ai_detail_level" ? "balanced" :
+        "zh-CN";
+      prepareAiPersonalizeSelectV18(field, key, prefs[key] || fallback);
+    });
+    layer.querySelectorAll(".toggle-switch").forEach((sw) => {
+      const label = sw.closest("article")?.querySelector("strong")?.textContent || "";
+      if (!/默认引用知识库|引用上下文/.test(label)) return;
+      const active = Boolean(prefs.cite_knowledge_by_default);
+      sw.classList.toggle("active", active);
+      sw.setAttribute("aria-pressed", String(active));
+    });
+  }
+
+  function closeAiPersonalizePanelsV18(except) {
+    document.querySelectorAll(".v18-ai-select-panel").forEach((panel) => {
+      if (panel === except) return;
+      panel.hidden = true;
+      const btn = panel.parentElement?.querySelector(".v18-ai-select-button");
+      if (btn) btn.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function bindAiPersonalizeModernControlsV18() {
+    injectAiPersonalizeStylesV18();
+    document.addEventListener(
+      "click",
+      (event) => {
+        const open = event.target.closest('[data-open-modal="aiPersonalize"]');
+        if (open) window.setTimeout(() => hydrateAiPersonalizeControlsV18(), 120);
+        const selectBtn = event.target.closest(".v18-ai-select-button");
+        if (selectBtn) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          const panel = selectBtn.parentElement?.querySelector(".v18-ai-select-panel");
+          const willOpen = !panel || panel.hidden;
+          closeAiPersonalizePanelsV18(panel);
+          if (panel) {
+            panel.hidden = !willOpen;
+            selectBtn.setAttribute("aria-expanded", String(willOpen));
+            if (willOpen) panel.querySelector("button[aria-selected='true'], button")?.focus();
+          }
+          return;
+        }
+        const option = event.target.closest(".v18-ai-select-panel button[data-value]");
+        if (option) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          const field = option.closest(".form-field");
+          const key = aiPersonalizeFieldKeyV18(field);
+          if (field && key) setAiPersonalizeSelectValueV18(field, key, option.dataset.value || "");
+          closeAiPersonalizePanelsV18();
+          field?.querySelector(".v18-ai-select-button")?.focus();
+          return;
+        }
+        if (!event.target.closest(".v18-ai-select-panel,.v18-ai-select-button")) {
+          closeAiPersonalizePanelsV18();
+        }
+      },
+      true,
+    );
+    document.addEventListener(
+      "keydown",
+      (event) => {
+        const btn = event.target.closest(".v18-ai-select-button");
+        if (btn && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          btn.click();
+          return;
+        }
+        const option = event.target.closest(".v18-ai-select-panel button[data-value]");
+        if (!option) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          option.click();
+        } else if (event.key === "Escape") {
+          closeAiPersonalizePanelsV18();
+          option.closest(".form-field")?.querySelector(".v18-ai-select-button")?.focus();
+        } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+          event.preventDefault();
+          const items = Array.from(option.closest(".v18-ai-select-panel").querySelectorAll("button[data-value]"));
+          const idx = items.indexOf(option);
+          const next = event.key === "ArrowDown"
+            ? items[(idx + 1) % items.length]
+            : items[(idx - 1 + items.length) % items.length];
+          next?.focus();
+        }
+      },
+      true,
+    );
+    window.setTimeout(() => hydrateAiPersonalizeControlsV18(), 0);
   }
 
   async function handleAiSaveModal(button, layer) {
@@ -1309,7 +1927,7 @@
     uploadFile: handleUploadFileModal,
     webLink: handleWebLinkModal,
     deepResearch: handleDeepResearchModal,
-    voiceInput: handleVoicePlaceholder,
+    voiceInput: handleVoiceInputModal,
     newFolder: handleNewFolderModal,
     newDocument: handleNewDocumentModal,
     skillRun: handleSkillRunModal,
@@ -1438,6 +2056,13 @@
           await loadFeedCards();
           await loadFeedIntoRecordsTable();
           await refreshNotificationBadge();
+          const cardId = data.card_id || data.card?.id;
+          if (data.card) {
+            revealItemDetailDrawerV18(data.card);
+          } else if (cardId) {
+            const detail = await loadCardForDrawer(String(cardId));
+            if (detail) revealItemDetailDrawerV18(detail);
+          }
         } catch (e) {
           toast("保存失败: " + e.message, "error");
         }
@@ -1863,7 +2488,7 @@
     }
     const summary =
       drawer.querySelector(".drawer-summary") ||
-      drawer.querySelector("article p, .panel-text");
+      drawer.querySelector(".drawer-section p, article p, .panel-text");
     if (summary && payload.summary) summary.textContent = payload.summary;
     const tags = drawer.querySelector(".tag-list, .source-chip-list");
     if (tags && Array.isArray(payload.tags)) {
@@ -1872,9 +2497,79 @@
         .map((t) => `<span class="tag">${escapeHtmlV14(String(t))}</span>`)
         .join("");
     }
+    Array.from(drawer.querySelectorAll(".drawer-section")).forEach((section) => {
+      const label = section.querySelector("h3")?.textContent || "";
+      if (
+        !section.dataset.bridgeCardSource &&
+        !section.dataset.bridgeCardContent &&
+        /来源|追溯|Source/i.test(label)
+      ) {
+        section.hidden = true;
+      }
+    });
+    const cardText = String(payload.content || payload.raw_content || "").trim();
+    const sourceObj = payload.source && typeof payload.source === "object" ? payload.source : null;
+    const sourceLabel =
+      payload.source_url ||
+      payload.url ||
+      (typeof payload.source === "string" ? payload.source : "") ||
+      sourceObj?.url ||
+      sourceObj?.name ||
+      "手动输入";
+    const sourceKind = payload.document_type || (sourceLabel.startsWith("http") ? "网页剪藏" : payload.content_type || "灵感记录");
+    let contentSection = drawer.querySelector("[data-bridge-card-content]");
+    if (!contentSection) {
+      contentSection = document.createElement("div");
+      contentSection.className = "drawer-section";
+      contentSection.dataset.bridgeCardContent = "true";
+      const actionSection = Array.from(drawer.querySelectorAll(".drawer-section")).find((sec) =>
+        /下一步|Next/i.test(sec.querySelector("h3")?.textContent || ""),
+      );
+      const parent = actionSection?.parentElement || drawer.querySelector(".detail-drawer") || drawer;
+      parent.insertBefore(contentSection, actionSection || null);
+    }
+    contentSection.innerHTML = `
+      <h3>原始内容</h3>
+      <p style="white-space:pre-wrap;line-height:1.75;word-break:break-word;">${escapeHtmlV14(cardText || "暂无原文")}</p>
+    `;
+    let sourceSection = drawer.querySelector("[data-bridge-card-source]");
+    if (!sourceSection) {
+      sourceSection = document.createElement("div");
+      sourceSection.className = "drawer-section";
+      sourceSection.dataset.bridgeCardSource = "true";
+      contentSection.insertAdjacentElement("afterend", sourceSection);
+    }
+    sourceSection.innerHTML = `
+      <h3>来源与追溯</h3>
+      <article class="quick-setting">
+        <svg class="icon"><use href="#icon-file-text" /></svg>
+        <div>
+          <strong>${escapeHtmlV14(sourceKind)}</strong>
+          <span>${escapeHtmlV14(sourceLabel)} · ${cardText.length || 0} 字</span>
+        </div>
+        <svg class="icon"><use href="#icon-chevron-right" /></svg>
+      </article>
+    `;
     drawer.dataset.cardId = payload.id || "";
     drawer.dataset.cardFavorite = String(Boolean(payload.is_favorite));
     drawer.__bridgeCard = payload;
+  }
+
+  function revealItemDetailDrawerV18(payload) {
+    const drawer = _findItemDetailDrawer();
+    if (!drawer) return;
+    hydrateItemDetailDrawer(drawer, payload);
+    document.querySelectorAll(".drawer-layer").forEach((layer) => {
+      if (layer === drawer) {
+        layer.hidden = false;
+        layer.classList.remove("is-leaving");
+        document.body.classList.add("layer-lock");
+        requestAnimationFrame(() => layer.classList.add("is-open"));
+      } else if (layer.dataset.drawer) {
+        layer.classList.remove("is-open");
+        layer.hidden = true;
+      }
+    });
   }
 
   function bindCardClickToDrawer() {
@@ -1882,7 +2577,7 @@
       "click",
       async (event) => {
         const el = event.target.closest(
-          ".idea-card[data-card-id], .record-card[data-card-id]",
+          ".idea-card[data-card-id], .record-card[data-card-id], .record-row[data-card-id]",
         );
         if (!el) return;
         const cardId = el.dataset.cardId;
@@ -1957,39 +2652,198 @@
    * §16.5 — Inject @KB document picker + generate vs transform toggles into the
    * skillRun modal without editing index.html. Populates from GET /kb/documents.
    */
+  function injectSkillRunPickerStylesV18() {
+    if (document.getElementById("mydow-skill-run-picker-v18")) return;
+    const style = document.createElement("style");
+    style.id = "mydow-skill-run-picker-v18";
+    style.textContent = `
+      .skill-doc-picker-v18 {
+        display: grid;
+        gap: 10px;
+        margin-bottom: 14px;
+        padding: 13px;
+        border: 1px solid rgba(91,120,255,.18);
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(247,250,255,.94));
+        box-shadow: 0 18px 48px rgba(42, 56, 95, .10);
+      }
+      .skill-doc-picker-v18 .picker-label {
+        color: #4b5f81;
+        font-size: 12px;
+        font-weight: 820;
+      }
+      .skill-doc-picker-v18 .skill-doc-search {
+        min-height: 43px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 0 12px;
+        border: 1px solid rgba(108,124,153,.16);
+        border-radius: 14px;
+        background: #fff;
+      }
+      .skill-doc-picker-v18 input[type="search"] {
+        width: 100%;
+        border: 0;
+        outline: 0;
+        color: #22304a;
+        font-size: 13px;
+        font-weight: 650;
+        background: transparent;
+      }
+      .skill-doc-picker-v18 select[data-v16-skill-doc-select] {
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+      .skill-doc-list-v18 {
+        display: grid;
+        gap: 7px;
+        max-height: 210px;
+        overflow: auto;
+        padding-right: 4px;
+      }
+      .skill-doc-option-v18 {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 11px;
+        border: 1px solid rgba(108,124,153,.14);
+        border-radius: 14px;
+        color: #26354f;
+        background: rgba(255,255,255,.92);
+        text-align: left;
+        cursor: pointer;
+      }
+      .skill-doc-option-v18:hover,
+      .skill-doc-option-v18:focus-visible {
+        outline: 0;
+        border-color: rgba(91,120,255,.36);
+        background: #fff;
+      }
+      .skill-doc-option-v18[aria-selected="true"] {
+        border-color: rgba(91,120,255,.52);
+        background: rgba(239,244,255,.96);
+        color: #3655c8;
+      }
+      .skill-doc-option-v18 strong { display:block;font-size:13px;line-height:1.25; }
+      .skill-doc-option-v18 small { display:block;margin-top:3px;color:#7c899e;font-size:11px;font-weight:620; }
+      .skill-run-mode-v18 {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      .skill-run-mode-v18 label {
+        min-height: 34px;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 0 11px;
+        border: 1px solid rgba(108,124,153,.14);
+        border-radius: 999px;
+        background: rgba(255,255,255,.8);
+        color: #4f5f79;
+        font-size: 12px;
+        font-weight: 720;
+        cursor: pointer;
+      }
+      .skill-run-mode-v18 label:has(input:checked) {
+        border-color: rgba(91,120,255,.34);
+        background: rgba(239,244,255,.96);
+        color: #3655c8;
+      }
+      .skill-run-mode-v18 input { accent-color: #5b78ff; }
+      .skill-doc-picker-v18 .picker-meta {
+        color: #7c899e;
+        font-size: 11px;
+        font-weight: 620;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   async function hydrateSkillRunModalDocumentPickerV165() {
     const layer = document.querySelector('.surface-layer[data-modal="skillRun"]');
     if (!layer) return;
     const body = layer.querySelector(".modal-body .form-grid");
     if (!body || body.querySelector("[data-v16-skill-doc-picker]")) return;
+    injectSkillRunPickerStylesV18();
 
     const wrap = document.createElement("div");
     wrap.dataset.v16SkillDocPicker = "true";
-    wrap.style.cssText =
-      "display:flex;flex-direction:column;gap:8px;margin-bottom:12px;padding:12px;" +
-      "background:rgba(91,120,255,0.06);border-radius:12px;border:1px solid rgba(91,120,255,0.15);";
+    wrap.className = "skill-doc-picker-v18";
     wrap.innerHTML =
-      '<label style="font-size:12px;color:#5d6b82;font-weight:600;">@ 知识库文档（可选）</label>' +
-      '<select data-v16-skill-doc-select aria-label="选择知识库文档" ' +
-      'style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #d8e0ea;font-size:13px;">' +
-      '<option value="">— 不引用文档，仅用下方输入 —</option></select>' +
-      '<div data-v16-skill-mode-row style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:4px;">' +
-      '<span style="font-size:12px;color:#5d6b82;">输出</span>' +
-      '<label style="font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;">' +
+      '<div class="picker-label">@ 知识库文档（可选）</div>' +
+      '<label class="skill-doc-search"><svg class="icon" aria-hidden="true" style="width:15px;height:15px;color:#8090aa"><use href="#icon-search" /></svg>' +
+      '<input type="search" data-v18-skill-doc-search role="searchbox" aria-label="搜索知识库文档" placeholder="搜索文档标题、摘要或标签..." autocomplete="off" /></label>' +
+      '<select data-v16-skill-doc-select aria-label="选择知识库文档"><option value="">— 不引用文档，仅用下方输入 —</option></select>' +
+      '<div class="skill-doc-list-v18" role="listbox" data-v18-skill-doc-list aria-label="Skill 知识库文档搜索结果"></div>' +
+      '<div class="skill-run-mode-v18" data-v16-skill-mode-row>' +
+      '<span class="picker-meta">输出</span>' +
+      '<label>' +
       '<input type="radio" name="v16-skill-output-mode" value="generate" checked /> 生成新文档</label>' +
-      '<label style="font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;">' +
+      '<label>' +
       '<input type="radio" name="v16-skill-output-mode" value="transform" /> 修改所选文档</label></div>' +
-      '<p style="font-size:11px;color:#97a3b7;margin:0;line-height:1.45;">' +
+      '<p class="picker-meta" data-v18-skill-doc-meta>' +
       "选择文档后，运行会把文档正文并入提示词；选「修改所选文档」时，LLM 输出会写回该文档而非新建。</p>";
 
     body.insertBefore(wrap, body.firstChild);
 
     const sel = wrap.querySelector("[data-v16-skill-doc-select]");
     const modeRow = wrap.querySelector("[data-v16-skill-mode-row]");
+    const search = wrap.querySelector("[data-v18-skill-doc-search]");
+    const list = wrap.querySelector("[data-v18-skill-doc-list]");
+    const meta = wrap.querySelector("[data-v18-skill-doc-meta]");
+    let docs = [];
+
+    const renderDocs = (query) => {
+      const q = String(query || "").trim().toLowerCase();
+      const filtered = docs
+        .filter((d) => {
+          if (!q) return true;
+          return [
+            d.title,
+            d.summary,
+            d.folder_name,
+            ...(Array.isArray(d.tags) ? d.tags : []),
+          ].join(" ").toLowerCase().includes(q);
+        })
+        .slice(0, 24);
+      if (meta) {
+        meta.textContent = filtered.length
+          ? `${filtered.length} 个可选文档${q ? " · " + query : ""}`
+          : "没有找到匹配文档，可直接粘贴材料运行";
+      }
+      if (!list) return;
+      if (!filtered.length) {
+        list.innerHTML = '<div class="picker-meta" style="padding:12px;text-align:center;">暂无匹配文档</div>';
+        return;
+      }
+      const selected = sel ? String(sel.value || "") : "";
+      list.innerHTML = filtered.map((d) => {
+        const title = escapeHtmlV14(String(d.title || "未命名文档"));
+        const folder = escapeHtmlV14(String(d.folder_name || d.folder?.name || "知识库"));
+        const summary = escapeHtmlV14(String(d.summary || "").slice(0, 72));
+        const id = escapeHtmlV14(String(d.id || ""));
+        return (
+          `<button type="button" class="skill-doc-option-v18" role="option" tabindex="0" ` +
+          `aria-selected="${String(d.id) === selected ? "true" : "false"}" data-doc-id="${id}">` +
+          `<span><strong>${title}</strong><small>${folder}${summary ? " · " + summary : ""}</small></span>` +
+          `</button>`
+        );
+      }).join("");
+    };
+
     try {
       const resp = await apiFetch("/kb/documents?page_size=48");
       const data = unwrapData(resp) || {};
       const items = data.items || [];
+      docs = items;
       items.forEach((d) => {
         if (!d || !d.id) return;
         const o = document.createElement("option");
@@ -1997,8 +2851,10 @@
         o.textContent = String(d.title || "未命名").slice(0, 96);
         sel.appendChild(o);
       });
+      renderDocs("");
     } catch (e) {
       console.warn("[Mydow v1.4] skillRun doc list failed", e);
+      if (meta) meta.textContent = "读取知识库文档失败，可直接粘贴材料运行";
     }
 
     const syncMode = () => {
@@ -2013,6 +2869,47 @@
       }
     };
     sel.addEventListener("change", syncMode);
+    if (search) {
+      let t = null;
+      search.addEventListener("input", () => {
+        window.clearTimeout(t);
+        t = window.setTimeout(() => renderDocs(search.value), 140);
+      });
+      search.addEventListener("keydown", (ev) => {
+        if (ev.key === "ArrowDown") {
+          ev.preventDefault();
+          list?.querySelector("button")?.focus();
+        }
+      });
+    }
+    if (list) {
+      list.addEventListener("click", (ev) => {
+        const opt = ev.target.closest("[data-doc-id]");
+        if (!opt) return;
+        const id = opt.dataset.docId || "";
+        if (sel) {
+          sel.value = id;
+          sel.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+        renderDocs(search ? search.value : "");
+      });
+      list.addEventListener("keydown", (ev) => {
+        const opt = ev.target.closest("[data-doc-id]");
+        if (!opt) return;
+        const items = Array.from(list.querySelectorAll("[data-doc-id]"));
+        const idx = items.indexOf(opt);
+        if (ev.key === "Enter" || ev.key === " ") {
+          ev.preventDefault();
+          opt.click();
+        } else if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
+          ev.preventDefault();
+          const next = ev.key === "ArrowDown"
+            ? items[(idx + 1) % items.length]
+            : items[(idx - 1 + items.length) % items.length];
+          next?.focus();
+        }
+      });
+    }
     syncMode();
   }
 
@@ -2225,6 +3122,12 @@
     }
     const data = unwrapData(resp) || resp || {};
     const items = data.items || [];
+    V14.allSkills = items.slice();
+    const hashFilter = readSkillFilterFromHashV18();
+    if (hashFilter) V14.activeSkillFilter = hashFilter;
+    const renderItems = V14.activeSkillFilter
+      ? _filterSkillsByChip(V14.activeSkillFilter)
+      : items;
     const grid =
       document.querySelector(".skills-open .skill-grid") ||
       document.querySelector(".skill-grid");
@@ -2234,14 +3137,14 @@
     const template = cards[0];
 
     // Backfill: clone template card so we have at least items.length cards.
-    while (cards.length < items.length && template) {
+    while (cards.length < renderItems.length && template) {
       const clone = template.cloneNode(true);
       grid.appendChild(clone);
       cards.push(clone);
     }
 
     cards.forEach((card, idx) => {
-      const sk = items[idx];
+      const sk = renderItems[idx];
       if (!sk) {
         card.style.display = "none";
         return;
@@ -2298,10 +3201,12 @@
 
     window.dispatchEvent(
       new CustomEvent("mydow:v14:skills-loaded", {
-        detail: { count: items.length },
+        detail: { count: renderItems.length, total: items.length, filter: V14.activeSkillFilter || "全部" },
       }),
     );
     paintSkillRunDoneChipsV16();
+    markSkillFilterActiveV18(V14.activeSkillFilter || "全部");
+    renderSkillFilterEmptyStateV18(renderItems, V14.activeSkillFilter || "全部");
     // §17.5 — render the personalized recommendations drawer above the grid
     loadSkillRecommendationsV17(items).catch(() => {});
     return data;
@@ -2424,34 +3329,37 @@
     const drawer = document.querySelector(".skills-drawer .insight-panel");
     if (drawer && items.length > 1) {
       let extra = drawer.querySelector("[data-v17-recommend-list]");
-      if (!extra) {
-        extra = document.createElement("div");
+      if (!extra || extra.tagName !== "DETAILS") {
+        const old = extra;
+        extra = document.createElement("details");
         extra.dataset.v17RecommendList = "true";
-        extra.style.cssText =
-          "margin-top: 14px; display: flex; flex-direction: column; gap: 8px;";
+        extra.className = "skill-side-rec-list-v18";
         const recCard = drawer.querySelector(".recommend-card");
-        if (recCard && recCard.parentNode === drawer) {
+        if (old && old.parentNode) {
+          old.replaceWith(extra);
+        } else if (recCard && recCard.parentNode === drawer) {
           recCard.insertAdjacentElement("afterend", extra);
         } else {
           drawer.appendChild(extra);
         }
       }
+      const wasOpen = !!extra.open;
       extra.innerHTML = "";
-      const heading = document.createElement("h3");
-      heading.className = "section-label";
-      heading.style.cssText = "font-size: 13px; margin-bottom: 6px; color: #6b7892;";
-      heading.textContent = "其他推荐 Skill";
-      extra.appendChild(heading);
+      const summary = document.createElement("summary");
+      summary.innerHTML = `<span>其他推荐 Skill</span><small>${items.length - 1} 个</small>`;
+      extra.appendChild(summary);
+      const rows = document.createElement("div");
+      rows.className = "skill-side-rec-items-v18";
+      extra.appendChild(rows);
+      extra.open = wasOpen;
       items.slice(1).forEach((it) => {
         const row = document.createElement("article");
         row.className = "compact-row";
         row.dataset.skillId = it.id;
-        row.style.cssText =
-          "display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: center; padding: 6px 8px; border-radius: 8px; cursor: pointer;";
         row.innerHTML = `
           <span class="recent-item-icon"><svg class="icon"><use href="#icon-sparkles" /></svg></span>
-          <strong style="font-size: 13px; color: #1d2742;">${escapeHtmlV14(it.name || "")}</strong>
-          <span style="font-size: 11px; color: #97a3b7;">${formatSkillRecommendationScoreV17(it.recommendation_score)}</span>
+          <strong>${escapeHtmlV14(it.name || "")}</strong>
+          <span>${formatSkillRecommendationScoreV17(it.recommendation_score)}</span>
         `;
         row.addEventListener("click", () => {
           V14.activeSkillId = it.id;
@@ -2466,7 +3374,7 @@
           const opener = document.querySelector('[data-open-modal="skillRun"]');
           if (opener) opener.click();
         });
-        extra.appendChild(row);
+        rows.appendChild(row);
       });
     }
     return data;
@@ -2612,22 +3520,110 @@
   // currently-cached skill list (from V14.allSkills) by category mapping or
   // localStorage favorites, and re-renders the grid in-place.
 
+  const _SKILL_FILTER_SLUGS_V18 = {
+    "全部": "all",
+    "热门": "hot",
+    "最新": "new",
+    "内容创作": "content",
+    "研究分析": "research",
+    "效率工具": "productivity",
+    "工作流": "workflow",
+    "我的收藏": "favorites",
+  };
+  const _SKILL_FILTER_LABELS_V18 = Object.fromEntries(
+    Object.entries(_SKILL_FILTER_SLUGS_V18).map(([label, slug]) => [slug, label]),
+  );
+
+  function normalizeSkillFilterLabelV18(label) {
+    const raw = String(label || "").replace(/\s+/g, "");
+    const known = Object.keys(_SKILL_FILTER_SLUGS_V18).find((it) => raw.includes(it));
+    return known || "全部";
+  }
+
+  function readSkillFilterFromHashV18() {
+    const hash = String(window.location.hash || "");
+    const match = hash.match(/[?&]filter=([^&]+)/);
+    if (!match) return "";
+    const value = decodeURIComponent(match[1] || "");
+    return _SKILL_FILTER_LABELS_V18[value] || normalizeSkillFilterLabelV18(value);
+  }
+
+  function syncSkillFilterHashV18(label) {
+    const clean = normalizeSkillFilterLabelV18(label);
+    const slug = _SKILL_FILTER_SLUGS_V18[clean] || encodeURIComponent(clean);
+    const next = window.location.pathname + window.location.search + "#skills?filter=" + slug;
+    if (window.location.pathname + window.location.search + window.location.hash !== next) {
+      window.history.replaceState(null, "", next);
+    }
+  }
+
+  function openSkillsFromHashV18() {
+    if (!String(window.location.hash || "").startsWith("#skills")) return;
+    window.setTimeout(() => {
+      const page = document.querySelector(".page");
+      if (!page || page.classList.contains("skills-open")) return;
+      const nav = document.querySelector('[data-nav-target="skills"]');
+      if (nav) nav.click();
+    }, 0);
+  }
+
+  function skillFilterBlobV18(skill) {
+    return [
+      skill.name,
+      skill.description,
+      skill.summary,
+      skill.category,
+      skill.author,
+      skill.created_by,
+      ...(Array.isArray(skill.tags) ? skill.tags : []),
+    ].filter(Boolean).join(" ").toLowerCase();
+  }
+
   const _SKILL_CATEGORY_BUCKETS = {
     "热门": (a, b) =>
-      Number(b.usage_count || 0) - Number(a.usage_count || 0),
+      (Number(b.usage_count || 0) + Number(b.favorite_count || 0)) -
+      (Number(a.usage_count || 0) + Number(a.favorite_count || 0)),
     "最新": (a, b) => {
-      const at = a.created_at ? Date.parse(a.created_at) : 0;
-      const bt = b.created_at ? Date.parse(b.created_at) : 0;
+      const at = Date.parse(a.created_at || a.updated_at || a.last_used_at || "") || 0;
+      const bt = Date.parse(b.created_at || b.updated_at || b.last_used_at || "") || 0;
       return bt - at;
     },
   };
 
   const _SKILL_CATEGORY_GROUPS = {
-    "内容创作": ["writing", "format"],
-    "研究分析": ["research", "interview", "analysis"],
-    "效率工具": ["productivity", "ideate"],
-    "工作流": ["report", "development"],
+    "内容创作": ["writing", "format", "content", "markdown", "邮件", "写作", "内容", "卡片"],
+    "研究分析": ["research", "interview", "analysis", "竞品", "研究", "访谈", "分析"],
+    "效率工具": ["productivity", "ideate", "okr", "效率", "脑暴", "拆解"],
+    "工作流": ["report", "development", "workflow", "周报", "代码", "流程"],
   };
+
+  function markSkillFilterActiveV18(label) {
+    const clean = normalizeSkillFilterLabelV18(label);
+    document.querySelectorAll(".skills-categories .skill-chip").forEach((chip) => {
+      const active = normalizeSkillFilterLabelV18(chip.textContent || "") === clean;
+      chip.classList.toggle("active", active);
+      chip.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+  }
+
+  function renderSkillFilterEmptyStateV18(items, label) {
+    const grid =
+      document.querySelector(".skills-open .skill-grid") ||
+      document.querySelector(".skill-grid");
+    if (!grid) return;
+    let empty = grid.querySelector("[data-v18-skill-filter-empty]");
+    if (items && items.length) {
+      if (empty) empty.remove();
+      return;
+    }
+    if (!empty) {
+      empty = document.createElement("div");
+      empty.dataset.v18SkillFilterEmpty = "true";
+      empty.className = "skill-filter-empty-v18";
+      grid.appendChild(empty);
+    }
+    empty.textContent = `暂无「${normalizeSkillFilterLabelV18(label)}」Skill，换个分类看看。`;
+  }
 
   function _renderSkillsGridFromCache(items) {
     const grid =
@@ -2684,29 +3680,47 @@
         }
       }
     });
+    renderSkillFilterEmptyStateV18(items, V14.activeSkillFilter || "全部");
   }
 
   function _filterSkillsByChip(label) {
+    const clean = normalizeSkillFilterLabelV18(label);
     const all = (V14.allSkills || []).slice();
-    if (!label || label.indexOf("全部") >= 0) return all;
-    if (label.indexOf("我的收藏") >= 0) {
+    if (!clean || clean === "全部") return all;
+    if (clean === "我的收藏") {
       let favs = [];
       try {
         favs = JSON.parse(window.localStorage.getItem("mydow_v14_fav_skills") || "[]");
       } catch { /* ignore */ }
       const set = new Set(favs);
-      return all.filter((s) => set.has(s.id));
+      return all.filter((s) => set.has(s.id) || s.is_favorite === true);
     }
-    const sortFn = _SKILL_CATEGORY_BUCKETS[label.replace(/^[^\u4e00-\u9fff]+/, "")];
+    const sortFn = _SKILL_CATEGORY_BUCKETS[clean];
     if (sortFn) return all.slice().sort(sortFn);
-    const stripped = label.replace(/^[^\u4e00-\u9fff]+/, "");
-    const cats = _SKILL_CATEGORY_GROUPS[stripped];
+    const cats = _SKILL_CATEGORY_GROUPS[clean];
     if (cats) {
-      return all.filter((s) =>
-        cats.some((c) => String(s.category || "").toLowerCase().includes(c)),
-      );
+      return all.filter((s) => {
+        const blob = skillFilterBlobV18(s);
+        return cats.some((c) => blob.includes(String(c).toLowerCase()));
+      });
     }
     return all;
+  }
+
+  function applySkillsFilterV18(label, options) {
+    const clean = normalizeSkillFilterLabelV18(label);
+    V14.activeSkillFilter = clean === "全部" ? "" : clean;
+    const items = _filterSkillsByChip(clean);
+    markSkillFilterActiveV18(clean);
+    _renderSkillsGridFromCache(items);
+    renderSkillFilterEmptyStateV18(items, clean);
+    if (!options || options.syncUrl !== false) syncSkillFilterHashV18(clean);
+    window.dispatchEvent(
+      new CustomEvent("mydow:v14:skills-filter", {
+        detail: { label: clean, count: items.length, total: (V14.allSkills || []).length },
+      }),
+    );
+    return items;
   }
 
   function bindSkillsCategoryFilterV40() {
@@ -2717,17 +3731,10 @@
         if (!chip) return;
         // Allow IIFE to update active class first.
         window.setTimeout(() => {
-          const label = (chip.textContent || "").trim();
-          const items = _filterSkillsByChip(label);
-          _renderSkillsGridFromCache(items);
-          window.dispatchEvent(
-            new CustomEvent("mydow:v14:skills-filter", {
-              detail: { label, count: items.length },
-            }),
-          );
+          applySkillsFilterV18(chip.textContent || "全部");
         }, 60);
       },
-      false,
+      true,
     );
   }
 
@@ -3199,9 +4206,39 @@
     return document.querySelector(".ai-message-list");
   }
 
+  function ensureAiConversationVisibleV18(title) {
+    const page =
+      document.querySelector(".page.ai-open") ||
+      document.querySelector(".page:has(.ai-conversation-view)") ||
+      document.querySelector(".page");
+    if (page) {
+      page.classList.add("ai-open", "ai-chat-open");
+      page.classList.remove("profile-open", "notifications-open", "skills-open", "garden-open", "knowledge-open", "folder-open", "doc-open");
+    }
+    const view = document.querySelector(".ai-conversation-view");
+    if (view) {
+      view.hidden = false;
+      view.removeAttribute("hidden");
+    }
+    const label = String(title || "当前对话").trim();
+    document.querySelectorAll('[data-inline-menu="aiConversation"] [data-inline-label]').forEach((node) => {
+      node.textContent = label;
+    });
+    document.querySelectorAll("[data-ai-chat-open]").forEach((thread) => {
+      if (thread.dataset.conversationId && V14.aiConvId) {
+        thread.classList.toggle("active", thread.dataset.conversationId === V14.aiConvId);
+      }
+    });
+    document.querySelectorAll(".ai-chat-message").forEach((msg) => {
+      msg.style.opacity = "1";
+      msg.style.transform = "none";
+    });
+  }
+
   function appendAiUserBubble(text) {
     const list = aiMessageListHost();
     if (!list) return;
+    ensureAiConversationVisibleV18();
     const el = document.createElement("article");
     el.className = "ai-chat-message user-message";
     el.innerHTML = '<div class="message-bubble"></div>';
@@ -3213,13 +4250,16 @@
   function appendAiAssistantPlaceholder() {
     const list = aiMessageListHost();
     if (!list) return null;
+    ensureAiConversationVisibleV18();
     const el = document.createElement("article");
     el.className = "ai-chat-message assistant-message is-thinking";
     el.innerHTML = `
       <div class="assistant-avatar" aria-hidden="true"><span class="brand-mark"></span></div>
       <div class="assistant-content">
-        <span class="thinking-dot"></span><span class="thinking-dot"></span><span class="thinking-dot"></span>
-        <span>正在生成…</span>
+        <span class="ai-thinking-indicator" aria-live="polite">
+          <span class="thinking-dot"></span><span class="thinking-dot"></span><span class="thinking-dot"></span>
+          <span>正在生成…</span>
+        </span>
         <p data-v14-ai-stream></p>
         <div class="ai-message-actions" aria-label="回答操作" style="display:none;margin-top:10px;gap:6px;">
           <button type="button" data-toast="已复制回答" aria-label="复制回答">复制</button>
@@ -3229,6 +4269,7 @@
         </div>
       </div>`;
     list.appendChild(el);
+    el.style.opacity = "1";
     list.scrollTop = list.scrollHeight;
     return el.querySelector("[data-v14-ai-stream]");
   }
@@ -3383,7 +4424,7 @@
     }
     V14.streamAbort = new AbortController();
     const streamEl = appendAiAssistantPlaceholder();
-    const url = API_BASE + `/ai/conversations/${conversationId}/messages/stream`;
+    const streamPath = `/ai/conversations/${conversationId}/messages/stream`;
     /** §15.37.f — propagate selected AI model + mode to backend.
      * Read label live from the IIFE-controlled DOM so we always pick up the
      * latest user choice (the IIFE manages aiModel state via uiMemory). */
@@ -3410,26 +4451,23 @@
       body.context_scope = {
         document_ids: docPins,
         folder_ids: folderPins,
-        sources: ["doc"],
+        sources: Array.isArray(V14.contextScope.sources)
+          ? V14.contextScope.sources.slice()
+          : ["doc"],
       };
     }
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + getToken(),
-        Accept: "text/event-stream",
-      },
-      body: JSON.stringify(body),
-      signal: V14.streamAbort.signal,
-    });
+    const resp = await fetchAiStreamWithSession(streamPath, body, V14.streamAbort.signal);
     if (!resp.ok || !resp.body) {
       if (streamEl) streamEl.textContent = "（生成失败 " + resp.status + "）";
-      toast("AI 请求失败", "error");
+      toast(resp.status === 401 ? "登录已刷新，请再试一次" : "AI 请求失败", "error");
       return;
     }
     const parent = streamEl && streamEl.closest(".ai-chat-message");
-    if (parent) parent.classList.remove("is-thinking");
+    if (parent) {
+      parent.classList.remove("is-thinking");
+      const indicator = parent.querySelector(".ai-thinking-indicator");
+      if (indicator) indicator.remove();
+    }
 
     const reader = resp.body.getReader();
     const decoder = new TextDecoder("utf-8");
@@ -3478,7 +4516,7 @@
         } else if (eventType === "error" && streamEl) {
           streamEl.textContent = (payload && payload.message) || "错误";
         } else if (eventType === "done" && streamEl) {
-          if (first) streamEl.textContent = "（离线占位模式）";
+          if (first) streamEl.textContent = "模型没有返回内容，请检查 LLM 配置或稍后重试。";
           const article = streamEl.closest(".ai-chat-message");
           _showAssistantActions(article, V14.lastAssistantMessageId);
           if (payload && Array.isArray(payload.citations) && article) {
@@ -3691,6 +4729,7 @@
     const cid = thread.dataset.conversationId;
     if (!cid) return;
     V14.aiConvId = cid;
+    ensureAiConversationVisibleV18(thread.dataset.title || thread.querySelector("strong")?.textContent || "当前对话");
     loadActiveConversationContextScope().catch(() => {});
     const list = aiMessageListHost();
     if (!list) return;
@@ -3708,6 +4747,8 @@
           if (ph) {
             const wrap = ph.closest(".ai-chat-message");
             if (wrap) wrap.classList.remove("is-thinking");
+            const indicator = wrap?.querySelector(".ai-thinking-indicator");
+            if (indicator) indicator.remove();
             ph.textContent = content;
             const cites = Array.isArray(m.citations) ? m.citations : [];
             if (cites.length)
@@ -3747,6 +4788,7 @@
         send.disabled = true;
         send.classList.add("is-loading");
         try {
+          await ensureSession();
           const cid = await ensureAiConversationId();
           appendAiUserBubble(text);
           if (input) {
@@ -4697,6 +5739,190 @@
     );
   }
 
+  // §18.5 — Document editor hydrate + autosave + focus polish.
+  let _docEditorSaveTimerV18 = null;
+
+  function injectDocEditorPolishCssV18() {
+    if (document.getElementById("mydow-doc-editor-v18")) return;
+    const style = document.createElement("style");
+    style.id = "mydow-doc-editor-v18";
+    style.textContent = `
+      .doc-editor-surface {
+        transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+      }
+      .doc-editor-surface:focus-within {
+        border-color: rgba(91,120,255,.30) !important;
+        box-shadow: 0 28px 80px rgba(39, 55, 96, .13), 0 0 0 4px rgba(91,120,255,.08) !important;
+        background: rgba(255,255,255,.94) !important;
+      }
+      .doc-title-input,
+      .doc-body[contenteditable="true"] {
+        outline: none !important;
+        box-shadow: none !important;
+        caret-color: #5b78ff;
+      }
+      .doc-title-input:focus-visible,
+      .doc-body[contenteditable="true"]:focus-visible {
+        outline: none !important;
+      }
+      .doc-body[contenteditable="true"] {
+        min-height: 360px;
+        border-radius: 16px;
+        padding: 6px 8px;
+        margin: -6px -8px 0;
+        transition: background .18s ease;
+      }
+      .doc-body[contenteditable="true"]:focus {
+        background: linear-gradient(180deg, rgba(248,250,255,.72), rgba(255,255,255,.32));
+      }
+      .doc-status[data-v18-state="saving"] { color: #5b78ff; background: rgba(91,120,255,.10); }
+      .doc-status[data-v18-state="error"] { color: #c44646; background: rgba(216,72,74,.10); }
+      .doc-status[data-v18-state="saved"] { color: #158c72; background: rgba(112,200,170,.13); }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function docTextToHtmlV18(text) {
+    const raw = String(text || "").trim();
+    if (!raw) return "<p></p>";
+    return raw
+      .split(/\n{2,}/)
+      .map((para) => `<p>${escapeHtmlV14(para).replace(/\n/g, "<br>")}</p>`)
+      .join("");
+  }
+
+  function getDocEditorMainV18() {
+    return document.querySelector(".doc-editor-main");
+  }
+
+  function setDocEditorStatusV18(state, text) {
+    const main = getDocEditorMainV18();
+    const status = main && main.querySelector(".doc-status");
+    if (!status) return;
+    status.dataset.v18State = state || "saved";
+    const icon = state === "error" ? "!" : state === "saving" ? "…" : "✓";
+    status.innerHTML =
+      `<span aria-hidden="true" style="font-weight:900">${icon}</span>` +
+      escapeHtmlV14(text || (state === "saving" ? "正在保存" : state === "error" ? "保存失败" : "已自动保存"));
+  }
+
+  function hydrateDocEditorFooterV18(doc) {
+    const main = getDocEditorMainV18();
+    const footer = main && main.querySelector(".doc-footer");
+    if (!footer) return;
+    const text = String(doc.content || "").trim();
+    const words = doc.word_count || (text ? text.length : 0);
+    const updated = doc.updated_at ? new Date(doc.updated_at).toLocaleString("zh-CN") : "刚刚";
+    footer.innerHTML =
+      `<span>${Number(words || 0).toLocaleString("zh-CN")} 字</span>` +
+      `<span>最后更新 ${escapeHtmlV14(updated)}</span>`;
+  }
+
+  async function hydrateDocEditorFromDocumentV18(documentId) {
+    const id = String(documentId || "").trim();
+    if (!id) return;
+    injectDocEditorPolishCssV18();
+    const main = getDocEditorMainV18();
+    if (!main) return;
+    main.dataset.documentId = id;
+    setDocEditorStatusV18("saving", "正在读取文档");
+    try {
+      const resp = await apiFetch("/kb/documents/" + encodeURIComponent(id));
+      const doc = unwrapData(resp) || resp || {};
+      main.dataset.documentId = doc.id || id;
+      const title = main.querySelector(".doc-title-input");
+      const body = main.querySelector(".doc-body");
+      if (title) {
+        title.value = doc.title || "未命名文档";
+        title.dataset.v18SavedValue = title.value;
+      }
+      if (body) {
+        body.innerHTML = docTextToHtmlV18(doc.content || doc.summary || "");
+        body.dataset.v18SavedValue = body.innerText || body.textContent || "";
+      }
+      hydrateDocEditorFooterV18(doc);
+      setDocEditorStatusV18("saved", "已同步到知识库");
+    } catch (e) {
+      setDocEditorStatusV18("error", "读取失败");
+      toast("读取文档失败: " + e.message, "error");
+    }
+  }
+
+  async function saveDocEditorNowV18() {
+    const main = getDocEditorMainV18();
+    const docId = main && main.dataset.documentId;
+    if (!docId) return;
+    const title = main.querySelector(".doc-title-input");
+    const body = main.querySelector(".doc-body");
+    const nextTitle = (title && title.value.trim()) || "未命名文档";
+    const nextContent = (body && (body.innerText || body.textContent || "").trim()) || "";
+    const patch = {};
+    if (title && nextTitle !== (title.dataset.v18SavedValue || "")) patch.title = nextTitle;
+    if (body && nextContent !== (body.dataset.v18SavedValue || "")) patch.content = nextContent;
+    if (!Object.keys(patch).length) return;
+    setDocEditorStatusV18("saving", "正在保存");
+    try {
+      const resp = await apiFetch("/kb/documents/" + encodeURIComponent(docId), {
+        method: "PATCH",
+        body: patch,
+      });
+      const doc = unwrapData(resp) || resp || {};
+      if (title) title.dataset.v18SavedValue = nextTitle;
+      if (body) body.dataset.v18SavedValue = nextContent;
+      hydrateDocEditorFooterV18(doc);
+      setDocEditorStatusV18("saved", "已自动保存");
+    } catch (e) {
+      setDocEditorStatusV18("error", "保存失败");
+      toast("文档保存失败: " + e.message, "error");
+    }
+  }
+
+  function scheduleDocEditorSaveV18() {
+    window.clearTimeout(_docEditorSaveTimerV18);
+    setDocEditorStatusV18("saving", "等待自动保存");
+    _docEditorSaveTimerV18 = window.setTimeout(() => {
+      saveDocEditorNowV18().catch(() => {});
+    }, 750);
+  }
+
+  function bindDocEditorHydrateAndAutosaveV18() {
+    injectDocEditorPolishCssV18();
+    document.addEventListener(
+      "click",
+      (event) => {
+        const row = event.target.closest(".doc-row[data-document-id], [data-open-drawer='docDetail'][data-doc-id], .kb-list-row[data-doc-id]");
+        if (!row) return;
+        const id = row.dataset.documentId || row.dataset.docId || "";
+        if (!id) return;
+        window.setTimeout(() => hydrateDocEditorFromDocumentV18(id), 160);
+      },
+      false,
+    );
+    document.addEventListener(
+      "input",
+      (event) => {
+        const target = event.target;
+        if (!target || !target.closest) return;
+        if (!target.closest(".doc-editor-main")) return;
+        if (!target.matches(".doc-title-input, .doc-body")) return;
+        scheduleDocEditorSaveV18();
+      },
+      true,
+    );
+    document.addEventListener(
+      "blur",
+      (event) => {
+        const target = event.target;
+        if (!target || !target.closest) return;
+        if (!target.closest(".doc-editor-main")) return;
+        if (!target.matches(".doc-title-input, .doc-body")) return;
+        window.clearTimeout(_docEditorSaveTimerV18);
+        saveDocEditorNowV18().catch(() => {});
+      },
+      true,
+    );
+  }
+
   // §15.37.g — Doc AI actions: 5 buttons in doc-editor toolbar
   function _resolveDocSubjectV37() {
     const main = document.querySelector(".doc-editor-main, .doc-editor-drawer");
@@ -5074,9 +6300,81 @@
     });
   }
 
+  function formatSecurityTimeV18(value) {
+    if (!value) return "尚未记录";
+    try {
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return String(value);
+      return d.toLocaleString("zh-CN", { hour12: false });
+    } catch (_e) {
+      return String(value);
+    }
+  }
+
+  function renderAccountSecurityV18(security) {
+    const data = security || {};
+    const root = document.querySelector(".profile-main");
+    if (!root) return;
+    const emailBtn = root.querySelector('[data-toast="邮箱验证链接已发送"]');
+    if (emailBtn) {
+      emailBtn.textContent = data.email_verified ? "已验证" : data.email_verification_requested_at ? "重新发送" : "验证邮箱";
+      emailBtn.classList.toggle("active", Boolean(data.email_verified));
+      emailBtn.setAttribute("aria-pressed", String(Boolean(data.email_verified)));
+      emailBtn.disabled = Boolean(data.email_verified);
+    }
+    const emailRow = emailBtn?.closest(".preference-row, article, .quick-setting");
+    const emailSub = emailRow?.querySelector("span");
+    if (emailSub && data.email) {
+      const tail = data.email_verified
+        ? " · 已验证"
+        : data.email_verification_requested_at
+          ? " · 待验证 " + formatSecurityTimeV18(data.email_verification_requested_at)
+          : "";
+      emailSub.textContent = String(data.email) + tail;
+    }
+
+    const twoFactor = root.querySelector('[data-toast="二步验证状态已更新"]');
+    if (twoFactor) {
+      const on = Boolean(data.two_factor_enabled);
+      twoFactor.classList.toggle("active", on);
+      twoFactor.setAttribute("aria-pressed", String(on));
+      twoFactor.setAttribute("aria-label", on ? "二步验证已开启" : "二步验证已关闭");
+    }
+
+    const refreshBtn = root.querySelector('[data-toast="已刷新登录设备"]');
+    const deviceRow = refreshBtn?.closest(".preference-row, article, .quick-setting");
+    const deviceText = deviceRow?.querySelector("span");
+    const firstDevice = Array.isArray(data.login_devices) ? data.login_devices[0] : null;
+    if (deviceText && firstDevice) {
+      deviceText.textContent =
+        `${firstDevice.label || "当前设备"} · ${formatSecurityTimeV18(firstDevice.last_seen_at)}`;
+    }
+    if (refreshBtn && data.last_security_refresh_at) {
+      refreshBtn.dataset.lastRefreshAt = data.last_security_refresh_at;
+      refreshBtn.setAttribute("aria-label", "刷新登录设备，上次刷新 " + formatSecurityTimeV18(data.last_security_refresh_at));
+    }
+  }
+
+  async function hydrateAccountSecurityV18() {
+    try {
+      const resp = await apiFetch("/me/security");
+      renderAccountSecurityV18(unwrapData(resp) || resp || {});
+    } catch (e) {
+      console.warn("[Mydow v1.4] account security hydrate failed", e);
+    }
+  }
+
+  function bindAccountSecurityHydrateV18() {
+    const schedule = () => [120, 520, 1000].forEach((delay) => window.setTimeout(hydrateAccountSecurityV18, delay));
+    document.addEventListener("click", (event) => {
+      if (event.target.closest('[data-settings-panel="security"]')) schedule();
+    }, false);
+    schedule();
+  }
+
   function bindPrefToggleV39() {
     const map = {
-      "自动保存设置已更新": "auto_save_enabled",
+      "自动保存设置已更新": "auto_save",
       "二步验证状态已更新": "two_factor_enabled",
     };
     document.addEventListener(
@@ -5090,13 +6388,24 @@
         event.preventDefault();
         event.stopImmediatePropagation();
         const sw =
+          (btn.matches(".toggle-switch") ? btn : null) ||
           btn.closest("article")?.querySelector(".toggle-switch") ||
           btn.querySelector(".toggle-switch");
         const wasActive = sw && sw.classList.contains("active");
         const next = !wasActive;
         try {
           await _patchMePreference(key, next);
-          if (sw) sw.classList.toggle("active", next);
+          if (sw) {
+            sw.classList.toggle("active", next);
+            sw.setAttribute("aria-pressed", String(next));
+            if (key === "auto_save") {
+              sw.setAttribute("aria-label", next ? "自动保存已开启" : "自动保存已关闭");
+            }
+            if (key === "two_factor_enabled") {
+              sw.setAttribute("aria-label", next ? "二步验证已开启" : "二步验证已关闭");
+            }
+          }
+          if (key === "two_factor_enabled") hydrateAccountSecurityV18();
           toast(label, "success");
         } catch (e) {
           toast("保存失败: " + e.message, "error");
@@ -5155,17 +6464,33 @@
     );
   }
 
-  // §15.39.email — 邮箱验证：V1 用 /me 当前 email + 后端 SMTP 已配置时可触发
-  //   verification email。当前 PRD10 后端没有该 endpoint，所以记录为 toast 即可。
+  // §18.12.email — 邮箱验证请求必须写入真实账号安全状态。
   function bindEmailVerifyV39() {
     document.addEventListener(
       "click",
-      (event) => {
+      async (event) => {
         const btn = event.target.closest('[data-toast="邮箱验证链接已发送"]');
         if (!btn) return;
         event.preventDefault();
         event.stopImmediatePropagation();
-        toast("邮箱验证 V1：链接已记录，等待 SMTP 通道接入后真发送", "info");
+        if (btn.disabled) return;
+        btn.disabled = true;
+        const oldText = btn.textContent;
+        btn.textContent = "发送中...";
+        try {
+          const resp = await apiFetch("/me/security/email-verification", {
+            method: "POST",
+            body: {},
+          });
+          const data = unwrapData(resp) || resp || {};
+          renderAccountSecurityV18(data);
+          const delivery = data.email_verification_delivery === "smtp" ? "验证邮件已发送" : "验证请求已保存到本地安全记录";
+          toast(delivery, "success");
+        } catch (e) {
+          btn.disabled = false;
+          btn.textContent = oldText || "验证邮箱";
+          toast("邮箱验证失败: " + e.message, "error");
+        }
       },
       true
     );
@@ -5209,16 +6534,31 @@
     );
   }
 
-  // §15.39.security — 「已刷新登录设备」 → V1 toast (PRD10 V2 增加 sessions API)
+  // §18.12.security — 「已刷新登录设备」 → 真实写入当前会话设备列表。
   function bindSecurityDevicesV39() {
     document.addEventListener(
       "click",
-      (event) => {
+      async (event) => {
         const btn = event.target.closest('[data-toast="已刷新登录设备"]');
         if (!btn) return;
         event.preventDefault();
         event.stopImmediatePropagation();
-        toast("登录设备 V1：当前会话已刷新（多设备列表 V2 上线）", "info");
+        btn.disabled = true;
+        const oldText = btn.textContent;
+        btn.textContent = "刷新中...";
+        try {
+          const resp = await apiFetch("/me/security/devices/refresh", {
+            method: "POST",
+            body: {},
+          });
+          renderAccountSecurityV18(unwrapData(resp) || resp || {});
+          toast("登录设备已刷新", "success");
+        } catch (e) {
+          toast("刷新失败: " + e.message, "error");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = oldText || "刷新";
+        }
       },
       true
     );
@@ -5232,13 +6572,123 @@
   /**
    * @typedef {{ id:string, title:string, folder_name?:string, summary?:string, tags?:string[] }} CtxDoc
    */
+  function injectAiContextPickerStylesV18() {
+    if (document.getElementById("mydow-ai-context-picker-v18")) return;
+    const style = document.createElement("style");
+    style.id = "mydow-ai-context-picker-v18";
+    style.textContent = `
+      .ai-context-picker-v18 {
+        display: grid;
+        gap: 10px;
+        margin: 0 0 14px;
+        padding: 12px;
+        border: 1px solid rgba(117, 140, 255, 0.18);
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(247,249,255,.94));
+        box-shadow: 0 18px 50px rgba(37, 50, 91, 0.10);
+      }
+      .ai-context-picker-v18 label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 42px;
+        padding: 0 12px;
+        border-radius: 14px;
+        background: rgba(255,255,255,.95);
+        border: 1px solid rgba(108,124,153,.16);
+      }
+      .ai-context-picker-v18 input {
+        width: 100%;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: #21304a;
+        font-size: 14px;
+        font-weight: 650;
+      }
+      .ai-context-picker-v18 input::placeholder { color: #9aa6bb; font-weight: 590; }
+      .ai-context-picker-v18 .picker-meta {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        color: #7b88a0;
+        font-size: 12px;
+        font-weight: 650;
+      }
+      .notice-list.ai-context-list-v18 {
+        display: grid;
+        gap: 8px;
+        max-height: min(54vh, 520px);
+        overflow: auto;
+        padding-right: 4px;
+      }
+      .notice-row.context-source-v18 {
+        border: 1px solid rgba(108,124,153,.14);
+        border-radius: 16px;
+        background: rgba(255,255,255,.92);
+        box-shadow: 0 8px 24px rgba(37,50,91,.06);
+        transition: transform .16s ease, border-color .16s ease, background .16s ease;
+      }
+      .notice-row.context-source-v18:hover,
+      .notice-row.context-source-v18:focus-visible {
+        transform: translateY(-1px);
+        border-color: rgba(91,120,255,.38);
+        background: #fff;
+        outline: 0;
+      }
+      .notice-row.context-source-v18.active {
+        border-color: rgba(91,120,255,.52);
+        background: rgba(239,244,255,.95);
+      }
+      .notice-row.context-source-v18 .notice-action {
+        border: 0;
+        border-radius: 999px;
+        background: rgba(91,120,255,.10);
+        color: #4f65d8;
+        font-weight: 780;
+      }
+      .notice-row.context-source-v18.active .notice-action {
+        background: #5b78ff;
+        color: #fff;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   function bindAiContextDrawerHydrateV14() {
     const layer = document.querySelector('.surface-layer[data-modal="aiContext"]');
     if (!layer) return;
+    injectAiContextPickerStylesV18();
 
-    async function hydrate() {
+    function ensureSearchBox() {
+      const list = layer.querySelector(".notice-list");
+      if (!list) return null;
+      let picker = layer.querySelector("[data-ai-context-picker]");
+      if (!picker) {
+        picker = document.createElement("div");
+        picker.className = "ai-context-picker-v18";
+        picker.dataset.aiContextPicker = "true";
+        picker.innerHTML = `
+          <label>
+            <svg class="icon" aria-hidden="true"><use href="#icon-search" /></svg>
+            <input type="search" data-ai-context-search role="searchbox" aria-label="搜索知识库文档或文件夹" placeholder="搜索知识库、文档、卡片或文件夹..." autocomplete="off" />
+          </label>
+          <div class="picker-meta">
+            <span data-ai-context-count>正在读取知识库...</span>
+            <span>Enter 选择 · Esc 关闭</span>
+          </div>`;
+        list.parentNode.insertBefore(picker, list);
+      }
+      return picker.querySelector("[data-ai-context-search]");
+    }
+
+    async function hydrate(keyword) {
       const list = layer.querySelector(".notice-list");
       if (!list) return;
+      const search = ensureSearchBox();
+      const queryText = String(
+        keyword != null ? keyword : (search && search.value) || "",
+      ).trim();
       // On AI surface, resolve conversation first so "已选" matches this chat's context_scope.
       if (isAiWorkspaceActive()) {
         try {
@@ -5265,9 +6715,11 @@
       let docs = [];
       let folders = [];
       try {
+        const docPath = "/kb/documents?page_size=30" + (queryText ? "&keyword=" + encodeURIComponent(queryText) : "");
+        const folderPath = "/kb/folders?include_counts=true" + (queryText ? "&keyword=" + encodeURIComponent(queryText) : "");
         const [docsResp, foldersResp] = await Promise.all([
-          apiFetch("/kb/documents?page_size=20"),
-          apiFetch("/kb/folders?include_counts=true&page_size=12"),
+          apiFetch(docPath),
+          apiFetch(folderPath),
         ]);
         docs = (unwrapData(docsResp)?.items) || [];
         folders = (unwrapData(foldersResp)?.items) || [];
@@ -5280,22 +6732,23 @@
 
       // Build new rows. Folders first (count badge), then top documents.
       const rows = [];
-      folders.slice(0, 4).forEach((f) => {
+      folders.slice(0, 8).forEach((f) => {
         const id = String(f.id);
+        const isOn = (V14.contextScope.folder_ids || []).map(String).includes(id);
         rows.push(`
-          <article class="notice-row context-source" data-source-id="${id}" data-source-type="folder" style="grid-template-columns: 48px minmax(0,1fr) 80px;cursor:pointer;">
-            <span class="notice-icon"><svg class="icon"><use href="#icon-folder" /></svg></span>
+          <article class="notice-row context-source context-source-v18 ${isOn ? "active" : ""}" role="option" tabindex="0" aria-selected="${isOn ? "true" : "false"}" data-source-id="${id}" data-source-type="folder" data-source-title="${escapeHtmlV14(f.name || "未命名文件夹")}" style="grid-template-columns: 48px minmax(0,1fr) 80px;cursor:pointer;">
+            <span class="notice-icon ${isOn ? "green" : ""}"><svg class="icon"><use href="#icon-folder" /></svg></span>
             <div class="notice-body"><h2>${escapeHtmlV14(f.name || "未命名文件夹")}</h2><p>${escapeHtmlV14(String(f.document_count ?? 0))} 篇文档 · 文件夹</p></div>
-            <button class="notice-action" type="button" data-context-toggle>选择</button>
+            <button class="notice-action" type="button" data-context-toggle>${isOn ? "已选" : "选择"}</button>
           </article>`);
       });
-      docs.slice(0, 12).forEach((d) => {
+      docs.slice(0, 20).forEach((d) => {
         const id = String(d.id);
         const fold = folderById[String(d.folder_id || "")] || "";
         const summary = (d.summary || (d.content || "").slice(0, 80) || "未填写摘要").trim();
         const isOn = alreadyPinned.has(id);
         rows.push(`
-          <article class="notice-row context-source ${isOn ? "active" : ""}" data-source-id="${id}" data-source-type="document" style="grid-template-columns: 48px minmax(0,1fr) 80px;cursor:pointer;">
+          <article class="notice-row context-source context-source-v18 ${isOn ? "active" : ""}" role="option" tabindex="0" aria-selected="${isOn ? "true" : "false"}" data-source-id="${id}" data-source-type="document" data-source-title="${escapeHtmlV14(d.title || "未命名文档")}" data-folder-id="${escapeHtmlV14(String(d.folder_id || ""))}" style="grid-template-columns: 48px minmax(0,1fr) 80px;cursor:pointer;">
             <span class="notice-icon ${isOn ? "green" : ""}"><svg class="icon"><use href="#icon-file-text" /></svg></span>
             <div class="notice-body"><h2>${escapeHtmlV14(d.title || "未命名文档")}</h2><p>${escapeHtmlV14(summary)}${fold ? " · " + escapeHtmlV14(fold) : ""}</p></div>
             <button class="notice-action" type="button" data-context-toggle>${isOn ? "已选" : "选择"}</button>
@@ -5303,10 +6756,16 @@
       });
       if (rows.length === 0) {
         rows.push(
-          `<article class="notice-row" style="grid-template-columns: 1fr;"><div class="notice-body"><p>当前知识库还没有文档。先去「灵感采集」记录一条吧。</p></div></article>`,
+          `<article class="notice-row" style="grid-template-columns: 1fr;"><div class="notice-body"><p>${queryText ? "没有匹配的知识库内容，换个关键词试试。" : "当前知识库还没有文档。先去「灵感采集」记录一条吧。"}</p></div></article>`,
         );
       }
+      list.classList.add("ai-context-list-v18");
+      list.setAttribute("role", "listbox");
+      list.setAttribute("aria-label", "知识库上下文搜索结果");
       list.innerHTML = rows.join("");
+      const count = layer.querySelector("[data-ai-context-count]");
+      if (count) count.textContent = `${folders.length + docs.length} 个结果${queryText ? " · " + queryText : ""}`;
+      if (search && document.activeElement !== search) search.focus({ preventScroll: true });
       list.dataset.bridgeBound = "true";
     }
 
@@ -5317,10 +6776,47 @@
         ev.preventDefault();
         ev.stopPropagation();
         const wasOn = row.classList.toggle("active");
+        row.setAttribute("aria-selected", wasOn ? "true" : "false");
         const btn = row.querySelector("[data-context-toggle]");
         if (btn) btn.textContent = wasOn ? "已选" : "选择";
         const icon = row.querySelector(".notice-icon");
         if (icon) icon.classList.toggle("green", wasOn);
+      });
+      layer.addEventListener("keydown", (ev) => {
+        const input = ev.target.closest("[data-ai-context-search]");
+        if (input) {
+          if (ev.key === "Escape") closeV14Layers();
+          if (ev.key === "ArrowDown") {
+            ev.preventDefault();
+            layer.querySelector(".context-source-v18")?.focus();
+          }
+          return;
+        }
+        const row = ev.target.closest(".context-source-v18[data-source-id]");
+        if (!row) return;
+        if (ev.key === "Enter" || ev.key === " ") {
+          ev.preventDefault();
+          row.click();
+        } else if (ev.key === "ArrowDown") {
+          ev.preventDefault();
+          row.nextElementSibling?.focus?.();
+        } else if (ev.key === "ArrowUp") {
+          ev.preventDefault();
+          row.previousElementSibling?.focus?.() || layer.querySelector("[data-ai-context-search]")?.focus();
+        }
+      });
+      let searchTimer = null;
+      layer.addEventListener("input", (ev) => {
+        const input = ev.target.closest("[data-ai-context-search]");
+        if (!input) return;
+        window.clearTimeout(searchTimer);
+        const count = layer.querySelector("[data-ai-context-count]");
+        if (count) count.textContent = "正在搜索...";
+        searchTimer = window.setTimeout(() => {
+          hydrate(input.value).catch((e) =>
+            console.warn("[Mydow v1.4] aiContext search failed", e),
+          );
+        }, 220);
       });
     }
 
@@ -5365,11 +6861,30 @@
         const layer = btn.closest('.surface-layer[data-modal="aiContext"]');
         const documentIds = [];
         const folderIds = [];
+        const sources = [];
         if (layer) {
           layer.querySelectorAll(".context-source[data-source-id].active").forEach((el) => {
             const t = el.dataset.sourceType || "document";
-            if (t === "folder") folderIds.push(el.dataset.sourceId);
-            else documentIds.push(el.dataset.sourceId);
+            const id = String(el.dataset.sourceId || "");
+            const title =
+              el.dataset.sourceTitle ||
+              el.querySelector(".notice-body h2")?.textContent?.trim() ||
+              (t === "folder" ? "知识库文件夹" : "未命名文档");
+            if (!id) return;
+            if (t === "folder") {
+              folderIds.push(id);
+              V14.contextFoldersCache[id] = { id, title };
+              sources.push({ type: "folder", label: title, ref: id });
+            } else {
+              documentIds.push(id);
+              V14.contextDocsCache[id] = {
+                id,
+                title,
+                folder_id: el.dataset.folderId || null,
+                kind: "doc",
+              };
+              sources.push({ type: "doc", label: title, ref: id });
+            }
           });
         }
         if (documentIds.length === 0 && folderIds.length === 0) {
@@ -5383,10 +6898,7 @@
               context_scope: mergedContextScopeV16({
                 document_ids: documentIds,
                 folder_ids: folderIds,
-                sources:
-                  documentIds.length + folderIds.length > 0
-                    ? ["doc"]
-                    : undefined,
+                sources,
               }),
             },
           });
@@ -5433,7 +6945,7 @@
     );
   }
 
-  // §15.39.voice — 「录音已暂停」 → UI only；语音真接通在 §3.2
+  // §18.10.voice — 「录音已暂停」 stops the real browser speech recognizer.
   function bindVoicePauseV39() {
     document.addEventListener(
       "click",
@@ -5442,7 +6954,14 @@
         if (!btn) return;
         event.preventDefault();
         event.stopImmediatePropagation();
-        toast("录音已暂停（V1 仅 UI；语音流接通在 §3.2 上线）", "info");
+        if (voiceRecognitionV18) {
+          try { voiceRecognitionV18.stop(); } catch (_e) { /* noop */ }
+          voiceRecognitionV18 = null;
+        }
+        const layer = btn.closest('.surface-layer[data-modal="voiceInput"]');
+        const status = layer?.querySelector("[data-v18-voice-status]");
+        if (status) status.textContent = "听写已暂停";
+        toast("语音听写已暂停", "success");
       },
       true
     );
@@ -5611,7 +7130,7 @@
     );
   }
 
-  // §15.39.voiceFinish — 「语音记录已保存」 → POST /capture/text 落库
+  // §18.10.voiceFinish — 「语音记录已保存」 → POST /capture/text(type=voice) 落库
   function bindVoiceFinishV39() {
     document.addEventListener(
       "click",
@@ -5620,25 +7139,7 @@
         if (!btn) return;
         event.preventDefault();
         event.stopImmediatePropagation();
-        const layer = btn.closest('.surface-layer[data-modal="voiceCapture"]');
-        const transcript = layer && layer.querySelector("textarea");
-        const text = (transcript && transcript.value.trim()) || "（语音转写占位）";
-        try {
-          await apiFetch("/capture/text", {
-            method: "POST",
-            body: {
-              content: text,
-              content_type: "voice",
-              tags: ["语音"],
-              auto_process: true,
-            },
-          });
-          toast("语音记录已保存到最近捕捉", "success");
-          closeV14Layers();
-          await loadFeedCards();
-        } catch (e) {
-          toast("保存失败: " + e.message, "error");
-        }
+        await handleVoiceInputModal(btn, btn.closest('.surface-layer[data-modal="voiceInput"]'));
       },
       true
     );
@@ -5649,6 +7150,7 @@
     bindConfirmDeleteV39();
     bindMovePanelV39();
     bindThemeToggleV39();
+    bindAccountSecurityHydrateV18();
     bindPrefToggleV39();
     bindPasswordModalV39();
     bindBillingV39();
@@ -5799,6 +7301,19 @@
 }
 .skills-open .skill-chip:hover {
   transform: translateY(-1px);
+}
+.skill-filter-empty-v18 {
+  grid-column: 1 / -1;
+  min-height: 150px;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  border: 1px dashed rgba(99,135,232,.24);
+  border-radius: 16px;
+  color: #6f7f98;
+  background: rgba(255,255,255,.68);
+  font-size: 13px;
+  font-weight: 680;
 }
 
 /* §16.6 — Completed skill run badge on grid cards (notification + poll). */
@@ -5956,6 +7471,102 @@ a:focus-visible,
   padding: 18px;
   color: #97a3b7;
   font-size: 12px;
+}
+
+/* §18.7 — Skills side rail must not clip recommendations/recent usage. */
+.page.skills-open .skills-drawer .insight-panel {
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding-right: 12px !important;
+}
+.page.skills-open .skills-drawer .insight-panel::-webkit-scrollbar {
+  width: 7px;
+}
+.page.skills-open .skills-drawer .insight-panel::-webkit-scrollbar-thumb {
+  background: rgba(108,124,153,.22);
+  border-radius: 999px;
+}
+.skills-drawer .recommend-card {
+  margin-bottom: 12px;
+}
+.skill-side-rec-list-v18 {
+  margin: 12px 0 16px;
+  border: 1px solid rgba(99,135,232,.15);
+  border-radius: 15px;
+  background: rgba(255,255,255,.72);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+}
+.skill-side-rec-list-v18 summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 42px;
+  padding: 10px 12px;
+  cursor: pointer;
+  color: #293650;
+  font-size: 13px;
+  font-weight: 780;
+  list-style: none;
+}
+.skill-side-rec-list-v18 summary::-webkit-details-marker { display: none; }
+.skill-side-rec-list-v18 summary::before {
+  content: "▶";
+  color: #6387e8;
+  font-size: 10px;
+  transition: transform .16s ease;
+}
+.skill-side-rec-list-v18[open] summary::before {
+  transform: rotate(90deg);
+}
+.skill-side-rec-list-v18 summary span {
+  flex: 1;
+}
+.skill-side-rec-list-v18 summary small {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(99,135,232,.1);
+  color: #6387e8;
+  font-size: 11px;
+  font-weight: 760;
+}
+.skill-side-rec-items-v18 {
+  display: grid;
+  gap: 8px;
+  padding: 0 10px 10px;
+}
+.skill-side-rec-list-v18 .compact-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0,1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 38px;
+  padding: 7px 8px;
+  border-radius: 11px;
+  cursor: pointer;
+  background: rgba(247,249,255,.78);
+  transition: background .14s ease, transform .14s ease;
+}
+.skill-side-rec-list-v18 .compact-row:hover {
+  transform: translateY(-1px);
+  background: rgba(239,244,255,.96);
+}
+.skill-side-rec-list-v18 .compact-row strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #1d2742;
+  font-size: 13px;
+}
+.skill-side-rec-list-v18 .compact-row > span:last-child {
+  color: #7d8ba3;
+  font-size: 11px;
+  font-weight: 720;
+}
+.skills-drawer .section-label {
+  clear: both;
 }
 `;
     document.head.appendChild(style);
@@ -6312,12 +7923,14 @@ a:focus-visible,
       return;
     }
 
+    injectAiComposerLayoutFixV18();
     bindCaptureSubmit();
     bindModalSubmitsCapture();
     bindCreateDocCapture();
     bindCardClickToDrawer();
     bindCardFavoriteAction();
     bindSkillRunModalContext();
+    bindVoiceInputModalV18();
     bindNoticeFilterCapture();
     bindNoticeQuickCapture();
     bindNoticeRowMarkRead();
@@ -6328,7 +7941,9 @@ a:focus-visible,
     attachGardenInlineMenuV17();
     bindSkillCardStash();
     bindSkillDetailRunHistoryV17();
+    bindSkillsCategoryFilterV40();
     bindSkillsPageHydration();
+    openSkillsFromHashV18();
     bindAiThreadHydrate();
     bindAiComposerCapture();
     bindAiConvIdWatcher();
@@ -6350,9 +7965,11 @@ a:focus-visible,
     bindAiChatRenameV37();
     bindAiChatMoreV37();
     trackAiModelV37();
+    bindAiPersonalizeModernControlsV18();
     bindCardShareV37();
     bindFolderFavoriteV37();
     bindSkillFavoriteV37();
+    bindDocEditorHydrateAndAutosaveV18();
     bindDocAiActionsV37();
     bindInsightActionsV37();
     _restoreAiModelV37();

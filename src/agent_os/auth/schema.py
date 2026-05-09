@@ -82,6 +82,10 @@ class Prd10PreferencesView(BaseModel):
     ai_response_style: Literal[
         "concise_structured", "concise", "detailed", "academic"
     ] = Field(default="concise_structured")
+    ai_detail_level: Literal["brief", "balanced", "deep"] = Field(default="balanced")
+    cite_knowledge_by_default: bool = Field(default=True)
+    ai_auto_suggest: bool = Field(default=True)
+    ai_streaming: bool = Field(default=True)
     default_ai_model: str = Field(default="auto")
     daily_report_time: str = Field(default="21:30")
     notification_enabled: bool = Field(default=True)
@@ -230,6 +234,10 @@ PRD10_SETTINGS_WHITELIST = frozenset({
     "default_view",
     "default_input_mode",
     "ai_response_style",
+    "ai_detail_level",
+    "cite_knowledge_by_default",
+    "ai_auto_suggest",
+    "ai_streaming",
     "default_ai_model",
     "auto_save",
     "two_factor_enabled",

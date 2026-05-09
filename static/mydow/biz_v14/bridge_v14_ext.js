@@ -531,8 +531,17 @@
       `.idea-card[data-bridge-bound=true],.library-card[data-bridge-bound=true],.notice-row[data-bridge-bound=true],.record-card[data-bridge-bound=true]{animation:mydowStateIn .26s ease-out both}` +
       `.pill-button,.soft-filter,.icon-button,.square-tool,.send-button{transition:transform .14s ease,box-shadow .14s ease,background-color .14s ease}` +
       `.pill-button:active,.soft-filter:active,.icon-button:active,.square-tool:active,.send-button:active{transform:translateY(1px) scale(.985)}` +
+      `.select-control[data-v18-bound=true],.segmented-control[data-v18-bound=true] button,.toggle-switch[data-v18-bound=true]{cursor:pointer}` +
+      `.select-control[data-v18-bound=true]{position:relative;min-width:132px;border:1px solid rgba(128,145,178,.28)!important;border-radius:999px!important;background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(247,249,253,.94))!important;box-shadow:0 10px 24px rgba(48,64,96,.08);transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease}` +
+      `.select-control[data-v18-bound=true]:hover,.select-control[data-v18-bound=true][aria-expanded=true]{border-color:rgba(95,125,240,.45)!important;box-shadow:0 14px 30px rgba(58,78,128,.14);transform:translateY(-1px)}` +
+      `.mydow-choice-popover{position:fixed;z-index:9999;min-width:220px;max-width:min(320px,calc(100vw - 28px));padding:8px;border:1px solid rgba(120,136,166,.2);border-radius:18px;background:rgba(255,255,255,.96);box-shadow:0 24px 70px rgba(23,34,58,.18),0 4px 14px rgba(23,34,58,.08);backdrop-filter:blur(18px);animation:mydowPopoverIn .14s ease-out both}` +
+      `.mydow-choice-popover button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:14px;border:0;border-radius:13px;background:transparent;padding:11px 12px;color:#243047;font-size:13px;font-weight:680;text-align:left;cursor:pointer}` +
+      `.mydow-choice-popover button small{display:block;margin-top:2px;color:#7a879b;font-size:11px;font-weight:560}` +
+      `.mydow-choice-popover button:hover,.mydow-choice-popover button[aria-selected=true]{background:linear-gradient(135deg,rgba(239,244,255,.98),rgba(247,251,255,.92));color:#3655c8}` +
+      `.mydow-choice-popover button[aria-selected=true]::after{content:"✓";font-weight:900;color:#4d6df1}` +
       `@keyframes mydowSkel{0%{background-position:0 0}100%{background-position:-200% 0}}` +
       `@keyframes mydowStateIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}` +
+      `@keyframes mydowPopoverIn{from{opacity:0;transform:translateY(-4px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}` +
       `@media (prefers-reduced-motion:reduce){.mydow-skel,.mydow-state-card,.idea-card[data-bridge-bound=true],.library-card[data-bridge-bound=true],.notice-row[data-bridge-bound=true],.record-card[data-bridge-bound=true]{animation:none!important}.pill-button,.soft-filter,.icon-button,.square-tool,.send-button{transition:none!important}}` +
       `.mydow-empty-hint{border:1px dashed rgba(108,124,153,.35);border-radius:14px;background:rgba(255,255,255,.5)}`;
     document.head.appendChild(s);
@@ -1248,7 +1257,7 @@
       },
       // voice modal
       "录音已暂停": async () => {
-        base.toast && base.toast("录音已暂停（演示）", "info");
+        base.toast && base.toast("语音听写已暂停", "info");
         return true;
       },
       // aiContext modal — add selected ids
@@ -1418,6 +1427,342 @@
   }
 
   // ─── boot ───────────────────────────────────────────────────────────────
+  // §18.1 — profile preferences: real controls + modern popovers.
+  const PROFILE_PREF_OPTIONS = {
+    default_ai_model: [
+      { value: "auto", label: "Mydow Auto", desc: "根据任务自动选择" },
+      { value: "deepseek-v4-flash", label: "DeepSeek V4 Flash", desc: "当前默认高速模型" },
+      { value: "glm-4-flash", label: "GLM-4 Flash", desc: "轻量生成与整理" },
+    ],
+    language: [
+      { value: "zh-CN", label: "中文 简体", desc: "界面与 AI 输出优先中文" },
+      { value: "en-US", label: "English", desc: "Use English interface copy" },
+    ],
+    default_input_mode: [
+      { value: "auto", label: "智能识别 Auto", desc: "自动识别文本、链接与文件" },
+      { value: "text", label: "文本输入", desc: "默认按文字灵感处理" },
+      { value: "voice", label: "语音优先", desc: "移动端优先打开语音" },
+    ],
+  };
+
+  function rowText(row) {
+    return (row?.innerText || "").replace(/\s+/g, " ").trim();
+  }
+
+  function preferenceKeyForRow(row) {
+    const text = rowText(row);
+    if (/默认\s*AI\s*模型|Mydow Auto|DeepSeek|GLM/i.test(text)) return "default_ai_model";
+    if (/语言|language/i.test(text)) return "language";
+    if (/默认输入|输入模式|智能识别/i.test(text)) return "default_input_mode";
+    return "";
+  }
+
+  function labelForPreference(key, value) {
+    const item = (PROFILE_PREF_OPTIONS[key] || []).find((opt) => opt.value === value);
+    return item ? item.label : String(value || "");
+  }
+
+  function normalizePreferencesPayload(resp) {
+    const data = resp && resp.data ? resp.data : resp;
+    if (data && data.settings && typeof data.settings === "object") {
+      return { ...data.settings, locale: data.locale || data.settings.locale };
+    }
+    return data || resp || {};
+  }
+
+  function applyThemePreferenceV18(theme) {
+    const requested = theme || "light";
+    const resolved = requested === "system"
+      ? (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+      : (requested === "dark" ? "dark" : "light");
+    if (window.MydowBridgeV14 && typeof window.MydowBridgeV14.applyTheme === "function") {
+      window.MydowBridgeV14.applyTheme(resolved);
+    } else {
+      document.documentElement.dataset.theme = resolved;
+      document.body.classList.toggle("theme-dark", resolved === "dark");
+      document.body.classList.toggle("theme-light", resolved !== "dark");
+      try { localStorage.setItem("mydow_v14_theme", resolved); } catch (_e) {}
+    }
+    document.body.dataset.themePreference = requested;
+  }
+
+  function setTextIfFound(selector, text) {
+    const node = document.querySelector(selector);
+    if (node && text) node.textContent = text;
+  }
+
+  function applyLanguagePreferenceV18(language) {
+    const lang = language || "zh-CN";
+    const english = /^en/i.test(lang);
+    document.documentElement.lang = english ? "en-US" : "zh-CN";
+    document.body.dataset.language = document.documentElement.lang;
+    try { localStorage.setItem("mydow_v14_language", document.documentElement.lang); } catch (_e) {}
+    const nav = english
+      ? ["Capture", "Knowledge Base", "Digital Garden", "Mydow AI", "Skills"]
+      : ["灵感采集", "知识库", "数字花园", "Mydow AI", "Skills 广场"];
+    document.querySelectorAll("[data-nav-target]").forEach((node, idx) => {
+      if (nav[idx]) node.textContent = nav[idx];
+    });
+    const header = document.querySelector(".profile-main h1");
+    if (header) header.textContent = english ? "Profile & Settings" : "个人中心与设置";
+    const sub = document.querySelector(".profile-main h1 + p");
+    if (sub) {
+      sub.textContent = english
+        ? "Manage your profile, preferences, and account security"
+        : "管理你的个人信息、偏好设置与账户安全";
+    }
+    const menuLabels = english
+      ? ["Profile", "Account Security", "Preferences", "Billing & Usage"]
+      : ["个人资料", "账户安全", "偏好设置", "会员与用量"];
+    document.querySelectorAll(".settings-menu button").forEach((btn, idx) => {
+      if (menuLabels[idx]) btn.textContent = menuLabels[idx];
+    });
+    const activePanel =
+      (document.querySelector(".settings-menu button.active") || {}).dataset?.settingsPanel || "profile";
+    const panelTitles = english
+      ? {
+          profile: "Profile",
+          security: "Account Security",
+          preferences: "Preferences",
+          billing: "Billing & Usage",
+          basic: "Basic Preferences",
+        }
+      : {
+          profile: "个人资料",
+          security: "账户安全",
+          preferences: "偏好设置",
+          billing: "会员与用量",
+          basic: "基础偏好",
+        };
+    const profileTitle = document.querySelector(".profile-main .profile-card h2");
+    if (profileTitle && activePanel === "profile") profileTitle.textContent = panelTitles.profile;
+    const settingsTitle = document.querySelector(".profile-main .settings-card h2");
+    if (settingsTitle) {
+      settingsTitle.textContent =
+        activePanel === "profile" ? panelTitles.basic : (panelTitles[activePanel] || panelTitles.profile);
+    }
+    const search = document.querySelector('.search input[type="search"], input[placeholder*="搜索"]');
+    if (search) {
+      search.setAttribute("placeholder", english ? "Search ideas, notes, resources, or anything..." : "搜索灵感、笔记、资源或任何内容...");
+    }
+  }
+
+  function applyDefaultInputModePreferenceV18(mode) {
+    const next = mode || "text";
+    document.body.dataset.defaultInputMode = next;
+    const capture = document.querySelector(".capture, [aria-label='灵感输入']");
+    document.querySelectorAll(".capture textarea, [aria-label='灵感输入'] textarea").forEach((ta) => {
+      const placeholder =
+        next === "voice"
+          ? "默认语音优先：点击语音输入开始记录，或直接粘贴转写文本..."
+          : next === "auto"
+            ? "输入后自动识别文本、链接、任务或语音转写..."
+            : "现在的想法或感悟记录下来...";
+      ta.setAttribute("placeholder", placeholder);
+    });
+    if (capture) {
+      capture.classList.toggle("default-input-voice", next === "voice");
+      capture.classList.toggle("default-input-auto", next === "auto");
+    }
+    document.querySelectorAll('[data-open-modal="voiceInput"], button[aria-label="语音输入"]').forEach((btn) => {
+      btn.classList.toggle("active", next === "voice");
+      btn.setAttribute("aria-pressed", String(next === "voice"));
+    });
+    document.querySelectorAll(".capture button").forEach((btn) => {
+      if (/Auto|智能识别/.test(btn.textContent || "")) {
+        btn.classList.toggle("active", next === "auto");
+        btn.setAttribute("aria-pressed", String(next === "auto"));
+      }
+    });
+  }
+
+  function applyProfilePreferencesV18(prefs) {
+    const safe = prefs || {};
+    applyThemePreferenceV18(safe.theme || "light");
+    applyLanguagePreferenceV18(safe.language || safe.locale || "zh-CN");
+    applyDefaultInputModePreferenceV18(safe.default_input_mode || "text");
+  }
+
+  function closeChoicePopover() {
+    document.querySelectorAll(".mydow-choice-popover").forEach((node) => node.remove());
+    document.querySelectorAll(".select-control[aria-expanded=true]").forEach((node) => {
+      node.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function openChoicePopover(anchor, key, current, onPick) {
+    closeChoicePopover();
+    const options = PROFILE_PREF_OPTIONS[key] || [];
+    if (!anchor || options.length === 0) return;
+    anchor.dataset.v18Bound = "true";
+    anchor.setAttribute("role", "button");
+    anchor.setAttribute("tabindex", "0");
+    anchor.setAttribute("aria-haspopup", "listbox");
+    anchor.setAttribute("aria-expanded", "true");
+    const box = document.createElement("div");
+    box.className = "mydow-choice-popover";
+    box.setAttribute("role", "listbox");
+    box.dataset.preferenceKey = key;
+    box.innerHTML = options
+      .map((opt) => {
+        const selected = opt.value === current ? "true" : "false";
+        return (
+          `<button type="button" role="option" aria-selected="${selected}" data-value="${escapeHtml(opt.value)}">` +
+          `<span>${escapeHtml(opt.label)}<small>${escapeHtml(opt.desc || "")}</small></span>` +
+          `</button>`
+        );
+      })
+      .join("");
+    document.body.appendChild(box);
+    const rect = anchor.getBoundingClientRect();
+    const top = Math.min(rect.bottom + 8, window.innerHeight - box.offsetHeight - 14);
+    const left = Math.min(Math.max(14, rect.left), window.innerWidth - box.offsetWidth - 14);
+    box.style.top = `${Math.max(14, top)}px`;
+    box.style.left = `${left}px`;
+    box.addEventListener("click", async (event) => {
+      const btn = event.target.closest("button[data-value]");
+      if (!btn) return;
+      event.preventDefault();
+      await onPick(btn.dataset.value);
+      closeChoicePopover();
+    });
+  }
+
+  function markProfilePreferenceControls() {
+    document.querySelectorAll(".profile-main .preference-row").forEach((row) => {
+      const key = preferenceKeyForRow(row);
+      if (key) row.dataset.preferenceKey = key;
+      row.querySelectorAll(".select-control").forEach((ctrl) => {
+        if (!key) return;
+        ctrl.dataset.v18Bound = "true";
+        ctrl.setAttribute("role", "button");
+        ctrl.setAttribute("tabindex", "0");
+        ctrl.setAttribute("aria-haspopup", "listbox");
+        ctrl.setAttribute("aria-expanded", "false");
+      });
+      row.querySelectorAll(".segmented-control").forEach((ctrl) => {
+        ctrl.dataset.v18Bound = "true";
+      });
+      row.querySelectorAll(".toggle-switch").forEach((ctrl) => {
+        ctrl.dataset.v18Bound = "true";
+      });
+    });
+  }
+
+  async function hydrateProfilePreferences(base) {
+    try {
+      const resp = await base.apiFetch("/me/preferences");
+      const prefs = normalizePreferencesPayload(base.unwrapData ? base.unwrapData(resp) || resp : resp);
+      applyProfilePreferencesV18(prefs);
+      document.querySelectorAll(".profile-main .preference-row").forEach((row) => {
+        const key = preferenceKeyForRow(row);
+        if (key) {
+          const label = labelForPreference(key, prefs[key]);
+          row.querySelectorAll(".select-control").forEach((ctrl) => {
+            const icon = ctrl.querySelector("svg");
+            ctrl.childNodes.forEach((node) => {
+              if (node.nodeType === Node.TEXT_NODE) node.textContent = "";
+            });
+            ctrl.insertBefore(document.createTextNode(label + " "), icon || null);
+            ctrl.dataset.value = prefs[key] || "";
+          });
+        }
+        const text = rowText(row);
+        if (/自动保存/.test(text)) {
+          row.querySelectorAll(".toggle-switch").forEach((sw) => {
+            const active = Boolean(prefs.auto_save);
+            sw.classList.toggle("active", active);
+            sw.setAttribute("aria-pressed", String(active));
+            sw.setAttribute("aria-label", active ? "自动保存已开启" : "自动保存已关闭");
+          });
+        }
+        if (/主题模式/.test(text)) {
+          row.querySelectorAll(".segmented-control button").forEach((btn) => {
+            const isDark = /深色/.test(btn.textContent || "");
+            const active = (prefs.theme || "light") === (isDark ? "dark" : "light");
+            btn.classList.toggle("active", active);
+            btn.setAttribute("aria-pressed", String(active));
+          });
+        }
+      });
+      return prefs;
+    } catch (e) {
+      console.warn("[v14-ext] hydrate profile preferences", e);
+      return null;
+    } finally {
+      markProfilePreferenceControls();
+    }
+  }
+
+  function bindProfilePreferencesV18(base) {
+    const scheduleHydrate = () => {
+      [120, 520, 1000].forEach((delay) => {
+        window.setTimeout(() => hydrateProfilePreferences(base), delay);
+      });
+    };
+    scheduleHydrate();
+    document.addEventListener("click", (event) => {
+      if (event.target.closest("[data-settings-panel]") || event.target.closest("[data-account-action='preferences']")) {
+        scheduleHydrate();
+      }
+    }, false);
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest(".mydow-choice-popover,.select-control")) closeChoicePopover();
+    }, true);
+    document.addEventListener(
+      "click",
+      async (event) => {
+        const themeBtn = event.target.closest(".profile-main .segmented-control button");
+        if (themeBtn) {
+          const row = themeBtn.closest(".preference-row");
+          if (/主题模式/.test(rowText(row))) {
+            event.preventDefault();
+            event.stopPropagation();
+            const theme = /深色/.test(themeBtn.textContent || "") ? "dark" : "light";
+            try {
+              const resp = await base.apiFetch("/me/preferences", { method: "PATCH", body: { theme } });
+              applyProfilePreferencesV18(normalizePreferencesPayload(resp));
+              row.querySelectorAll(".segmented-control button").forEach((btn) => {
+                const active = btn === themeBtn;
+                btn.classList.toggle("active", active);
+                btn.setAttribute("aria-pressed", String(active));
+              });
+              base.toast && base.toast(theme === "dark" ? "已切换为深色模式" : "已切换为浅色模式", "success");
+            } catch (e) {
+              base.toast && base.toast(`主题保存失败: ${e.message}`, "error");
+            }
+            return;
+          }
+        }
+        const select = event.target.closest(".profile-main .select-control");
+        if (select) {
+          const row = select.closest(".preference-row");
+          const key = preferenceKeyForRow(row);
+          if (!key) return;
+          event.preventDefault();
+          event.stopPropagation();
+          const current = select.dataset.value || "";
+          openChoicePopover(select, key, current, async (value) => {
+            try {
+              const resp = await base.apiFetch("/me/preferences", { method: "PATCH", body: { [key]: value } });
+              applyProfilePreferencesV18(normalizePreferencesPayload(resp));
+              select.dataset.value = value;
+              const icon = select.querySelector("svg");
+              select.childNodes.forEach((node) => {
+                if (node.nodeType === Node.TEXT_NODE) node.textContent = "";
+              });
+              select.insertBefore(document.createTextNode(labelForPreference(key, value) + " "), icon || null);
+              base.toast && base.toast("偏好已保存", "success");
+            } catch (e) {
+              base.toast && base.toast(`偏好保存失败: ${e.message}`, "error");
+            }
+          });
+        }
+      },
+      false,
+    );
+  }
+
   async function boot() {
     const base = await whenBaseReady(8000);
     if (!base || !base.apiFetch) {
@@ -1437,6 +1782,7 @@
     bindNoteOptions(base);
     bindOpenFolder(base);
     bindSearchResultClick(base);
+    bindProfilePreferencesV18(base);
     // expose state for tests
     window.MydowBridgeV14Ext = {
       ctx: _CTX,
@@ -1445,6 +1791,7 @@
       showFeedSkeleton,
       hideFeedSkeleton,
       enhanceSearchEmptyNodes,
+      hydrateProfilePreferences: () => hydrateProfilePreferences(base),
     };
     console.info("[Mydow v1.4] ext bridge ready (extra wiring loaded)");
   }

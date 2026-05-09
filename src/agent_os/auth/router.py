@@ -1,7 +1,10 @@
 """Authentication API router."""
 
+import hashlib
 import logging
+import secrets
 import uuid
+from datetime import UTC, datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -57,6 +60,46 @@ demo_router = APIRouter(prefix="/api/v1/demo", tags=["Demo"])
 _DEMO_EMAIL_DEFAULT = "demo@mydow.example"
 _DEMO_USERNAME_DEFAULT = "demo"
 _DEMO_PASSWORD_DEFAULT = "demo123"
+
+
+def _iso_now() -> str:
+    return datetime.now(UTC).isoformat()
+
+
+def _request_device_payload(request: Request) -> dict:
+    """Return a durable current-session device summary for account security."""
+
+    user_agent = (request.headers.get("user-agent") or "Unknown browser").strip()
+    platform = "Windows" if "Windows" in user_agent else "macOS" if "Mac" in user_agent else "Linux" if "Linux" in user_agent else "Device"
+    browser = "Chrome" if "Chrome" in user_agent else "Edge" if "Edg" in user_agent else "Safari" if "Safari" in user_agent else "Browser"
+    host = request.client.host if request.client else "unknown"
+    return {
+        "id": hashlib.sha256(f"{host}|{user_agent}".encode("utf-8")).hexdigest()[:16],
+        "label": f"{platform} · {browser}",
+        "ip": host,
+        "user_agent": user_agent[:240],
+        "last_seen_at": _iso_now(),
+        "current": True,
+    }
+
+
+def _project_account_security(user: User, request: Request | None = None) -> dict:
+    settings = dict(user.settings or {})
+    devices = list(settings.get("login_devices") or [])
+    if request is not None:
+        current = _request_device_payload(request)
+        devices = [d for d in devices if d.get("id") != current["id"]]
+        devices.insert(0, current)
+    return {
+        "email": user.email,
+        "email_verified": bool(settings.get("email_verified", False)),
+        "email_verification_requested_at": settings.get("email_verification_requested_at"),
+        "email_verification_delivery": settings.get("email_verification_delivery"),
+        "two_factor_enabled": bool(settings.get("two_factor_enabled", False)),
+        "password_rotated_at": settings.get("password_rotated_at"),
+        "last_security_refresh_at": settings.get("last_security_refresh_at"),
+        "login_devices": devices[:8],
+    }
 
 
 def _is_demo_mode_enabled() -> bool:
@@ -616,6 +659,12 @@ def _project_prd10_preferences(settings: dict | None) -> Prd10PreferencesView:
         "locale": raw.get("locale") or "zh-CN",
         "timezone": raw.get("timezone") or "Asia/Shanghai",
         "ai_response_style": raw.get("ai_response_style") or "concise_structured",
+        "ai_detail_level": raw.get("ai_detail_level") or "balanced",
+        "cite_knowledge_by_default": bool(
+            raw.get("cite_knowledge_by_default", True)
+        ),
+        "ai_auto_suggest": bool(raw.get("ai_auto_suggest", True)),
+        "ai_streaming": bool(raw.get("ai_streaming", True)),
         "default_ai_model": raw.get("default_ai_model") or "auto",
         "daily_report_time": raw.get("daily_report_time") or "21:30",
         "notification_enabled": bool(raw.get("notification_enabled", True)),
@@ -646,6 +695,132 @@ async def get_prd10_me_preferences(
     """
 
     return _project_prd10_preferences(current_user.settings)
+
+
+@me_router.get(
+    "/me/security",
+    responses={401: {"model": ErrorResponse, "description": "Not authenticated"}},
+)
+async def get_prd10_me_security(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the real persisted account-security state for the user."""
+
+    current_device = _request_device_payload(request)
+    existing = list((current_user.settings or {}).get("login_devices") or [])
+    if not any(d.get("id") == current_device["id"] for d in existing):
+        await crud.update_prd10_me(
+            db=db,
+            user_id=current_user.id,
+            settings_patch={
+                "login_devices": [current_device, *existing][:8],
+                "last_security_refresh_at": current_device["last_seen_at"],
+            },
+        )
+        current_user = await crud.get_user_by_id(db, current_user.id) or current_user
+
+    return _project_account_security(current_user, request)
+
+
+@me_router.post(
+    "/me/security/email-verification",
+    responses={401: {"model": ErrorResponse, "description": "Not authenticated"}},
+)
+async def request_prd10_email_verification(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a real verification request and delivery record for this email.
+
+    If SMTP/Redis are configured, the endpoint sends through the production
+    verification-code pipeline. In local/demo deployments without SMTP, it
+    still persists a one-time local-outbox request instead of pretending a
+    message was sent.
+    """
+
+    now = _iso_now()
+    delivery = "local_outbox"
+    request_id = str(uuid.uuid4())
+    token_hash = hashlib.sha256(secrets.token_urlsafe(32).encode("utf-8")).hexdigest()
+    error: str | None = None
+
+    verification = get_verification_service()
+    if verification is not None:
+        try:
+            code = verification.create_code(
+                email=str(current_user.email),
+                code_type="bind",
+                ip=request.client.host if request.client else "unknown",
+            )
+            mailer = get_mailer()
+            result = mailer.send_template(
+                to=str(current_user.email),
+                subject=f"[Mydow] 邮箱验证码：{code}",
+                template_name="verification_code.html",
+                context={
+                    "code": code,
+                    "email": str(current_user.email),
+                    "year": datetime.now().year,
+                    "app_name": "Mydow",
+                },
+            )
+            if result.success:
+                delivery = "smtp"
+            else:
+                error = result.error
+        except Exception as exc:  # pragma: no cover - depends on local SMTP/Redis
+            error = str(exc)
+
+    user = await crud.update_prd10_me(
+        db=db,
+        user_id=current_user.id,
+        settings_patch={
+            "email_verified": False,
+            "email_verification_requested_at": now,
+            "email_verification_delivery": delivery,
+            "email_verification_request_id": request_id,
+            "email_verification_token_hash": token_hash,
+            "email_verification_error": error,
+        },
+    )
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    payload = _project_account_security(user, request)
+    payload["request_id"] = request_id
+    payload["delivery_error"] = error
+    return payload
+
+
+@me_router.post(
+    "/me/security/devices/refresh",
+    responses={401: {"model": ErrorResponse, "description": "Not authenticated"}},
+)
+async def refresh_prd10_login_devices(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Persist and return the current-login device list."""
+
+    current_device = _request_device_payload(request)
+    existing = list((current_user.settings or {}).get("login_devices") or [])
+    devices = [d for d in existing if d.get("id") != current_device["id"]]
+    devices.insert(0, current_device)
+    user = await crud.update_prd10_me(
+        db=db,
+        user_id=current_user.id,
+        settings_patch={
+            "login_devices": devices[:8],
+            "last_security_refresh_at": current_device["last_seen_at"],
+        },
+    )
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return _project_account_security(user, request)
 
 
 @me_router.post(
@@ -700,6 +875,12 @@ async def change_prd10_me_password(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
+
+    user = await crud.update_prd10_me(
+        db=db,
+        user_id=current_user.id,
+        settings_patch={"password_rotated_at": _iso_now()},
+    ) or user
 
     return Prd10PasswordUpdateResponse(
         id=user.id,

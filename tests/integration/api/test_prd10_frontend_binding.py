@@ -1101,6 +1101,221 @@ def test_biz_v14_ext_exposes_six_state_runtime():
     assert not missing, f"biz_v14 ext missing six-state hooks: {missing}"
 
 
+def test_biz_v14_profile_preferences_are_real_controls():
+    """§18.1 — profile preference controls must be real API-backed UI."""
+
+    bridge = (MYDOW_DIR / "biz_v14" / "bridge_v14.js").read_text(encoding="utf-8")
+    ext = (MYDOW_DIR / "biz_v14" / "bridge_v14_ext.js").read_text(encoding="utf-8")
+    bridge_tokens = [
+        '"自动保存设置已更新": "auto_save"',
+        'sw.setAttribute("aria-pressed", String(next))',
+        'sw.setAttribute("aria-label", next ? "自动保存已开启" : "自动保存已关闭")',
+    ]
+    ext_tokens = [
+        "function bindProfilePreferencesV18",
+        "function hydrateProfilePreferences",
+        'base.apiFetch("/me/preferences", { method: "PATCH", body: { [key]: value } })',
+        'base.apiFetch("/me/preferences", { method: "PATCH", body: { theme } })',
+        "PROFILE_PREF_OPTIONS",
+        "mydow-choice-popover",
+        "default_ai_model",
+        "default_input_mode",
+        "function applyProfilePreferencesV18",
+        "function applyThemePreferenceV18",
+        "function applyLanguagePreferenceV18",
+        "function applyDefaultInputModePreferenceV18",
+        "document.body.dataset.defaultInputMode",
+        "document.documentElement.lang",
+    ]
+    missing_bridge = [token for token in bridge_tokens if token not in bridge]
+    missing_ext = [token for token in ext_tokens if token not in ext]
+    assert not missing_bridge, f"biz_v14 bridge missing §18.1 preference tokens: {missing_bridge}"
+    assert not missing_ext, f"biz_v14 ext missing §18.1 preference tokens: {missing_ext}"
+
+
+def test_biz_v14_account_security_uses_real_api_state():
+    """Section 18.12: account security buttons must read/write real endpoints."""
+
+    bridge = (MYDOW_DIR / "biz_v14" / "bridge_v14.js").read_text(encoding="utf-8")
+    tokens = [
+        "function renderAccountSecurityV18",
+        "function hydrateAccountSecurityV18",
+        "bindAccountSecurityHydrateV18();",
+        'apiFetch("/me/security")',
+        'apiFetch("/me/security/email-verification"',
+        'apiFetch("/me/security/devices/refresh"',
+        'sw.setAttribute("aria-label", next ? "二步验证已开启" : "二步验证已关闭")',
+        "email_verification_requested_at",
+        "last_security_refresh_at",
+    ]
+    missing = [token for token in tokens if token not in bridge]
+    assert not missing, f"biz_v14 bridge missing account security tokens: {missing}"
+    forbidden = [
+        "邮箱验证 V1：链接已记录",
+        "登录设备 V1：当前会话已刷新",
+    ]
+    stale = [token for token in forbidden if token in bridge]
+    assert not stale, f"biz_v14 bridge still has fake account security toasts: {stale}"
+
+
+def test_biz_v14_ai_stream_refreshes_session_before_send():
+    """Section 18.2: AI streaming send recovers from stale browser tokens."""
+
+    bridge = (MYDOW_DIR / "biz_v14" / "bridge_v14.js").read_text(encoding="utf-8")
+    tokens = [
+        "function ensureAiConversationVisibleV18",
+        'page.classList.add("ai-open", "ai-chat-open")',
+        'msg.style.opacity = "1"',
+        "async function fetchAiStreamWithSession",
+        "await ensureSession();",
+        "if (resp.status === 401)",
+        'setToken("");',
+        "resp = await fetch(API_BASE + path, buildInit())",
+        "const streamPath = `/ai/conversations/${conversationId}/messages/stream`",
+    ]
+    missing = [token for token in tokens if token not in bridge]
+    assert not missing, f"biz_v14 bridge missing Section 18.2 stream auth recovery: {missing}"
+
+
+def test_biz_v14_ai_context_picker_is_searchable_and_traceable():
+    """Section 18.3: @ context picker searches real KB data and stores sources."""
+
+    bridge = (MYDOW_DIR / "biz_v14" / "bridge_v14.js").read_text(encoding="utf-8")
+    tokens = [
+        "function injectAiContextPickerStylesV18",
+        "data-ai-context-search",
+        "role=\"searchbox\"",
+        "apiFetch(docPath)",
+        "apiFetch(folderPath)",
+        "context-source-v18",
+        "sources.push({ type: \"folder\", label: title, ref: id })",
+        "sources.push({ type: \"doc\", label: title, ref: id })",
+        "contextFoldersCache",
+        "sources: Array.isArray(V14.contextScope.sources)",
+    ]
+    missing = [token for token in tokens if token not in bridge]
+    assert not missing, f"biz_v14 bridge missing Section 18.3 context picker tokens: {missing}"
+
+
+def test_biz_v14_ai_personalize_dropdowns_are_modern_and_persisted():
+    """Section 18.4: AI personalization dropdowns are modern and API-backed."""
+
+    bridge = (MYDOW_DIR / "biz_v14" / "bridge_v14.js").read_text(encoding="utf-8")
+    tokens = [
+        "function bindAiPersonalizeModernControlsV18",
+        "function hydrateAiPersonalizeControlsV18",
+        "AI_PERSONALIZE_SELECTS_V18",
+        "v18-ai-select-button",
+        "v18-ai-select-panel",
+        "payload.ai_response_style",
+        "payload.ai_detail_level",
+        "payload.cite_knowledge_by_default",
+        'apiFetch("/me/preferences", { method: "PATCH", body: payload })',
+    ]
+    missing = [token for token in tokens if token not in bridge]
+    assert not missing, f"biz_v14 bridge missing Section 18.4 AI personalize tokens: {missing}"
+
+
+def test_biz_v14_doc_editor_autosaves_without_black_focus_frame():
+    """Section 18.5: document editor hydrates real docs and autosaves edits."""
+
+    bridge = (MYDOW_DIR / "biz_v14" / "bridge_v14.js").read_text(encoding="utf-8")
+    tokens = [
+        "function injectDocEditorPolishCssV18",
+        ".doc-body[contenteditable=\"true\"]",
+        "outline: none !important",
+        "function hydrateDocEditorFromDocumentV18",
+        "function saveDocEditorNowV18",
+        "function bindDocEditorHydrateAndAutosaveV18",
+        'apiFetch("/kb/documents/" + encodeURIComponent(id))',
+        'apiFetch("/kb/documents/" + encodeURIComponent(docId),',
+        "method: \"PATCH\"",
+        "scheduleDocEditorSaveV18",
+    ]
+    missing = [token for token in tokens if token not in bridge]
+    assert not missing, f"biz_v14 bridge missing Section 18.5 doc editor tokens: {missing}"
+
+
+def test_biz_v14_skill_run_picker_is_searchable_and_modern():
+    """Section 18.6: Skill run modal uses a searchable KB document picker."""
+
+    bridge = (MYDOW_DIR / "biz_v14" / "bridge_v14.js").read_text(encoding="utf-8")
+    tokens = [
+        "function injectSkillRunPickerStylesV18",
+        "skill-doc-picker-v18",
+        "data-v18-skill-doc-search",
+        "data-v18-skill-doc-list",
+        "skill-doc-option-v18",
+        "role=\"searchbox\"",
+        "role=\"listbox\"",
+        'apiFetch("/kb/documents?page_size=48")',
+        "docSel = layer.querySelector(\"select[data-v16-skill-doc-select]\")",
+        "document_id: documentId",
+    ]
+    missing = [token for token in tokens if token not in bridge]
+    assert not missing, f"biz_v14 bridge missing Section 18.6 skill picker tokens: {missing}"
+
+
+def test_biz_v14_skills_sidebar_recommendations_do_not_clip_recent_usage():
+    """Section 18.7: Skill recommendations collapse cleanly and the side rail scrolls."""
+
+    bridge = (MYDOW_DIR / "biz_v14" / "bridge_v14.js").read_text(encoding="utf-8")
+    tokens = [
+        "skill-side-rec-list-v18",
+        "skill-side-rec-items-v18",
+        "extra = document.createElement(\"details\")",
+        "extra.open = wasOpen",
+        ".page.skills-open .skills-drawer .insight-panel",
+        "overflow-y: auto !important",
+        "scrollbar-gutter: stable",
+        "其他推荐 Skill",
+    ]
+    missing = [token for token in tokens if token not in bridge]
+    assert not missing, f"biz_v14 bridge missing Section 18.7 sidebar layout tokens: {missing}"
+
+
+def test_biz_v14_skill_category_filters_use_real_cached_data_and_url_state():
+    """Section 18.8: Skills chips filter/sort the real /skills list."""
+
+    bridge = (MYDOW_DIR / "biz_v14" / "bridge_v14.js").read_text(encoding="utf-8")
+    tokens = [
+        "V14.allSkills = items.slice()",
+        "function applySkillsFilterV18",
+        "function syncSkillFilterHashV18",
+        "function readSkillFilterFromHashV18",
+        "function openSkillsFromHashV18",
+        "openSkillsFromHashV18();",
+        "skillFilterBlobV18",
+        "renderSkillFilterEmptyStateV18",
+        "bindSkillsCategoryFilterV40();",
+        "mydow:v14:skills-filter",
+        "favorite_count",
+        "skill-filter-empty-v18",
+    ]
+    missing = [token for token in tokens if token not in bridge]
+    assert not missing, f"biz_v14 bridge missing Section 18.8 skill filter tokens: {missing}"
+
+
+def test_biz_v14_voice_input_saves_real_transcript_as_voice_capture():
+    """Section 18.10: voice input no longer uses placeholder-only toasts."""
+
+    bridge = (MYDOW_DIR / "biz_v14" / "bridge_v14.js").read_text(encoding="utf-8")
+    tokens = [
+        "function hydrateVoiceInputModalV18",
+        "data-v18-voice-transcript",
+        "window.SpeechRecognition || window.webkitSpeechRecognition",
+        "function handleVoiceInputModal",
+        "type: \"voice\"",
+        "apiFetch(\"/capture/text\"",
+        "bindVoiceInputModalV18();",
+        "handleVoiceInputModal(btn, btn.closest('.surface-layer[data-modal=\"voiceInput\"]'))",
+    ]
+    missing = [token for token in tokens if token not in bridge]
+    assert not missing, f"biz_v14 bridge missing Section 18.10 voice input tokens: {missing}"
+    assert "演示环境仍走占位" not in bridge
+    assert "语音转写占位" not in bridge
+
+
 def test_biz_v14_skill_recommendation_scores_are_clamped():
     """§7.31 — personalized Skill scores must render as human percentages."""
 

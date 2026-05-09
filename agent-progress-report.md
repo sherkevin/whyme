@@ -1,9 +1,78 @@
-# PRD10 Backend Progress Report
+﻿# PRD10 Backend Progress Report
+
+## Milestone 81 - v1.4 AI stream send recovery - DELIVERED
+
+**When**: 2026-05-08 23:44 UTC+8 (by Codex)
+**Why**: `todo-tasks.md` Section 18.2 / user night review reported that Mydow AI send had no visible response.
+
+### Delivered
+
+* Added `fetchAiStreamWithSession()` in `static/mydow/biz_v14/bridge_v14.js`.
+* AI send now ensures a valid session before creating/using a conversation.
+* Streaming `/messages/stream` requests recover from stale browser tokens by clearing token, demo-login refreshing, and retrying once.
+* AI placeholder thinking text is removed once a real stream response begins, so completed answers no longer keep a stale "姝ｅ湪鐢熸垚" label.
+* Added focused frontend binding regression coverage for the stream auth recovery hook.
+
+### Test Evidence
+
+* `node --check static\mydow\biz_v14\bridge_v14.js` -> PASS.
+* `pytest tests\integration\api\test_prd10_frontend_binding.py::test_biz_v14_ai_stream_refreshes_session_before_send -q` -> PASS.
+* Chrome MCP on `127.0.0.1:8035`: intentionally wrote a bad `mydow_v14_token`, sent a Mydow AI prompt, observed automatic session refresh and `POST /api/v1/ai/conversations/{id}/messages/stream` -> 200.
+* DOM evidence after streaming: latest assistant answer rendered with KB citations, `hasThinking=false`.
+* Screenshot: `.tmp/screenshots/v18_2_ai_stream_fixed.png`.
+
+### Files Touched
+
+* `static/mydow/biz_v14/bridge_v14.js`
+* `tests/integration/api/test_prd10_frontend_binding.py`
+* `todo-tasks.md`
+* `agent-progress-report.md`
+
+### Next
+
+Continue Section 18.3 `@` knowledge/document searchable context picker.
+
+---
+
+## Milestone 80 - v1.4 profile preference controls - DELIVERED
+
+**When**: 2026-05-08 23:35 UTC+8 (by Codex)
+**Why**: `todo-tasks.md` 搂18.1 / user night review reported that Profile & Settings base preference buttons were not truly clickable.
+
+### Delivered
+
+* Fixed `bridge_v14.js::bindPrefToggleV39`: Auto Save now writes the real backend field `auto_save` instead of ignored `auto_save_enabled`.
+* Auto Save toggle now updates visual and accessibility state together (`active`, `aria-pressed`, `aria-label`).
+* Added `bridge_v14_ext.js` 搂18.1 profile preference runtime:
+  * Hydrates `/api/v1/me/preferences`.
+  * Converts static `.select-control` rows into clickable controls.
+  * Adds modern `mydow-choice-popover` listbox UI for default AI model, language, and default input mode.
+  * Persists changes through `PATCH /api/v1/me/preferences`.
+* Added frontend binding regression coverage for the 搂18.1 control wiring.
+
+### Test Evidence
+
+* Chrome MCP on `127.0.0.1:8035`: Profile -> Preferences -> Default AI Model -> selected `DeepSeek V4 Flash`; verified `default_ai_model=deepseek-v4-flash` through `GET /api/v1/me/preferences`.
+* Chrome MCP on `127.0.0.1:8035`: Auto Save toggle off/on; verified `auto_save=false/true` through `GET /api/v1/me/preferences`.
+* Console errors: **0**.
+* Screenshot: `.tmp/screenshots/v18_1_profile_preferences_fixed.png`.
+* Static checks: `node --check static\mydow\biz_v14\bridge_v14.js` and `node --check static\mydow\biz_v14\bridge_v14_ext.js` -> PASS.
+* Regression: `pytest tests\integration\api\test_prd10_frontend_binding.py -q` -> **39 passed**.
+
+### Files Touched
+
+`static/mydow/biz_v14/bridge_v14.js`, `static/mydow/biz_v14/bridge_v14_ext.js`, `tests/integration/api/test_prd10_frontend_binding.py`, `todo-tasks.md`, `agent-progress-report.md`.
+
+### Follow-ups
+
+Continue 搂18.2 Mydow AI send/stream unresponsive issue.
+
+---
 
 ## Milestone 79 - Todo table maintenance closeout - DELIVERED
 
 **When**: 2026-05-08 22:46 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §8.8 was the final active maintenance row after all actionable PRD10 rows were closed.
+**Why**: `todo-tasks.md` 搂8.8 was the final active maintenance row after all actionable PRD10 rows were closed.
 
 ### Delivered
 
@@ -30,7 +99,7 @@ None in the total todo table.
 ## Milestone 78 - import_test toolkit fixture audit - DELIVERED
 
 **When**: 2026-05-08 22:46 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §6.3 was left open waiting for a decision on whether tracked `data/workspaces/import_test/toolkit/*` changes were legitimate fixtures.
+**Why**: `todo-tasks.md` 搂6.3 was left open waiting for a decision on whether tracked `data/workspaces/import_test/toolkit/*` changes were legitimate fixtures.
 
 ### Delivered
 
@@ -50,21 +119,21 @@ None in the total todo table.
 
 ### Follow-ups
 
-Close the §8.8 maintenance row after final todo status verification.
+Close the 搂8.8 maintenance row after final todo status verification.
 
 ---
 
 ## Milestone 77 - Skill Marketplace API - DELIVERED
 
 **When**: 2026-05-08 22:39 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §6.8 / PRD10 B-19 required a real skill marketplace flow connected to billing credits and install state.
+**Why**: `todo-tasks.md` 搂6.8 / PRD10 B-19 required a real skill marketplace flow connected to billing credits and install state.
 
 ### Delivered
 
 * Added `src/agent_os/marketplace/models.py` with `SkillMarketplaceListing` and `SkillInstallation`.
 * Added `/api/v1/skill-marketplace/listings` list/search/filter and seller listing create/update endpoints.
 * Added `/api/v1/skill-marketplace/installations` so the current user can query installed marketplace skills.
-* Added `/api/v1/skill-marketplace/listings/{listing_id}/purchase` with real credit deduction via §6.7 `CreditLedger`.
+* Added `/api/v1/skill-marketplace/listings/{listing_id}/purchase` with real credit deduction via 搂6.7 `CreditLedger`.
 * Enforced no seller self-purchase, no double charge on repeated purchase, insufficient-credit rejection, and persisted install/purchase counters.
 * Mounted the marketplace router in `src/agent_os/server/app.py`.
 
@@ -80,14 +149,14 @@ Close the §8.8 maintenance row after final todo status verification.
 
 ### Follow-ups
 
-Audit and close the remaining §6.3 fixture decision and §8.8 maintenance row.
+Audit and close the remaining 搂6.3 fixture decision and 搂8.8 maintenance row.
 
 ---
 
 ## Milestone 76 - Billing subscription and credits API - DELIVERED
 
 **When**: 2026-05-08 22:33 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §6.7 / PRD10 B-18 required a real subscription and credit foundation rather than static plan labels.
+**Why**: `todo-tasks.md` 搂6.7 / PRD10 B-18 required a real subscription and credit foundation rather than static plan labels.
 
 ### Delivered
 
@@ -109,14 +178,14 @@ Audit and close the remaining §6.3 fixture decision and §8.8 maintenance row.
 
 ### Follow-ups
 
-Continue §6.8 Skill Marketplace.
+Continue 搂6.8 Skill Marketplace.
 
 ---
 
 ## Milestone 75 - Workspace permission API - DELIVERED
 
 **When**: 2026-05-08 22:26 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §6.6 / PRD10 B-17 required a real multi-workspace permission foundation instead of only reserved `workspace_id` fields.
+**Why**: `todo-tasks.md` 搂6.6 / PRD10 B-17 required a real multi-workspace permission foundation instead of only reserved `workspace_id` fields.
 
 ### Delivered
 
@@ -140,14 +209,14 @@ Continue §6.8 Skill Marketplace.
 
 ### Follow-ups
 
-Continue §6.7 Subscription/Billing.
+Continue 搂6.7 Subscription/Billing.
 
 ---
 
 ## Milestone 74 - Acceptance gate six UI states - DELIVERED
 
 **When**: 2026-05-08 22:20 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §14.4 was still blocked by old SPA state-machine defects, but its blockers (§9.13-§9.17) are now done and needed an independent acceptance closeout.
+**Why**: `todo-tasks.md` 搂14.4 was still blocked by old SPA state-machine defects, but its blockers (搂9.13-搂9.17) are now done and needed an independent acceptance closeout.
 
 ### Delivered
 
@@ -176,7 +245,7 @@ Continue remaining P2 TODOs.
 ## Milestone 73 - SPA i18n runtime - DELIVERED
 
 **When**: 2026-05-08 22:15 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §9.12 required Chinese/English switching based on `User.locale`, not a cosmetic-only frontend toggle.
+**Why**: `todo-tasks.md` 搂9.12 required Chinese/English switching based on `User.locale`, not a cosmetic-only frontend toggle.
 
 ### Delivered
 
@@ -212,7 +281,7 @@ Continue the remaining P2 TODOs.
 ## Milestone 72 - SPA drag and multiselect interactions - DELIVERED
 
 **When**: 2026-05-08 21:59 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §9.11 required production-feel drag and multiselect behavior: Feed multiselect archive, KB document drop into folder, and draggable Garden nodes.
+**Why**: `todo-tasks.md` 搂9.11 required production-feel drag and multiselect behavior: Feed multiselect archive, KB document drop into folder, and draggable Garden nodes.
 
 ### Delivered
 
@@ -238,14 +307,14 @@ Continue the remaining P2 TODOs.
 
 ### Follow-ups
 
-Continue §9.12 i18n.
+Continue 搂9.12 i18n.
 
 ---
 
 ## Milestone 71 - SPA unified toast system - DELIVERED
 
 **When**: 2026-05-08 21:50 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §9.10 required unified info/success/warning/error toasts with auto-dismiss, manual close, and queue behavior.
+**Why**: `todo-tasks.md` 搂9.10 required unified info/success/warning/error toasts with auto-dismiss, manual close, and queue behavior.
 
 ### Delivered
 
@@ -269,14 +338,14 @@ Continue §9.12 i18n.
 
 ### Follow-ups
 
-Continue §9.11 drag and multiselect behavior.
+Continue 搂9.11 drag and multiselect behavior.
 
 ---
 
 ## Milestone 70 - SPA empty-state illustrations - DELIVERED
 
 **When**: 2026-05-08 21:44 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §9.8 required polished SVG illustrations for empty states across Home, KB, AI, notifications, and search.
+**Why**: `todo-tasks.md` 搂9.8 required polished SVG illustrations for empty states across Home, KB, AI, notifications, and search.
 
 ### Delivered
 
@@ -300,14 +369,14 @@ Continue §9.11 drag and multiselect behavior.
 
 ### Follow-ups
 
-Continue §9.10 unified toast system.
+Continue 搂9.10 unified toast system.
 
 ---
 
 ## Milestone 69 - SPA low-frequency button audit - DELIVERED
 
 **When**: 2026-05-08 21:35 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §4.9 required a full-page low-frequency button audit with real backend effects, no toast-only success, and Chrome MCP evidence.
+**Why**: `todo-tasks.md` 搂4.9 required a full-page low-frequency button audit with real backend effects, no toast-only success, and Chrome MCP evidence.
 
 ### Delivered
 
@@ -320,7 +389,7 @@ Continue §9.10 unified toast system.
 * Button audit: `python scripts\smoke_spa_buttons.py --base http://127.0.0.1:8029 --out .tmp\spa_button_audit.json --screenshot-dir .tmp\screenshots\v4_9_buttons` -> **20/20 passed**, `api_call_count=59`, `api_failures=[]`, `console_errors=[]`, `page_errors=[]`.
 * Syntax: `node --check static\mydow\app.js` -> PASS.
 * Frontend binding suite: `pytest tests\integration\api\test_prd10_frontend_binding.py -q` -> **35 passed**.
-* Chrome MCP on uvicorn `127.0.0.1:8029`: registered a real user, clicked Today `新建任务`, confirmed modal default priority `medium`, submitted, observed `POST /api/v1/tasks` -> **201**, and saw the task render back in Today.
+* Chrome MCP on uvicorn `127.0.0.1:8029`: registered a real user, clicked Today `鏂板缓浠诲姟`, confirmed modal default priority `medium`, submitted, observed `POST /api/v1/tasks` -> **201**, and saw the task render back in Today.
 * Screenshot: `.tmp/screenshots/v4_9_buttons/chrome_mcp_today_task_medium.png`.
 
 ### Files Touched
@@ -329,14 +398,14 @@ Continue §9.10 unified toast system.
 
 ### Follow-ups
 
-Continue §9 frontend polish. Remaining open items include §9.8 empty-state SVG illustrations, §9.10 unified toast system, §9.11 drag/multiselect, and §9.12 i18n.
+Continue 搂9 frontend polish. Remaining open items include 搂9.8 empty-state SVG illustrations, 搂9.10 unified toast system, 搂9.11 drag/multiselect, and 搂9.12 i18n.
 
 ---
 
 ## Milestone 68 - SPA accessibility guardrails - DELIVERED
 
 **When**: 2026-05-08 20:55 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §9.7 required aria roles, focus rings, tab order, contrast, and screen-reader semantics.
+**Why**: `todo-tasks.md` 搂9.7 required aria roles, focus rings, tab order, contrast, and screen-reader semantics.
 
 ### Delivered
 
@@ -361,14 +430,14 @@ Continue §9 frontend polish. Remaining open items include §9.8 empty-state SVG
 
 ### Follow-ups
 
-Continue §9 frontend polish with empty-state illustrations, toast consistency, drag/multiselect behavior, and i18n.
+Continue 搂9 frontend polish with empty-state illustrations, toast consistency, drag/multiselect behavior, and i18n.
 
 ---
 
 ## Milestone 67 - SPA micro-interactions - DELIVERED
 
 **When**: 2026-05-08 20:43 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §9.5 required button press, card hover, drag feedback, and SSE stream-entry motion with 80-240ms timing and reduced-motion support.
+**Why**: `todo-tasks.md` 搂9.5 required button press, card hover, drag feedback, and SSE stream-entry motion with 80-240ms timing and reduced-motion support.
 
 ### Delivered
 
@@ -392,14 +461,14 @@ Continue §9 frontend polish with empty-state illustrations, toast consistency, 
 
 ### Follow-ups
 
-Continue §9 frontend polish with accessibility, empty illustrations, toast consistency, drag/multiselect behavior, and i18n.
+Continue 搂9 frontend polish with accessibility, empty illustrations, toast consistency, drag/multiselect behavior, and i18n.
 
 ---
 
 ## Milestone 66 - SPA six-state visual system - DELIVERED
 
 **When**: 2026-05-08 20:31 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §9.4 required a complete state visual spec: Loading, Empty, Error, 403, Processing, and Success.
+**Why**: `todo-tasks.md` 搂9.4 required a complete state visual spec: Loading, Empty, Error, 403, Processing, and Success.
 
 ### Delivered
 
@@ -423,14 +492,14 @@ Continue §9 frontend polish with accessibility, empty illustrations, toast cons
 
 ### Follow-ups
 
-Continue §9 frontend polish with micro-interactions, a11y, empty-state illustrations, toast consistency, drag/multiselect, and i18n.
+Continue 搂9 frontend polish with micro-interactions, a11y, empty-state illustrations, toast consistency, drag/multiselect, and i18n.
 
 ---
 
 ## Milestone 65 - SPA responsive acceptance - DELIVERED
 
 **When**: 2026-05-08 20:17 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §9.3 required the SPA to hold up across desktop, tablet, and mobile widths, with mobile navigation becoming a real bottom tab bar.
+**Why**: `todo-tasks.md` 搂9.3 required the SPA to hold up across desktop, tablet, and mobile widths, with mobile navigation becoming a real bottom tab bar.
 
 ### Delivered
 
@@ -444,7 +513,7 @@ Continue §9 frontend polish with micro-interactions, a11y, empty-state illustra
 * Syntax: `node --check static\mydow\app.js` -> PASS.
 * Frontend binding suite: `pytest tests\integration\api\test_prd10_frontend_binding.py -q` -> **32 passed**.
 * Chrome MCP on uvicorn `127.0.0.1:8019`: registered a real user, loaded `/mydow/spa/`, checked 1280 / 1024 / 768 / 390 viewports, verified no horizontal overflow, and found **0 console errors**.
-* Mobile interaction: at 390px, clicked the bottom-tab "知识库" button and verified navigation to `#/kb` with the active nav state updated.
+* Mobile interaction: at 390px, clicked the bottom-tab "鐭ヨ瘑搴? button and verified navigation to `#/kb` with the active nav state updated.
 * Screenshots: `.tmp/screenshots/v9_3_responsive/desktop_1280.png`, `tablet_1024_rail.png`, `tablet_768.png`, `mobile_390_exact.png`.
 
 ### Files Touched
@@ -453,14 +522,14 @@ Continue §9 frontend polish with micro-interactions, a11y, empty-state illustra
 
 ### Follow-ups
 
-Continue §9 visual polish: six-state visual spec, motion, accessibility, empty illustrations, toast consistency, drag/multiselect, and i18n.
+Continue 搂9 visual polish: six-state visual spec, motion, accessibility, empty illustrations, toast consistency, drag/multiselect, and i18n.
 
 ---
 
 ## Milestone 64 - SPA design tokens and theme switching - DELIVERED
 
 **When**: 2026-05-08 20:05 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §9.1 / §9.2 required the SPA to carry a complete design-token baseline and a real light/dark/system theme preference instead of relying only on OS media queries.
+**Why**: `todo-tasks.md` 搂9.1 / 搂9.2 required the SPA to carry a complete design-token baseline and a real light/dark/system theme preference instead of relying only on OS media queries.
 
 ### Delivered
 
@@ -483,22 +552,22 @@ Continue §9 visual polish: six-state visual spec, motion, accessibility, empty 
 
 ### Follow-ups
 
-Continue with the remaining §9 frontend polish tasks, starting from responsive acceptance and state visuals.
+Continue with the remaining 搂9 frontend polish tasks, starting from responsive acceptance and state visuals.
 
 ---
 
 ## Milestone 63 - Backend hardening audit closeout - DELIVERED
 
 **When**: 2026-05-08 19:55 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §8.12 was still open for PRD10 §29 hardening: rate limiting, AI call caching, and multipart/resumable uploads.
+**Why**: `todo-tasks.md` 搂8.12 was still open for PRD10 搂29 hardening: rate limiting, AI call caching, and multipart/resumable uploads.
 
 ### Delivered
 
 * Audited the actual implementation coverage:
-  * §12.2 already implements auth/AI/search/capture/global rate limits with PRD10 429 envelopes.
-  * §12.3 already implements same-prompt 24h AI completion cache with env toggles and stream bypass.
-  * §12.5 already implements multipart upload init/chunk/resume/complete/cancel plus capture-file commit compatibility.
-* No new production code was needed; closed §8.12 with fresh verification evidence.
+  * 搂12.2 already implements auth/AI/search/capture/global rate limits with PRD10 429 envelopes.
+  * 搂12.3 already implements same-prompt 24h AI completion cache with env toggles and stream bypass.
+  * 搂12.5 already implements multipart upload init/chunk/resume/complete/cancel plus capture-file commit compatibility.
+* No new production code was needed; closed 搂8.12 with fresh verification evidence.
 
 ### Test Evidence
 
@@ -512,14 +581,14 @@ Continue with the remaining §9 frontend polish tasks, starting from responsive 
 
 ### Follow-ups
 
-None for §8.12.
+None for 搂8.12.
 
 ---
 
 ## Milestone 62 - Legacy search shim restored - DELIVERED
 
 **When**: 2026-05-08 19:53 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §6.1 tracked historical `tests/integration/api/test_search_api_simple.py` failures caused by `agent_os.search.keyword_search` raising `NotImplementedError`.
+**Why**: `todo-tasks.md` 搂6.1 tracked historical `tests/integration/api/test_search_api_simple.py` failures caused by `agent_os.search.keyword_search` raising `NotImplementedError`.
 
 ### Delivered
 
@@ -540,14 +609,14 @@ None for §8.12.
 
 ### Follow-ups
 
-`tests/integration/api/test_search_api.py` remains module-skipped as a broader legacy suite; §6.1 specifically referenced the simple suite and is now green.
+`tests/integration/api/test_search_api.py` remains module-skipped as a broader legacy suite; 搂6.1 specifically referenced the simple suite and is now green.
 
 ---
 
 ## Milestone 61 - OpenAPI examples and curl docs - DELIVERED
 
 **When**: 2026-05-08 19:49 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §13.2 was stale in `doing`: `/docs` existed, but the generated OpenAPI schema did not carry concrete PRD10 examples or copyable curl samples for integrators.
+**Why**: `todo-tasks.md` 搂13.2 was stale in `doing`: `/docs` existed, but the generated OpenAPI schema did not carry concrete PRD10 examples or copyable curl samples for integrators.
 
 ### Delivered
 
@@ -569,14 +638,14 @@ None for §8.12.
 
 ### Follow-ups
 
-The OpenAPI generator still reports pre-existing duplicate operation-id warnings from legacy/PRD10 task route overlap; not part of §13.2, but worth cleaning if client SDK generation becomes strict.
+The OpenAPI generator still reports pre-existing duplicate operation-id warnings from legacy/PRD10 task route overlap; not part of 搂13.2, but worth cleaning if client SDK generation becomes strict.
 
 ---
 
 ## Milestone 60 - PRD10 21.3 DB index audit - DELIVERED
 
 **When**: 2026-05-08 19:43 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §12.6 was stale in `doing` and PRD10 §21.3 requires concrete DB indexes for the main product-data tables.
+**Why**: `todo-tasks.md` 搂12.6 was stale in `doing` and PRD10 搂21.3 requires concrete DB indexes for the main product-data tables.
 
 ### Delivered
 
@@ -599,19 +668,19 @@ The OpenAPI generator still reports pre-existing duplicate operation-id warnings
 
 ### Follow-ups
 
-None for §12.6. Continue open/stale todo cleanup.
+None for 搂12.6. Continue open/stale todo cleanup.
 
 ---
 
 ## Milestone 59 - SPA primary binding legacy todo closeout - DELIVERED
 
 **When**: 2026-05-08 19:26 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §4.23 was still open even though `test_mydow_primary_action_bindings_are_wired` had already been rewritten for the SPA shell.
+**Why**: `todo-tasks.md` 搂4.23 was still open even though `test_mydow_primary_action_bindings_are_wired` had already been rewritten for the SPA shell.
 
 ### Delivered
 
 * Confirmed the test now checks the SPA shell (`#app`, auth overlay, toast stack, CSS/JS entrypoints) plus `app.js` renderers, modals, drawers, and PRD10 API helper tokens.
-* Closed the obsolete “rewrite/delete after SPA completion” todo.
+* Closed the obsolete 鈥渞ewrite/delete after SPA completion鈥?todo.
 
 ### Test Evidence
 
@@ -623,14 +692,14 @@ None for §12.6. Continue open/stale todo cleanup.
 
 ### Follow-ups
 
-None for §4.23.
+None for 搂4.23.
 
 ---
 
 ## Milestone 58 - Windows SSE notification race hardening - DELIVERED
 
 **When**: 2026-05-08 19:25 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §5.3.1 tracked an intermittent Windows reader stall in `test_sse_emits_ready_then_notification`.
+**Why**: `todo-tasks.md` 搂5.3.1 tracked an intermittent Windows reader stall in `test_sse_emits_ready_then_notification`.
 
 ### Delivered
 
@@ -650,14 +719,14 @@ None for §4.23.
 
 ### Follow-ups
 
-None for §5.3.1 unless CI later reports a different SSE failure mode.
+None for 搂5.3.1 unless CI later reports a different SSE failure mode.
 
 ---
 
 ## Milestone 57 - v1.4 Chrome MCP nav sweep baseline - DELIVERED
 
 **When**: 2026-05-08 19:20 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §7.31 was stale in `doing`. After §16.1-§16.12 closed, the v1.4 business prototype needed a fresh Chrome MCP sweep with zero API failures and zero console errors.
+**Why**: `todo-tasks.md` 搂7.31 was stale in `doing`. After 搂16.1-搂16.12 closed, the v1.4 business prototype needed a fresh Chrome MCP sweep with zero API failures and zero console errors.
 
 ### Delivered
 
@@ -687,7 +756,7 @@ Continue stale/open todo cleanup. The v1.4 nav baseline itself is now green.
 ## Milestone 56 - v1.4 six-state UI runtime - DELIVERED
 
 **When**: 2026-05-08 19:08 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §16.10 was stale in `doing`. Business review required visible loading / empty / error states in the v1.4 prototype, with real backend requests and Chrome MCP evidence.
+**Why**: `todo-tasks.md` 搂16.10 was stale in `doing`. Business review required visible loading / empty / error states in the v1.4 prototype, with real backend requests and Chrome MCP evidence.
 
 ### Delivered
 
@@ -702,7 +771,7 @@ Continue stale/open todo cleanup. The v1.4 nav baseline itself is now green.
 
 * Syntax: `node --check static/mydow/biz_v14/bridge_v14_ext.js` -> PASS.
 * Contract: `python -m pytest tests/integration/api/test_prd10_frontend_binding.py -q -p no:cacheprovider --tb=short --no-header` -> **29 passed**.
-* Chrome DevTools MCP on `http://127.0.0.1:8016/mydow/biz_v14/`: capture skeleton `true -> false`; real capture persisted and refreshed the first feed card; real `/search` returned `items=[]` and rendered the search empty card; real missing endpoint 404 rendered `Not Found · 请重试`.
+* Chrome DevTools MCP on `http://127.0.0.1:8016/mydow/biz_v14/`: capture skeleton `true -> false`; real capture persisted and refreshed the first feed card; real `/search` returned `items=[]` and rendered the search empty card; real missing endpoint 404 rendered `Not Found 路 璇烽噸璇昤.
 * Screenshots: `.tmp/screenshots/v16_10/01_after_capture_feed.png`, `02_feed_skeleton.png`, `03_search_empty.png`, `04_error_toast.png`, `05_event_empty_states.png`.
 
 ### Files Touched
@@ -711,20 +780,20 @@ Continue stale/open todo cleanup. The v1.4 nav baseline itself is now green.
 
 ### Follow-ups
 
-Continue burning down remaining open/stale todo rows; §16.10 itself is complete.
+Continue burning down remaining open/stale todo rows; 搂16.10 itself is complete.
 
 ---
 
 ## Milestone 55 - SPA AI cancel/regenerate contract closeout - DELIVERED
 
 **When**: 2026-05-08 18:30 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §8.11 was still `open` while the backend cancel/regenerate endpoints were already delivered. The SPA needed explicit client helpers, visible stop UX, and regression coverage so AI message controls keep using real PRD10 APIs.
+**Why**: `todo-tasks.md` 搂8.11 was still `open` while the backend cancel/regenerate endpoints were already delivered. The SPA needed explicit client helpers, visible stop UX, and regression coverage so AI message controls keep using real PRD10 APIs.
 
 ### Delivered
 
 * `static/mydow/app.js` AI client now exposes `streamUrl(convId)`, `cancelMessage(id)`, and `regenerateMessage(id)` alongside the existing compatibility names.
-* The AI composer shows a real `停止` button while stream generation is in flight, with `title="停止生成"` for accessible discovery.
-* Fixed pre-first-token abort handling: if the user stops before the SSE response is established, the UI now resolves to `（已停止）` and does not incorrectly fall back to `POST /messages`.
+* The AI composer shows a real `鍋滄` button while stream generation is in flight, with `title="鍋滄鐢熸垚"` for accessible discovery.
+* Fixed pre-first-token abort handling: if the user stops before the SSE response is established, the UI now resolves to `锛堝凡鍋滄锛塦 and does not incorrectly fall back to `POST /messages`.
 * Fixed modal close-handler TDZ regressions (`onclick: close` inside `const { close } = openModal(...)`) that prevented AI save-to-KB / create-tasks modals from opening reliably.
 * `tests/integration/api/test_prd10_frontend_binding.py` pins the new AI helper tokens and stop-button wiring.
 
@@ -732,7 +801,7 @@ Continue burning down remaining open/stale todo rows; §16.10 itself is complete
 
 * Syntax: `node --check static/mydow/app.js` -> PASS.
 * Contract: `python -m pytest tests/integration/api/test_prd10_frontend_binding.py -q -p no:cacheprovider --tb=short --no-header` -> **28 passed**.
-* Chrome DevTools MCP on `http://127.0.0.1:8011/mydow/index.html#/ai`: save-to-KB -> `POST /save-to-kb` **202**; create-tasks -> `POST /create-tasks` **202**; regenerate -> `POST /regenerate` **201**; Slow 3G stop leaves `（已停止）` and no fallback `/messages` duplicate.
+* Chrome DevTools MCP on `http://127.0.0.1:8011/mydow/index.html#/ai`: save-to-KB -> `POST /save-to-kb` **202**; create-tasks -> `POST /create-tasks` **202**; regenerate -> `POST /regenerate` **201**; Slow 3G stop leaves `锛堝凡鍋滄锛塦 and no fallback `/messages` duplicate.
 
 ### Files Touched
 
@@ -740,7 +809,7 @@ Continue burning down remaining open/stale todo rows; §16.10 itself is complete
 
 ### Follow-ups
 
-Continue with the latest v1.4 / §16 todo lane; older SPA §9.19 is already closed in the current table and should not be duplicated.
+Continue with the latest v1.4 / 搂16 todo lane; older SPA 搂9.19 is already closed in the current table and should not be duplicated.
 
 ---
 
@@ -751,229 +820,173 @@ Continue with the latest v1.4 / §16 todo lane; older SPA §9.19 is already clos
 
 ---
 
-## Milestone 54 · 多人并行联调端口协议 + ephemeral Chrome MCP (`:2872`) — DELIVERED
+## Milestone 54 路 澶氫汉骞惰鑱旇皟绔彛鍗忚 + ephemeral Chrome MCP (`:2872`) 鈥?DELIVERED
 
 **When**: 2026-05-08 (Cursor Composer, UTC+8)
 
 ### Delivered
 
-* **`todo-tasks.md`**：`维护规则` 新增 **第 14 条**（自选空闲端口 + 独立 `DATABASE_URL` + 测毕释放端口 + `done` 证据写 port/db/pid）；文首「最近更新」同步该协议。
-* **§16.8（第一条表，引用 chip）**：证据追加 **不占 8000** 的复测：`127.0.0.1:2872`，DB `d:/Codes/whyme/.tmp/ephemeral_compose_2872.db`，Chrome MCP `evaluate_script` + `list_network_requests` + 截图 **`d:/Codes/whyme/.tmp/screenshots/mcp_ephemeral_port_2872_biz_v14.png`**；结束后 **`Stop-Process`** uvicorn，`Get-NetTCPConnection -LocalPort 2872` 无 LISTEN，`close_page` 关闭 MCP tab。
-
+* **`todo-tasks.md`**锛歚缁存姢瑙勫垯` 鏂板 **绗?14 鏉?*锛堣嚜閫夌┖闂茬鍙?+ 鐙珛 `DATABASE_URL` + 娴嬫瘯閲婃斁绔彛 + `done` 璇佹嵁鍐?port/db/pid锛夛紱鏂囬銆屾渶杩戞洿鏂般€嶅悓姝ヨ鍗忚銆?* **搂16.8锛堢涓€鏉¤〃锛屽紩鐢?chip锛?*锛氳瘉鎹拷鍔?**涓嶅崰 8000** 鐨勫娴嬶細`127.0.0.1:2872`锛孌B `d:/Codes/whyme/.tmp/ephemeral_compose_2872.db`锛孋hrome MCP `evaluate_script` + `list_network_requests` + 鎴浘 **`d:/Codes/whyme/.tmp/screenshots/mcp_ephemeral_port_2872_biz_v14.png`**锛涚粨鏉熷悗 **`Stop-Process`** uvicorn锛宍Get-NetTCPConnection -LocalPort 2872` 鏃?LISTEN锛宍close_page` 鍏抽棴 MCP tab銆?
 ### Test evidence
 
 ```text
-Chrome DevTools MCP: new_page → http://127.0.0.1:2872/mydow/biz_v14/
-evaluate_script → {"portGuess":"2872","booted":true,"tokenLen":209}
-list_network_requests → 30 requests, all 200 except favicon.ico 404
-Stop-Process -Id <uvicorn_pid>; Get-NetTCPConnection -LocalPort 2872 → (empty)
+Chrome DevTools MCP: new_page 鈫?http://127.0.0.1:2872/mydow/biz_v14/
+evaluate_script 鈫?{"portGuess":"2872","booted":true,"tokenLen":209}
+list_network_requests 鈫?30 requests, all 200 except favicon.ico 404
+Stop-Process -Id <uvicorn_pid>; Get-NetTCPConnection -LocalPort 2872 鈫?(empty)
 ```
 
 ### Files touched
 
-`todo-tasks.md`, `agent-progress-report.md`（本条目）
-
+`todo-tasks.md`, `agent-progress-report.md`锛堟湰鏉＄洰锛?
 ### Follow-ups
 
-下一轮若再启 ephemeral server，按需换端口/db 文件名，并在证据中更新数字。
-
+涓嬩竴杞嫢鍐嶅惎 ephemeral server锛屾寜闇€鎹㈢鍙?db 鏂囦欢鍚嶏紝骞跺湪璇佹嵁涓洿鏂版暟瀛椼€?
 ---
 
-## Milestone 53 · §16.9 v1.4 `data-toast` 全量审计脚本 — DELIVERED
+## Milestone 53 路 搂16.9 v1.4 `data-toast` 鍏ㄩ噺瀹¤鑴氭湰 鈥?DELIVERED
 
 **When**: 2026-05-08 (Cursor Composer, UTC+8)
 
 ### Delivered
 
-* **`.tmp/audit_v14_buttons.py`**：已由仓库内 Canonical 审计替代，保留 **`scripts/audit_v14_buttons.py`**（`MODAL_PRIMARY_TOAST_TO_MODAL` + `bindPrefToggleV39` map + `MODAL_SUBMIT_HANDLERS` 名称抽取）。
-* **`.tmp/v14_button_audit.json`**：`45` 个去重标签全部 `wired`（业务 HTML 实际数量高于历史「33」口径）。
-
+* **`.tmp/audit_v14_buttons.py`**锛氬凡鐢变粨搴撳唴 Canonical 瀹¤鏇夸唬锛屼繚鐣?**`scripts/audit_v14_buttons.py`**锛坄MODAL_PRIMARY_TOAST_TO_MODAL` + `bindPrefToggleV39` map + `MODAL_SUBMIT_HANDLERS` 鍚嶇О鎶藉彇锛夈€?* **`.tmp/v14_button_audit.json`**锛歚45` 涓幓閲嶆爣绛惧叏閮?`wired`锛堜笟鍔?HTML 瀹為檯鏁伴噺楂樹簬鍘嗗彶銆?3銆嶅彛寰勶級銆?
 ### Test evidence
 
 ```text
 python scripts/audit_v14_buttons.py
-→ summary.labels_with_no_static_wiring = []
+鈫?summary.labels_with_no_static_wiring = []
 exit code 0
 ```
 
 ### Files touched
 
-`scripts/audit_v14_buttons.py`（modal map + pref-toggle 静态覆盖）, `.tmp/v14_button_audit.json`, `todo-tasks.md`（§16.9 → done）
-
+`scripts/audit_v14_buttons.py`锛坢odal map + pref-toggle 闈欐€佽鐩栵級, `.tmp/v14_button_audit.json`, `todo-tasks.md`锛埪?6.9 鈫?done锛?
 ### Follow-ups
 
-§16.10 六态（loading / empty / error）需单独 milestone + Chrome MCP 截图。
-
+搂16.10 鍏€侊紙loading / empty / error锛夐渶鍗曠嫭 milestone + Chrome MCP 鎴浘銆?
 ---
 
-## Milestone 52 · §16.6 Skills 卡片「✓ 已生成」与通知 ingest — DELIVERED
+## Milestone 52 路 搂16.6 Skills 鍗＄墖銆屸湏 宸茬敓鎴愩€嶄笌閫氱煡 ingest 鈥?DELIVERED
 
 **When**: 2026-05-08 (Cursor Agent, UTC+8)
 
 ### Delivered
 
-* **`bridge_v14.js`**：`GET /notifications` 原始列表中 `ai_output_saved` + `object_type=skill_run` → 并行 `GET /skills/runs/{id}` 解析 `skill_id` / `document_id`，写入 `V14.skillRunDoneIds`，在对应 `.skill-card` 上渲染可点击（若有 KB 文档）的「✓ 已生成」chip；Skill 试用轮询完成时同步更新。
-* **CSS**：`injectInvestorPolishCss` 增加 `.skill-generated-chip` 样式。
-
+* **`bridge_v14.js`**锛歚GET /notifications` 鍘熷鍒楄〃涓?`ai_output_saved` + `object_type=skill_run` 鈫?骞惰 `GET /skills/runs/{id}` 瑙ｆ瀽 `skill_id` / `document_id`锛屽啓鍏?`V14.skillRunDoneIds`锛屽湪瀵瑰簲 `.skill-card` 涓婃覆鏌撳彲鐐瑰嚮锛堣嫢鏈?KB 鏂囨。锛夌殑銆屸湏 宸茬敓鎴愩€峜hip锛汼kill 璇曠敤杞瀹屾垚鏃跺悓姝ユ洿鏂般€?* **CSS**锛歚injectInvestorPolishCss` 澧炲姞 `.skill-generated-chip` 鏍峰紡銆?
 ### Test evidence
 
 ```text
-node --check static/mydow/biz_v14/bridge_v14.js → exit 0
+node --check static/mydow/biz_v14/bridge_v14.js 鈫?exit 0
 ```
 
 ### Files touched
 
-`static/mydow/biz_v14/bridge_v14.js`, `todo-tasks.md`（§16.6 → done）
-
+`static/mydow/biz_v14/bridge_v14.js`, `todo-tasks.md`锛埪?6.6 鈫?done锛?
 ### Follow-ups
 
-* 仍非真正浏览器 SSE：依赖通知列表 + 轮询；若后端提供 `/notifications/stream` 可再订阅增量。
-* Chrome MCP 需补 Skills 页截图验证 chip 与点击打开文档。
-
+* 浠嶉潪鐪熸娴忚鍣?SSE锛氫緷璧栭€氱煡鍒楄〃 + 杞锛涜嫢鍚庣鎻愪緵 `/notifications/stream` 鍙啀璁㈤槄澧為噺銆?* Chrome MCP 闇€琛?Skills 椤垫埅鍥鹃獙璇?chip 涓庣偣鍑绘墦寮€鏂囨。銆?
 ---
 
-## Milestone 51 · Capture LLM 整理与 GLM-4.5/4-Flash 解耦 + Docker compose 联调 — DELIVERED
+## Milestone 51 路 Capture LLM 鏁寸悊涓?GLM-4.5/4-Flash 瑙ｈ€?+ Docker compose 鑱旇皟 鈥?DELIVERED
 
-**When**: 2026-05-08 ~14:30–14:45 (Cursor Composer, UTC+8)
+**When**: 2026-05-08 ~14:30鈥?4:45 (Cursor Composer, UTC+8)
 
 ### Delivered
 
-* **灵感捕获结构化整理**：继续复用 **LiteLLM**（开源）做 `enrich_capture_with_llm` / `patch_card_with_enrichment`；为主对话 `MODEL=GLM-4.5-Flash`（reasoning 倾向）与「必须输出纯 JSON」的整理任务解耦——`enrich_capture_with_llm` 默认使用 **`GLM-4-Flash`**（可被 `CAPTURE_ENRICH_MODEL` / `MODEL_FALLBACK` 覆盖）。
-* **`litellm_impl.LiteLLMProvider.complete`**：支持单次调用传入 `model=` 覆盖实例默认模型，避免为整理单独 new provider。
-* **`_coerce_json_payload`**：从含思考链/前言的长回复中扫描**最大平衡** `\{…\}` 子串再 `json.loads`，降低解析失败回退 heuristic 的概率。
-* **`docker-compose.prd10.yml`**：`MODEL_FALLBACK` 默认 `GLM-4-Flash`；`CAPTURE_ENRICH_MODEL` 可选注入。
-* **`.env.example`**：补充 §16.1 相关说明行。
-
+* **鐏垫劅鎹曡幏缁撴瀯鍖栨暣鐞?*锛氱户缁鐢?**LiteLLM**锛堝紑婧愶級鍋?`enrich_capture_with_llm` / `patch_card_with_enrichment`锛涗负涓诲璇?`MODEL=GLM-4.5-Flash`锛坮easoning 鍊惧悜锛変笌銆屽繀椤昏緭鍑虹函 JSON銆嶇殑鏁寸悊浠诲姟瑙ｈ€︹€斺€擿enrich_capture_with_llm` 榛樿浣跨敤 **`GLM-4-Flash`**锛堝彲琚?`CAPTURE_ENRICH_MODEL` / `MODEL_FALLBACK` 瑕嗙洊锛夈€?* **`litellm_impl.LiteLLMProvider.complete`**锛氭敮鎸佸崟娆¤皟鐢ㄤ紶鍏?`model=` 瑕嗙洊瀹炰緥榛樿妯″瀷锛岄伩鍏嶄负鏁寸悊鍗曠嫭 new provider銆?* **`_coerce_json_payload`**锛氫粠鍚€濊€冮摼/鍓嶈█鐨勯暱鍥炲涓壂鎻?*鏈€澶у钩琛?* `\{鈥}` 瀛愪覆鍐?`json.loads`锛岄檷浣庤В鏋愬け璐ュ洖閫€ heuristic 鐨勬鐜囥€?* **`docker-compose.prd10.yml`**锛歚MODEL_FALLBACK` 榛樿 `GLM-4-Flash`锛沗CAPTURE_ENRICH_MODEL` 鍙€夋敞鍏ャ€?* **`.env.example`**锛氳ˉ鍏?搂16.1 鐩稿叧璇存槑琛屻€?
 ### Test evidence
 
 ```text
-pytest tests/integration/api/prd10/test_prd10_capture_api.py → 7 passed @ ~5–7s
+pytest tests/integration/api/prd10/test_prd10_capture_api.py 鈫?7 passed @ ~5鈥?s
 ```
 
-* **Docker 实测**：`POST /api/v1/capture/text` 后约 30s 内 `GET /api/v1/feed` 首条卡片 `updated_at` 更新，标题/summary 变为 LLM 整理结果；`llm_used` 在同步响应仍为 false（设计为 heuristic 快路径 + 异步 PATCH）。
-* **Chrome DevTools MCP**：当前环境 `new_page` / `list_pages` 报「selected page closed」，需在 IDE 中重新附着浏览器后再跑截图；未阻塞后端验证。
-
+* **Docker 瀹炴祴**锛歚POST /api/v1/capture/text` 鍚庣害 30s 鍐?`GET /api/v1/feed` 棣栨潯鍗＄墖 `updated_at` 鏇存柊锛屾爣棰?summary 鍙樹负 LLM 鏁寸悊缁撴灉锛沗llm_used` 鍦ㄥ悓姝ュ搷搴斾粛涓?false锛堣璁′负 heuristic 蹇矾寰?+ 寮傛 PATCH锛夈€?* **Chrome DevTools MCP**锛氬綋鍓嶇幆澧?`new_page` / `list_pages` 鎶ャ€宻elected page closed銆嶏紝闇€鍦?IDE 涓噸鏂伴檮鐫€娴忚鍣ㄥ悗鍐嶈窇鎴浘锛涙湭闃诲鍚庣楠岃瘉銆?
 ### Files touched
 
-`src/agent_os/capture/llm_pipeline.py`, `src/agent_os/llm/litellm_impl.py`, `docker-compose.prd10.yml`, `.env.example`, `todo-tasks.md`（§16.1 证据同步、§16.4 去陈旧 blocker）。
-
+`src/agent_os/capture/llm_pipeline.py`, `src/agent_os/llm/litellm_impl.py`, `docker-compose.prd10.yml`, `.env.example`, `todo-tasks.md`锛埪?6.1 璇佹嵁鍚屾銆伮?6.4 鍘婚檲鏃?blocker锛夈€?
 ### Follow-ups
 
-* §16.4：`data-ai-add` 四项 + 无会话时自动建对话 — Chrome 全流程点验。
-* §16.11 / §16.5 / §16.8 / §16.9 / §16.10 — 仍见 `todo-tasks.md`。
-
+* 搂16.4锛歚data-ai-add` 鍥涢」 + 鏃犱細璇濇椂鑷姩寤哄璇?鈥?Chrome 鍏ㄦ祦绋嬬偣楠屻€?* 搂16.11 / 搂16.5 / 搂16.8 / 搂16.9 / 搂16.10 鈥?浠嶈 `todo-tasks.md`銆?
 ---
 
-## Milestone 50 · §15.37 v1.4 button wiring rev2 + ruff 真 F821 bug 修复 + 1820 lint auto-fix — DELIVERED
+## Milestone 50 路 搂15.37 v1.4 button wiring rev2 + ruff 鐪?F821 bug 淇 + 1820 lint auto-fix 鈥?DELIVERED
 
 **When**: 2026-05-07 22:00 (Cursor Agent claude-opus-4.7, parallel session)
 
 ### Delivered
 
-* **§15.37 v1.4 button wiring rev2 — DONE** (与并行 agent §15.39 协作完成)：`static/mydow/biz_v14/bridge_v14.js` 追加 §15.37 节 (~580 行) 在 `bindAssistantActionButtonsV14` 之后挂 10 个新 capture-phase 监听 + 11 个新 helper：(a) `bindNoticeActionV37` 6 个 `data-notice-action` 通知行按钮按 `result/link/folder/report/detail/settings` 映射到 `data-nav-target` 真跳转 + 后台 `POST /notifications/{id}/read`；(b) `_openPopoverV37` 自定义 popover 系统；(c) `bindAiThreadMenuV37` 接 `[data-ai-thread-menu]` → 重命名 (PATCH `/ai/conversations/{id}`) + 删除 (DELETE `/ai/conversations/{id}`)；(d) `bindAiChatRenameV37` 顶栏「重命名对话」按钮直连同 PATCH；(e) `bindAiChatMoreV37` 「对话更多操作」popover 4 项；(f) `streamV14AiReply` 读 `[data-inline-menu=aiModel] [data-inline-label]` 实时取模型名传 `body.model`，并把 `data-ai-mode` 传 `body.mode`，新加 `_showAssistantActions(article, msgId)` 在流完成后写 `dataset.messageId` + 显示 4 按钮工具栏（复制/重新生成/👍/👎），让 §15.38 `bindAssistantActionButtonsV14` 真有点击对象；(g) `bindCardShareV37` 卡片分享链接复制；(h) `bindFolderFavoriteV37` 文件夹收藏 PATCH；(i) `bindSkillFavoriteV37` skill 收藏 + localStorage；(j) `bindDocAiActionsV37` 5 个文档 AI 动作；(k) `bindInsightActionsV37` 洞察侧抽 → cards/tasks/move。**冲突避免**：`closest('.ai-msg-actions, .assistant-message-actions')` 检测让 §15.38 处理 AI 气泡按钮，§15.37 跳过、专注非气泡 surface；§15.39 (`bridge_v14_ext.js`) 在 bubble 阶段补 confirmDelete 等。
-
-* **真 LLM Chrome MCP 验证 — DONE**：DeepSeek 真直接调通 `messages/stream`，Chrome MCP 真浏览器实测：导航到 `/mydow/biz_v14/?cb=mcp3` → 自动登录 → tokenLen=209 → 发 "用 15 个字说你是什么 AI" → AI 实时返回 "我是Mydow AI，知识助手。" (16 字, real DeepSeek) → 工具栏自动出现 → `dataset.messageId="dbc8e5d5-..."` → 点击 regenerate 真发 `POST /ai/messages/{id}/regenerate [201]`，network 抓到全程。
-
-* **§14.14 baseline 维护 — DONE**：跑 PRD10 14 套件 + prd10/ + landing + nginx + frontend_binding + v1_acceptance = **278 passed / 0 failed @ 587.38s** (`.tmp/baseline-14-14-v2.log`)。**`.tmp/smoke_v14_walk.py 8770`** 14/14 sections OK / `console_error_count=0` / `page_error_count=0` / `api_failure_count=0` / `api_call_count=47` (比 §15.34 baseline 44 +3 — 新接 buttons 触发新 API call) / `pass=true`。**新加 `.tmp/smoke_15_37.py`** 5 sections all OK：boot+10 §15.37 export 全在 / AI thread 三点菜单 popover 真出现 / aiModel 选 GPT-5.2 后 `data-inline-label` 真改 / Skill 收藏 click 后 localStorage 真持久化 / Card share button click 0 error / `pass=true`。
-
-* **§14.8 性能 LCP — DONE**：Chrome DevTools MCP `performance_start_trace` 实测：(a) **`/mydow/biz_v14/`（投资人 demo 默认入口）LCP=657ms / TTFB=27ms / Render delay=630ms / CLS=0.00**（远低于 2.5s 目标）；(b) `/`（landing）LCP=2,905ms — 略高 405ms，主要 render delay。投资人 demo 阈值已达成。
-
-* **真 F821 bug 修复 (2 处)**：(a) `src/agent_os/server/app.py` 加 `from typing import TYPE_CHECKING` + `if TYPE_CHECKING: from agent_os.server.diff_service import DiffService`，让 `DiffService` 字符串注解 ruff F821 通过（3 处）；(b) `src/agent_os/inbox/router.py::list_inbox_items` 用 `and_(...)` 但只 import 了 `select`，加 `from sqlalchemy import and_, select` 修真运行时未解决名称错误。两处 fix 后 src F821 = **0**（之前 4）。
-
-* **ruff 安全 auto-fix — 1820 errors fixed**：`python -m ruff check src/agent_os tests --fix --select=F401,F541,F811,F841,I,UP,SIM,C4 --no-show-fixes` 跑两轮：第一轮 fix 190 (src) + 580 (tests)，第二轮再 fix 1234；总计安全自动修复 ~1820 个 lint error；剩余 **904 个**（src 687 + tests ~217）大多是 E (pycodestyle) / W (warning) / SIM103/SIM117 等需要人工 review 的简化类。**修复期间触发 1 个 pre-existing 循环 import 暴露**：`agent_os/conversations/__init__.py` 老序「先 `from . import router` 再 `from .repository import ConversationRepository`」让 `router.py` 从 `agent_os.conversations` 拿 `ConversationRepository` 时拿不到（partial init）；改为先 import models+repository 再 router 修复（加 `# noqa: E402`）。
-
+* **搂15.37 v1.4 button wiring rev2 鈥?DONE** (涓庡苟琛?agent 搂15.39 鍗忎綔瀹屾垚)锛歚static/mydow/biz_v14/bridge_v14.js` 杩藉姞 搂15.37 鑺?(~580 琛? 鍦?`bindAssistantActionButtonsV14` 涔嬪悗鎸?10 涓柊 capture-phase 鐩戝惉 + 11 涓柊 helper锛?a) `bindNoticeActionV37` 6 涓?`data-notice-action` 閫氱煡琛屾寜閽寜 `result/link/folder/report/detail/settings` 鏄犲皠鍒?`data-nav-target` 鐪熻烦杞?+ 鍚庡彴 `POST /notifications/{id}/read`锛?b) `_openPopoverV37` 鑷畾涔?popover 绯荤粺锛?c) `bindAiThreadMenuV37` 鎺?`[data-ai-thread-menu]` 鈫?閲嶅懡鍚?(PATCH `/ai/conversations/{id}`) + 鍒犻櫎 (DELETE `/ai/conversations/{id}`)锛?d) `bindAiChatRenameV37` 椤舵爮銆岄噸鍛藉悕瀵硅瘽銆嶆寜閽洿杩炲悓 PATCH锛?e) `bindAiChatMoreV37` 銆屽璇濇洿澶氭搷浣溿€峱opover 4 椤癸紱(f) `streamV14AiReply` 璇?`[data-inline-menu=aiModel] [data-inline-label]` 瀹炴椂鍙栨ā鍨嬪悕浼?`body.model`锛屽苟鎶?`data-ai-mode` 浼?`body.mode`锛屾柊鍔?`_showAssistantActions(article, msgId)` 鍦ㄦ祦瀹屾垚鍚庡啓 `dataset.messageId` + 鏄剧ず 4 鎸夐挳宸ュ叿鏍忥紙澶嶅埗/閲嶆柊鐢熸垚/馃憤/馃憥锛夛紝璁?搂15.38 `bindAssistantActionButtonsV14` 鐪熸湁鐐瑰嚮瀵硅薄锛?g) `bindCardShareV37` 鍗＄墖鍒嗕韩閾炬帴澶嶅埗锛?h) `bindFolderFavoriteV37` 鏂囦欢澶规敹钘?PATCH锛?i) `bindSkillFavoriteV37` skill 鏀惰棌 + localStorage锛?j) `bindDocAiActionsV37` 5 涓枃妗?AI 鍔ㄤ綔锛?k) `bindInsightActionsV37` 娲炲療渚ф娊 鈫?cards/tasks/move銆?*鍐茬獊閬垮厤**锛歚closest('.ai-msg-actions, .assistant-message-actions')` 妫€娴嬭 搂15.38 澶勭悊 AI 姘旀场鎸夐挳锛屄?5.37 璺宠繃銆佷笓娉ㄩ潪姘旀场 surface锛浡?5.39 (`bridge_v14_ext.js`) 鍦?bubble 闃舵琛?confirmDelete 绛夈€?
+* **鐪?LLM Chrome MCP 楠岃瘉 鈥?DONE**锛欴eepSeek 鐪熺洿鎺ヨ皟閫?`messages/stream`锛孋hrome MCP 鐪熸祻瑙堝櫒瀹炴祴锛氬鑸埌 `/mydow/biz_v14/?cb=mcp3` 鈫?鑷姩鐧诲綍 鈫?tokenLen=209 鈫?鍙?"鐢?15 涓瓧璇翠綘鏄粈涔?AI" 鈫?AI 瀹炴椂杩斿洖 "鎴戞槸Mydow AI锛岀煡璇嗗姪鎵嬨€? (16 瀛? real DeepSeek) 鈫?宸ュ叿鏍忚嚜鍔ㄥ嚭鐜?鈫?`dataset.messageId="dbc8e5d5-..."` 鈫?鐐瑰嚮 regenerate 鐪熷彂 `POST /ai/messages/{id}/regenerate [201]`锛宯etwork 鎶撳埌鍏ㄧ▼銆?
+* **搂14.14 baseline 缁存姢 鈥?DONE**锛氳窇 PRD10 14 濂椾欢 + prd10/ + landing + nginx + frontend_binding + v1_acceptance = **278 passed / 0 failed @ 587.38s** (`.tmp/baseline-14-14-v2.log`)銆?*`.tmp/smoke_v14_walk.py 8770`** 14/14 sections OK / `console_error_count=0` / `page_error_count=0` / `api_failure_count=0` / `api_call_count=47` (姣?搂15.34 baseline 44 +3 鈥?鏂版帴 buttons 瑙﹀彂鏂?API call) / `pass=true`銆?*鏂板姞 `.tmp/smoke_15_37.py`** 5 sections all OK锛歜oot+10 搂15.37 export 鍏ㄥ湪 / AI thread 涓夌偣鑿滃崟 popover 鐪熷嚭鐜?/ aiModel 閫?GPT-5.2 鍚?`data-inline-label` 鐪熸敼 / Skill 鏀惰棌 click 鍚?localStorage 鐪熸寔涔呭寲 / Card share button click 0 error / `pass=true`銆?
+* **搂14.8 鎬ц兘 LCP 鈥?DONE**锛欳hrome DevTools MCP `performance_start_trace` 瀹炴祴锛?a) **`/mydow/biz_v14/`锛堟姇璧勪汉 demo 榛樿鍏ュ彛锛塋CP=657ms / TTFB=27ms / Render delay=630ms / CLS=0.00**锛堣繙浣庝簬 2.5s 鐩爣锛夛紱(b) `/`锛坙anding锛塋CP=2,905ms 鈥?鐣ラ珮 405ms锛屼富瑕?render delay銆傛姇璧勪汉 demo 闃堝€煎凡杈炬垚銆?
+* **鐪?F821 bug 淇 (2 澶?**锛?a) `src/agent_os/server/app.py` 鍔?`from typing import TYPE_CHECKING` + `if TYPE_CHECKING: from agent_os.server.diff_service import DiffService`锛岃 `DiffService` 瀛楃涓叉敞瑙?ruff F821 閫氳繃锛? 澶勶級锛?b) `src/agent_os/inbox/router.py::list_inbox_items` 鐢?`and_(...)` 浣嗗彧 import 浜?`select`锛屽姞 `from sqlalchemy import and_, select` 淇湡杩愯鏃舵湭瑙ｅ喅鍚嶇О閿欒銆備袱澶?fix 鍚?src F821 = **0**锛堜箣鍓?4锛夈€?
+* **ruff 瀹夊叏 auto-fix 鈥?1820 errors fixed**锛歚python -m ruff check src/agent_os tests --fix --select=F401,F541,F811,F841,I,UP,SIM,C4 --no-show-fixes` 璺戜袱杞細绗竴杞?fix 190 (src) + 580 (tests)锛岀浜岃疆鍐?fix 1234锛涙€昏瀹夊叏鑷姩淇 ~1820 涓?lint error锛涘墿浣?**904 涓?*锛坰rc 687 + tests ~217锛夊ぇ澶氭槸 E (pycodestyle) / W (warning) / SIM103/SIM117 绛夐渶瑕佷汉宸?review 鐨勭畝鍖栫被銆?*淇鏈熼棿瑙﹀彂 1 涓?pre-existing 寰幆 import 鏆撮湶**锛歚agent_os/conversations/__init__.py` 鑰佸簭銆屽厛 `from . import router` 鍐?`from .repository import ConversationRepository`銆嶈 `router.py` 浠?`agent_os.conversations` 鎷?`ConversationRepository` 鏃舵嬁涓嶅埌锛坧artial init锛夛紱鏀逛负鍏?import models+repository 鍐?router 淇锛堝姞 `# noqa: E402`锛夈€?
 ### Test evidence
 
 ```text
-PRD10 子集 + frontend_binding + v1_acceptance + ai_api + skills + app_wiring + prd10/:
-  → 278 passed / 0 failed @ 587.38s (`.tmp/baseline-14-14-v2.log`)
-  → 178 passed @ 191.08s (after lint fix round 2) (`.tmp/after-lint-tests.log`)
+PRD10 瀛愰泦 + frontend_binding + v1_acceptance + ai_api + skills + app_wiring + prd10/:
+  鈫?278 passed / 0 failed @ 587.38s (`.tmp/baseline-14-14-v2.log`)
+  鈫?178 passed @ 191.08s (after lint fix round 2) (`.tmp/after-lint-tests.log`)
 
 v14 walk e2e:
   python .tmp/smoke_v14_walk.py 8770
-  → 14/14 sections OK / 47 API calls / 0 console / 0 page / 0 failure / pass=true
+  鈫?14/14 sections OK / 47 API calls / 0 console / 0 page / 0 failure / pass=true
 
 v15.37 focused smoke:
   python .tmp/smoke_15_37.py 8770
-  → 5/5 sections OK / 0 console / 0 page / 0 failure / pass=true
+  鈫?5/5 sections OK / 0 console / 0 page / 0 failure / pass=true
 
 Real LLM via Chrome MCP:
-  → first iter: real DeepSeek "我是Mydow AI，知识助手。" (16 chars matching prompt constraint)
-  → reqid=71 POST /messages/stream [200] / reqid=73 POST /ai/messages/{msgId}/regenerate [201]
+  鈫?first iter: real DeepSeek "鎴戞槸Mydow AI锛岀煡璇嗗姪鎵嬨€? (16 chars matching prompt constraint)
+  鈫?reqid=71 POST /messages/stream [200] / reqid=73 POST /ai/messages/{msgId}/regenerate [201]
 
 Performance trace via Chrome MCP:
-  → /mydow/biz_v14/ LCP=657ms / CLS=0.00 (well under 2.5s)
-  → / landing LCP=2,905ms (slight overrun)
+  鈫?/mydow/biz_v14/ LCP=657ms / CLS=0.00 (well under 2.5s)
+  鈫?/ landing LCP=2,905ms (slight overrun)
 
 Ruff lint sanitize:
-  → 2728 → 904 errors (1824 safe auto-fixes applied)
-  → F821 (real bugs) 4 → 0 (all fixed)
+  鈫?2728 鈫?904 errors (1824 safe auto-fixes applied)
+  鈫?F821 (real bugs) 4 鈫?0 (all fixed)
 ```
 
 ### Files
 
-* `static/mydow/biz_v14/bridge_v14.js` (+580 lines §15.37 / streamV14AiReply 改读 live model label / appendAiAssistantPlaceholder 加 ai-message-actions)
+* `static/mydow/biz_v14/bridge_v14.js` (+580 lines 搂15.37 / streamV14AiReply 鏀硅 live model label / appendAiAssistantPlaceholder 鍔?ai-message-actions)
 * `src/agent_os/server/app.py` (TYPE_CHECKING import for DiffService, F821 fix)
 * `src/agent_os/inbox/router.py` (import `and_`, F821 fix)
 * `src/agent_os/conversations/__init__.py` (reorder imports to fix circular import)
 * ~30 src/agent_os/**/*.py and tests/**/*.py auto-fixed by ruff
-* `.tmp/smoke_15_37.py` (新增 5-section §15.37 smoke)
+* `.tmp/smoke_15_37.py` (鏂板 5-section 搂15.37 smoke)
 * `.tmp/baseline-14-14-v2.log` (baseline 278 passed)
 * `.tmp/v14_chrome_smoke_report.json` (14/14 sections OK)
-* `todo-tasks.md` (§14.14 / §15.37 / §14.8 → done)
+* `todo-tasks.md` (搂14.14 / 搂15.37 / 搂14.8 鈫?done)
 
 ### Follow-ups
 
-* **§5.3.1**: Windows uvicorn-in-thread + httpx 同步流式 reader 偶现 stuck（pre-existing flake, not blocking）。
-* **§11.2 partial**：剩余 904 ruff 错误（大多 E/W 风格类）；CI lint 仍会 fail。后续可继续按规则手动清理或调整 pyproject.toml 的 ruff [select] 严格度。
-* **§14.8 follow-up**: 优化 `/` landing LCP 从 2.9s → < 2.5s。
-
+* **搂5.3.1**: Windows uvicorn-in-thread + httpx 鍚屾娴佸紡 reader 鍋剁幇 stuck锛坧re-existing flake, not blocking锛夈€?* **搂11.2 partial**锛氬墿浣?904 ruff 閿欒锛堝ぇ澶?E/W 椋庢牸绫伙級锛汣I lint 浠嶄細 fail銆傚悗缁彲缁х画鎸夎鍒欐墜鍔ㄦ竻鐞嗘垨璋冩暣 pyproject.toml 鐨?ruff [select] 涓ユ牸搴︺€?* **搂14.8 follow-up**: 浼樺寲 `/` landing LCP 浠?2.9s 鈫?< 2.5s銆?
 ---
 
-## Milestone 49 · Docker 一键部署整套 + paratera GLM-4.5-Flash 真接入 + AI feedback 端点 + bridge_v14 高频按钮真化 — DELIVERED
+## Milestone 49 路 Docker 涓€閿儴缃叉暣濂?+ paratera GLM-4.5-Flash 鐪熸帴鍏?+ AI feedback 绔偣 + bridge_v14 楂橀鎸夐挳鐪熷寲 鈥?DELIVERED
 
-**When**: 2026-05-07 21:35 (Cursor Agent claude-opus, parallel session covering §14.15 / §14.16 / §15.37 / §15.38 / §15.39)
+**When**: 2026-05-07 21:35 (Cursor Agent claude-opus, parallel session covering 搂14.15 / 搂14.16 / 搂15.37 / 搂15.38 / 搂15.39)
 
 ### Delivered
 
-* **§15.37 业务方 zip 全文档纳入仓库 — DONE**：`Mydow_Web_Frontend_Backend_Handoff_v1.4_20260507_0058.zip` 完整解压，把 5 个新 markdown 复制到 `static/mydow/biz_v14/`：
-  - `Mydow_Web_AI_Workspace_v1.3.md`（4 模型 + 12 钩子 + 7 后端接口）
-  - `Mydow_Web_API_Buttons_v1.1.md`（13 章 200+ 钩子→接口映射）
+* **搂15.37 涓氬姟鏂?zip 鍏ㄦ枃妗ｇ撼鍏ヤ粨搴?鈥?DONE**锛歚Mydow_Web_Frontend_Backend_Handoff_v1.4_20260507_0058.zip` 瀹屾暣瑙ｅ帇锛屾妸 5 涓柊 markdown 澶嶅埗鍒?`static/mydow/biz_v14/`锛?  - `Mydow_Web_AI_Workspace_v1.3.md`锛? 妯″瀷 + 12 閽╁瓙 + 7 鍚庣鎺ュ彛锛?  - `Mydow_Web_API_Buttons_v1.1.md`锛?3 绔?200+ 閽╁瓙鈫掓帴鍙ｆ槧灏勶級
   - `Mydow_Web_Frontend_Delivery_v1.1.md`
   - `Mydow_Web_Frontend_Handoff.md`
   - `_API_Contract_v1.4.md`
-  中文文件名乱码已用 `Rename-Item` 修正为 ASCII。这些文档与 v1.4 contract 共同构成业务方需求真理。
-
-* **§14.15 真实 LLM (paratera GLM-4.5-Flash) 接入 — DONE**：原 `MODEL=openai/DeepSeek-V3.1` 触发 `team_model_access_denied` 401（团队权限只允许 GLM 系列：`PaddleOCR-VL-0.9B / GLM-4-Flash / GLM-CogView3-Flash / GLM-Z1-Flash / PaddleOCR-VL-1.5 / GLM-4.5-Flash / GLM-4V-Flash`）。`.env` 改：`API_BASE=https://llmapi.paratera.com/v1` (不用 `BASE_URL` 避免与 docker self-URL collision) + `MODEL=GLM-4.5-Flash` + `MODEL_FALLBACK=GLM-4-Flash`；启动 `AGENTOS_AI_LLM=on` + `AGENTOS_AI_TEMPERATURE=0.4` + `AGENTOS_AI_MAX_TOKENS=800`。
-  - `.tmp/test_real_llm.py`（uvicorn :8770）：events=`[meta, keepalive, token..., done]` / 21 chunks / 35 chars / 16.8s / DB 落 user+assistant 双 message / `verdict: real_llm_alive=True`。
-  - `.tmp/test_real_llm_docker.py`（docker :8000）：345 token chunks / 488 chars / 60.5s / 真实 GLM-4.5-Flash 中文输出（"…用户要求用一句中文形容上海的清晨…」"演示" 不在）/ `verdict: docker_real_llm_alive=True`。
-  - `litellm_impl.LiteLLMProvider` 零代码改动即兼容 paratera OpenAI-compatible endpoint（fallback chain `BASE_URL → API_BASE → DEEPSEEK_OPENAI_BASE_URL`）。
-
-* **§15.38 v1.4 业务方文档 audit + 5 个高频按钮真实化 — DONE**：
-  - **Audit**：grep `static/mydow/biz_v14/index.html` 共 50 个 `data-toast="..."` 占位按钮；bridge_v14.js 已接通 8 modal + 11 大模块；本任务定位 5 类未真接的 AI assistant 操作。
-  - **5 个高频补全（bridge_v14.js）**：
-    1. 复制回答 → `navigator.clipboard.writeText` (含 textarea fallback)
-    2. 重新生成 → `POST /api/v1/ai/messages/{id}/regenerate`（PRD10 §3.14 已存在）
-    3. 点赞 → `POST /api/v1/ai/messages/{id}/feedback {rating:up}`
-    4. 点踩 → `POST /api/v1/ai/messages/{id}/feedback {rating:down}`
-    5. 退出登录（`[data-account-action="logout"]`）→ `POST /auth/logout` + 清 token + reload
-  - **新增后端端点** `POST /api/v1/ai/messages/{message_id}/feedback`（`ai/router.py` line 1209+）：`FeedbackRequest{rating:up|down, comment?:str}`，写入 `prd10_notifications` 表（type=ai_feedback / object_type=ai_message / object_id=msg_id），idempotent on (user, msg) 由 SELECT-then-update 保证；返回 `{feedback_id, rating, comment, message_id, submitted_at}`。
-  - **真实测试** `.tmp/test_feedback.py`：login → create conv → send message → POST feedback up + comment → POST feedback down (overwrite) → idempotent feedback_id 一致 ✓ → notifications list 含 1 条 ai_feedback 行 ✓ → `verdict: feedback_endpoint_works=True`。
-  - **bridge_v14.js** `bindAssistantActionButtonsV14()` + `bindLogoutAction()` capture-phase + `_resolveAssistantContext()`（DOM dataset 优先 + V14.lastAssistantMessageId fallback）+ `_copyTextToClipboard()` 含 execCommand fallback；`node --check` PASS。
-
-* **§14.16 / §15.39 Docker compose 一键部署整套 + 真 LLM — DONE**：
-  - **Dockerfile.prd10** 加 4 个缺失依赖：`PyJWT>=2.8` / `sentry-sdk>=2.0` / `langgraph>=0.2` / `aider-chat>=0.60.0` + `typer/rich`。
-  - **`.dockerignore`** `*.md` 加例外 `!README.md` + `!static/mydow/biz_v14/*.md`（前者修 Dockerfile COPY 找不到 README，后者保业务方文档进 image）。
-  - **`agent_os/sandbox/docker_impl.py`** 用 try/except 包裹 `import docker` 让 Docker 镜像无 docker SDK 时仍可 import server.app（lazy `_require_docker_sdk()` 在 DockerSandbox 实例化时检查）。
-  - **`docker-compose.prd10.yml`** 给 `app` service 加 `API_KEY/API_BASE/MODEL` env passthrough；`DATABASE_URL` 默认 `sqlite+aiosqlite:////app/data/mydow.db`（legacy `conversations.user_id INTEGER` 与 PRD10 `users.id UUID` FK type 不兼容 Postgres，需要 §6.9.b 类似的 INTEGER→UUID schema rewrite，本任务暂不动；SQLite 容忍 FK type 错配，全功能可跑）。
-  - `docker compose up -d` 三服务全 healthy（postgres + redis healthcheck OK，app 30s 内 starting → healthy）。
-  - `docker compose exec app python scripts/seed_prd10.py --reset` 落库：6 folders / 20 documents / 30 cards / 5 tasks / 5 notifications / 3 ai_conversations / 18 ai_messages / 5 skills / 10 search_documents / 6 insights。
-  - `curl http://localhost:8000/health` 200 / `curl /mydow/` 307 → `/mydow/biz_v14/` / `/mydow/biz_v14/` 200 / 462042 bytes。
-  - **Docker port 走查** `.tmp/smoke_v14_walk.py 8000`：14/14 sections PASS / 0 console / 0 page / 0 API failure / 46 calls。
-  - **真实 LLM via Docker**：345 token chunks 真实中文输出（GLM-4.5-Flash）/ 60.5s / DB 真实落 message。
-
-* **landing page 重写**：原 `static/landing/index.html` 因 PowerShell 编码事故（cp936 ↔ utf-8 双向 mojibake）破坏，重写一份完整 522 行新 landing（保留品牌 Mydow / 5 处 CTA 全切到 `/mydow/biz_v14/` / pricing card 个人 Pro ¥39 + 团队 License ¥199 含「最受欢迎」徽章 / 8 个 PRD10 §2.1 模块卡含全局搜索 / 通知中心 / 隐私+条款+API+OpenAPI+健康 footer）。`test_landing_hero.py` 6/6 passed + `test_prd10_v1_acceptance.py::test_root_serves_landing_or_redirects_to_biz` + `test_prd10_frontend_binding.py::test_mydow_default_redirect_to_biz_or_spa` 全过（断言接受 `/mydow/biz_v14/` 与 `/mydow/biz/` 双形态以兼容旧 deploy）。
-
+  涓枃鏂囦欢鍚嶄贡鐮佸凡鐢?`Rename-Item` 淇涓?ASCII銆傝繖浜涙枃妗ｄ笌 v1.4 contract 鍏卞悓鏋勬垚涓氬姟鏂归渶姹傜湡鐞嗐€?
+* **搂14.15 鐪熷疄 LLM (paratera GLM-4.5-Flash) 鎺ュ叆 鈥?DONE**锛氬師 `MODEL=openai/DeepSeek-V3.1` 瑙﹀彂 `team_model_access_denied` 401锛堝洟闃熸潈闄愬彧鍏佽 GLM 绯诲垪锛歚PaddleOCR-VL-0.9B / GLM-4-Flash / GLM-CogView3-Flash / GLM-Z1-Flash / PaddleOCR-VL-1.5 / GLM-4.5-Flash / GLM-4V-Flash`锛夈€俙.env` 鏀癸細`API_BASE=https://llmapi.paratera.com/v1` (涓嶇敤 `BASE_URL` 閬垮厤涓?docker self-URL collision) + `MODEL=GLM-4.5-Flash` + `MODEL_FALLBACK=GLM-4-Flash`锛涘惎鍔?`AGENTOS_AI_LLM=on` + `AGENTOS_AI_TEMPERATURE=0.4` + `AGENTOS_AI_MAX_TOKENS=800`銆?  - `.tmp/test_real_llm.py`锛坲vicorn :8770锛夛細events=`[meta, keepalive, token..., done]` / 21 chunks / 35 chars / 16.8s / DB 钀?user+assistant 鍙?message / `verdict: real_llm_alive=True`銆?  - `.tmp/test_real_llm_docker.py`锛坉ocker :8000锛夛細345 token chunks / 488 chars / 60.5s / 鐪熷疄 GLM-4.5-Flash 涓枃杈撳嚭锛?鈥︾敤鎴疯姹傜敤涓€鍙ヤ腑鏂囧舰瀹逛笂娴风殑娓呮櫒鈥︺€?婕旂ず" 涓嶅湪锛? `verdict: docker_real_llm_alive=True`銆?  - `litellm_impl.LiteLLMProvider` 闆朵唬鐮佹敼鍔ㄥ嵆鍏煎 paratera OpenAI-compatible endpoint锛坒allback chain `BASE_URL 鈫?API_BASE 鈫?DEEPSEEK_OPENAI_BASE_URL`锛夈€?
+* **搂15.38 v1.4 涓氬姟鏂规枃妗?audit + 5 涓珮棰戞寜閽湡瀹炲寲 鈥?DONE**锛?  - **Audit**锛歡rep `static/mydow/biz_v14/index.html` 鍏?50 涓?`data-toast="..."` 鍗犱綅鎸夐挳锛沚ridge_v14.js 宸叉帴閫?8 modal + 11 澶фā鍧楋紱鏈换鍔″畾浣?5 绫绘湭鐪熸帴鐨?AI assistant 鎿嶄綔銆?  - **5 涓珮棰戣ˉ鍏紙bridge_v14.js锛?*锛?    1. 澶嶅埗鍥炵瓟 鈫?`navigator.clipboard.writeText` (鍚?textarea fallback)
+    2. 閲嶆柊鐢熸垚 鈫?`POST /api/v1/ai/messages/{id}/regenerate`锛圥RD10 搂3.14 宸插瓨鍦級
+    3. 鐐硅禐 鈫?`POST /api/v1/ai/messages/{id}/feedback {rating:up}`
+    4. 鐐硅俯 鈫?`POST /api/v1/ai/messages/{id}/feedback {rating:down}`
+    5. 閫€鍑虹櫥褰曪紙`[data-account-action="logout"]`锛夆啋 `POST /auth/logout` + 娓?token + reload
+  - **鏂板鍚庣绔偣** `POST /api/v1/ai/messages/{message_id}/feedback`锛坄ai/router.py` line 1209+锛夛細`FeedbackRequest{rating:up|down, comment?:str}`锛屽啓鍏?`prd10_notifications` 琛紙type=ai_feedback / object_type=ai_message / object_id=msg_id锛夛紝idempotent on (user, msg) 鐢?SELECT-then-update 淇濊瘉锛涜繑鍥?`{feedback_id, rating, comment, message_id, submitted_at}`銆?  - **鐪熷疄娴嬭瘯** `.tmp/test_feedback.py`锛歭ogin 鈫?create conv 鈫?send message 鈫?POST feedback up + comment 鈫?POST feedback down (overwrite) 鈫?idempotent feedback_id 涓€鑷?鉁?鈫?notifications list 鍚?1 鏉?ai_feedback 琛?鉁?鈫?`verdict: feedback_endpoint_works=True`銆?  - **bridge_v14.js** `bindAssistantActionButtonsV14()` + `bindLogoutAction()` capture-phase + `_resolveAssistantContext()`锛圖OM dataset 浼樺厛 + V14.lastAssistantMessageId fallback锛? `_copyTextToClipboard()` 鍚?execCommand fallback锛沗node --check` PASS銆?
+* **搂14.16 / 搂15.39 Docker compose 涓€閿儴缃叉暣濂?+ 鐪?LLM 鈥?DONE**锛?  - **Dockerfile.prd10** 鍔?4 涓己澶变緷璧栵細`PyJWT>=2.8` / `sentry-sdk>=2.0` / `langgraph>=0.2` / `aider-chat>=0.60.0` + `typer/rich`銆?  - **`.dockerignore`** `*.md` 鍔犱緥澶?`!README.md` + `!static/mydow/biz_v14/*.md`锛堝墠鑰呬慨 Dockerfile COPY 鎵句笉鍒?README锛屽悗鑰呬繚涓氬姟鏂规枃妗ｈ繘 image锛夈€?  - **`agent_os/sandbox/docker_impl.py`** 鐢?try/except 鍖呰９ `import docker` 璁?Docker 闀滃儚鏃?docker SDK 鏃朵粛鍙?import server.app锛坙azy `_require_docker_sdk()` 鍦?DockerSandbox 瀹炰緥鍖栨椂妫€鏌ワ級銆?  - **`docker-compose.prd10.yml`** 缁?`app` service 鍔?`API_KEY/API_BASE/MODEL` env passthrough锛沗DATABASE_URL` 榛樿 `sqlite+aiosqlite:////app/data/mydow.db`锛坙egacy `conversations.user_id INTEGER` 涓?PRD10 `users.id UUID` FK type 涓嶅吋瀹?Postgres锛岄渶瑕?搂6.9.b 绫讳技鐨?INTEGER鈫扷UID schema rewrite锛屾湰浠诲姟鏆備笉鍔紱SQLite 瀹瑰繊 FK type 閿欓厤锛屽叏鍔熻兘鍙窇锛夈€?  - `docker compose up -d` 涓夋湇鍔″叏 healthy锛坧ostgres + redis healthcheck OK锛宎pp 30s 鍐?starting 鈫?healthy锛夈€?  - `docker compose exec app python scripts/seed_prd10.py --reset` 钀藉簱锛? folders / 20 documents / 30 cards / 5 tasks / 5 notifications / 3 ai_conversations / 18 ai_messages / 5 skills / 10 search_documents / 6 insights銆?  - `curl http://localhost:8000/health` 200 / `curl /mydow/` 307 鈫?`/mydow/biz_v14/` / `/mydow/biz_v14/` 200 / 462042 bytes銆?  - **Docker port 璧版煡** `.tmp/smoke_v14_walk.py 8000`锛?4/14 sections PASS / 0 console / 0 page / 0 API failure / 46 calls銆?  - **鐪熷疄 LLM via Docker**锛?45 token chunks 鐪熷疄涓枃杈撳嚭锛圙LM-4.5-Flash锛? 60.5s / DB 鐪熷疄钀?message銆?
+* **landing page 閲嶅啓**锛氬師 `static/landing/index.html` 鍥?PowerShell 缂栫爜浜嬫晠锛坈p936 鈫?utf-8 鍙屽悜 mojibake锛夌牬鍧忥紝閲嶅啓涓€浠藉畬鏁?522 琛屾柊 landing锛堜繚鐣欏搧鐗?Mydow / 5 澶?CTA 鍏ㄥ垏鍒?`/mydow/biz_v14/` / pricing card 涓汉 Pro 楼39 + 鍥㈤槦 License 楼199 鍚€屾渶鍙楁杩庛€嶅窘绔?/ 8 涓?PRD10 搂2.1 妯″潡鍗″惈鍏ㄥ眬鎼滅储 / 閫氱煡涓績 / 闅愮+鏉℃+API+OpenAPI+鍋ュ悍 footer锛夈€俙test_landing_hero.py` 6/6 passed + `test_prd10_v1_acceptance.py::test_root_serves_landing_or_redirects_to_biz` + `test_prd10_frontend_binding.py::test_mydow_default_redirect_to_biz_or_spa` 鍏ㄨ繃锛堟柇瑷€鎺ュ彈 `/mydow/biz_v14/` 涓?`/mydow/biz/` 鍙屽舰鎬佷互鍏煎鏃?deploy锛夈€?
 ### Test evidence
 
 ```text
@@ -996,114 +1009,94 @@ Feedback endpoint persistence:
 ### Files touched
 
 * `.env` (LLM config: API_BASE / MODEL=GLM-4.5-Flash + docker-compose passthrough vars)
-* `static/mydow/biz_v14/{Mydow_Web_AI_Workspace_v1.3.md, Mydow_Web_API_Buttons_v1.1.md, Mydow_Web_Frontend_Delivery_v1.1.md, Mydow_Web_Frontend_Handoff.md, _API_Contract_v1.4.md}` (业务方文档全套)
-* `static/mydow/biz_v14/bridge_v14.js` (+ §15.38 5 个 binding + 2 个 export)
-* `src/agent_os/ai/router.py` (+ FeedbackRequest schema + POST /messages/{id}/feedback endpoint，~95 行)
+* `static/mydow/biz_v14/{Mydow_Web_AI_Workspace_v1.3.md, Mydow_Web_API_Buttons_v1.1.md, Mydow_Web_Frontend_Delivery_v1.1.md, Mydow_Web_Frontend_Handoff.md, _API_Contract_v1.4.md}` (涓氬姟鏂规枃妗ｅ叏濂?
+* `static/mydow/biz_v14/bridge_v14.js` (+ 搂15.38 5 涓?binding + 2 涓?export)
+* `src/agent_os/ai/router.py` (+ FeedbackRequest schema + POST /messages/{id}/feedback endpoint锛寏95 琛?
 * `src/agent_os/sandbox/docker_impl.py` (+ try/except docker SDK import + lazy _require_docker_sdk)
-* `src/agent_os/server/app.py` (§15.34 redirect chain 切到 v1.4)
-* `Dockerfile.prd10` (+ 5 缺失依赖)
+* `src/agent_os/server/app.py` (搂15.34 redirect chain 鍒囧埌 v1.4)
+* `Dockerfile.prd10` (+ 5 缂哄け渚濊禆)
 * `docker-compose.prd10.yml` (LLM env passthrough + sqlite default)
-* `.dockerignore` (+ !README.md + !static/mydow/biz_v14/*.md 例外)
-* `static/landing/index.html` (完整重写 522 行)
-* `tests/integration/api/test_landing_hero.py` (接受 v1.4 路径)
-* `tests/integration/api/test_prd10_v1_acceptance.py` (接受 v1.4 路径 + 新加 test_biz_v14_prototype_reachable)
-* `tests/integration/api/test_prd10_frontend_binding.py` (接受 v1.4 路径)
-* `todo-tasks.md` (§15.34/35/36/37/38/39 + §14.13/14.15/14.16 done)
-* `agent-progress-report.md` (本 milestone)
-* `.tmp/{smoke_v14_walk.py, test_real_llm.py, test_real_llm_docker.py, test_feedback.py, fix_landing_encoding.py}` (5 smoke 脚本，+ `.tmp/v14_chrome_smoke_report.json` + `.tmp/screenshots/v14_walk/00..99.png` 14 张截图)
+* `.dockerignore` (+ !README.md + !static/mydow/biz_v14/*.md 渚嬪)
+* `static/landing/index.html` (瀹屾暣閲嶅啓 522 琛?
+* `tests/integration/api/test_landing_hero.py` (鎺ュ彈 v1.4 璺緞)
+* `tests/integration/api/test_prd10_v1_acceptance.py` (鎺ュ彈 v1.4 璺緞 + 鏂板姞 test_biz_v14_prototype_reachable)
+* `tests/integration/api/test_prd10_frontend_binding.py` (鎺ュ彈 v1.4 璺緞)
+* `todo-tasks.md` (搂15.34/35/36/37/38/39 + 搂14.13/14.15/14.16 done)
+* `agent-progress-report.md` (鏈?milestone)
+* `.tmp/{smoke_v14_walk.py, test_real_llm.py, test_real_llm_docker.py, test_feedback.py, fix_landing_encoding.py}` (5 smoke 鑴氭湰锛? `.tmp/v14_chrome_smoke_report.json` + `.tmp/screenshots/v14_walk/00..99.png` 14 寮犳埅鍥?
 
 ### Known follow-ups
 
-* §6.9.b legacy `conversations.user_id INTEGER → UUID`：让 docker stack 可用真 Postgres（当前用 sqlite 兜底）。
-* §9.x 设计系统升级（暗色 / 响应式 / a11y / 微交互）：业务方 v1.4 视觉已落地，剩下是 polishing。
-* §11.2 CI Actions（Agent 3 lane）：让 PR 必须绿。
-* §15.40+：业务方 v1.1 文档列出但 PRD10 后端未实装的 8 个 P2 端点（`/research/tasks` / `/capture/voice/sessions` / `/capture/upload` 已部分 / `/billing/portal-session` / `/kb/docs/:id/share-links`）按需扩。
-
+* 搂6.9.b legacy `conversations.user_id INTEGER 鈫?UUID`锛氳 docker stack 鍙敤鐪?Postgres锛堝綋鍓嶇敤 sqlite 鍏滃簳锛夈€?* 搂9.x 璁捐绯荤粺鍗囩骇锛堟殫鑹?/ 鍝嶅簲寮?/ a11y / 寰氦浜掞級锛氫笟鍔℃柟 v1.4 瑙嗚宸茶惤鍦帮紝鍓╀笅鏄?polishing銆?* 搂11.2 CI Actions锛圓gent 3 lane锛夛細璁?PR 蹇呴』缁裤€?* 搂15.40+锛氫笟鍔℃柟 v1.1 鏂囨。鍒楀嚭浣?PRD10 鍚庣鏈疄瑁呯殑 8 涓?P2 绔偣锛坄/research/tasks` / `/capture/voice/sessions` / `/capture/upload` 宸查儴鍒?/ `/billing/portal-session` / `/kb/docs/:id/share-links`锛夋寜闇€鎵┿€?
 ---
 
-## Milestone 48 · v1.4 全按钮真接通 + 真 LLM 验证 + 测试基线 302 passed — DELIVERED
+## Milestone 48 路 v1.4 鍏ㄦ寜閽湡鎺ラ€?+ 鐪?LLM 楠岃瘉 + 娴嬭瘯鍩虹嚎 302 passed 鈥?DELIVERED
 
 **When**: 2026-05-07 21:35 (Cursor Agent claude-opus-4.7)
 
 ### Delivered
 
-* **§14.14 Test baseline maintenance — DONE**：跑 PRD10 14 套件 + landing + nginx + frontend_binding + prd10/ + v1_acceptance baseline = **303 collected / 302 passed / 1 failed @ 887s** (`.tmp/baseline_14_14.log`)。唯一失败 `test_sse_emits_ready_then_notification` 是 §5.3 已知 Windows-flaky harness（与 §15.34 redirect 改动无关，新写入跟踪 §5.3.1 等待修）。比 §0 baseline 225 提升 **+77**。
-* **`tests/e2e/test_v14_walk.py` 1 passed @ 22.26s** — `MydowBridgeV14.booted=true` / `mydow_v14_token` 落库 / `apiFetchV14` 导出 / capture surface 渲染 / 0 console / 0 page / 0 failed API。
-* **真实 LLM SSE 验证 — DONE**：`.tmp/verify_real_llm.py`（自包含 subprocess uvicorn + httpx SSE reader）跑通：`AGENTOS_AI_LLM=on` + `MODEL=deepseek-chat` (via `.env.local`) → `is_llm_enabled=True` → `POST /api/v1/ai/conversations/{id}/messages/stream` 真返 SSE token → `tokens_seen=115` / `stream_content_len=195` / `persisted_status=completed` / `persisted_model=litellm` / `is_placeholder=false` / `real_llm_alive=true`。回复内容是真实 deepseek-chat 中文 3-bullet 创业者建议。
-* **`src/agent_os/llm/litellm_impl.py` 增强**：`complete()` + `stream_complete()` 都加 `reasoning_content` fallback——当模型 (DeepSeek v4-flash 推理模式 / GLM Z1) 把答案放在 `reasoning_content` 而 `content` 为空时（max_tokens 被 reasoning 吃完），自动surface reasoning_content（带 `（思考过程）` 前缀），避免空回复；流式版本对没有 visible content 的全程让 reasoning chunks 通过 `kind="reasoning"` 透出。
-* **`.env.local` 重写**：清楚标注 `MODEL=deepseek-chat` 路由到 deepseek-v4-flash 但走非推理模式（content 直接落 `choice.message.content`，小回答 200-500 tokens 即够）；新增 `AGENTOS_AI_LLM=on` / `AGENTOS_AI_TEMPERATURE=0.4` / `AGENTOS_AI_MAX_TOKENS=1500` / `AGENTOS_AI_MODEL=deepseek-chat`。
-* **§15.39 v1.4 全按钮真接通 — DONE**：`static/mydow/biz_v14/bridge_v14.js` 新增 §15.39 段（line 2829-3120）+ 13 个 capture-phase 监听 → `bindAllRemainingV39()`：confirmDelete 上下文化路由（cards/docs/folders DELETE）/ movePanel（prompt 选 folder + `/cards/{id}/move`）/ themeToggle（localStorage + `<html data-theme>` + body class）/ prefToggle（PATCH `/me/preferences` auto_save_enabled / two_factor_enabled）/ passwordModal（prompt × 2 + POST `/me/password`）/ billing / emailVerify / permissions（V1 toast + V2 roadmap 提示）/ storageRefresh（拉 `/kb/overview` 显示真实容量）/ securityDevices / aiContextAdd（PATCH `/ai/conversations/{id}` context_scope）/ duplicateFolder（POST `/kb/folders` 创建副本）/ voicePause。Re-audit `.tmp/v14_hooks_audit.md`：toast 覆盖率从 **20/45 → 36/45**（+16），剩 9 个本就由 modal-submit handlers (aiSave/skillRun/uploadFile/deepResearch/webLink/newFolder/notificationSettings/garden zoom) 接管，运行时 100% 覆盖。
-* **§10.6 投资材料 8 张 1920x1080 截图 — DONE**：`docs/assets/screenshots/01..08_*.png` 入库（landing first paint / capture inflight / KB folders grid / KB folder detail / KB doc editor / digital garden / AI workspace streaming / insights full panel）。截图源自 `.tmp/screenshots/v14_walk/` 14 节 acceptance 走查（real LLM + 47 API calls + 0 errors）。
-* **§14.13 v1.4 acceptance gate 复测 — DONE**：`.tmp/smoke_v14_walk.py 5248` 跑通 14/14 sections / 47 `/api/v1/*` calls / 0 console error / 0 page error / 0 API failure (`.tmp/v14_walk_after_15_39.log`)。
-* **`todo-tasks.md`**：§14.14 / §15.37 / §15.39 / §10.6 → `done`；§5.3.1 新加为 `open` 跟踪 SSE Windows flake（不阻塞 acceptance）。
-
+* **搂14.14 Test baseline maintenance 鈥?DONE**锛氳窇 PRD10 14 濂椾欢 + landing + nginx + frontend_binding + prd10/ + v1_acceptance baseline = **303 collected / 302 passed / 1 failed @ 887s** (`.tmp/baseline_14_14.log`)銆傚敮涓€澶辫触 `test_sse_emits_ready_then_notification` 鏄?搂5.3 宸茬煡 Windows-flaky harness锛堜笌 搂15.34 redirect 鏀瑰姩鏃犲叧锛屾柊鍐欏叆璺熻釜 搂5.3.1 绛夊緟淇級銆傛瘮 搂0 baseline 225 鎻愬崌 **+77**銆?* **`tests/e2e/test_v14_walk.py` 1 passed @ 22.26s** 鈥?`MydowBridgeV14.booted=true` / `mydow_v14_token` 钀藉簱 / `apiFetchV14` 瀵煎嚭 / capture surface 娓叉煋 / 0 console / 0 page / 0 failed API銆?* **鐪熷疄 LLM SSE 楠岃瘉 鈥?DONE**锛歚.tmp/verify_real_llm.py`锛堣嚜鍖呭惈 subprocess uvicorn + httpx SSE reader锛夎窇閫氾細`AGENTOS_AI_LLM=on` + `MODEL=deepseek-chat` (via `.env.local`) 鈫?`is_llm_enabled=True` 鈫?`POST /api/v1/ai/conversations/{id}/messages/stream` 鐪熻繑 SSE token 鈫?`tokens_seen=115` / `stream_content_len=195` / `persisted_status=completed` / `persisted_model=litellm` / `is_placeholder=false` / `real_llm_alive=true`銆傚洖澶嶅唴瀹规槸鐪熷疄 deepseek-chat 涓枃 3-bullet 鍒涗笟鑰呭缓璁€?* **`src/agent_os/llm/litellm_impl.py` 澧炲己**锛歚complete()` + `stream_complete()` 閮藉姞 `reasoning_content` fallback鈥斺€斿綋妯″瀷 (DeepSeek v4-flash 鎺ㄧ悊妯″紡 / GLM Z1) 鎶婄瓟妗堟斁鍦?`reasoning_content` 鑰?`content` 涓虹┖鏃讹紙max_tokens 琚?reasoning 鍚冨畬锛夛紝鑷姩surface reasoning_content锛堝甫 `锛堟€濊€冭繃绋嬶級` 鍓嶇紑锛夛紝閬垮厤绌哄洖澶嶏紱娴佸紡鐗堟湰瀵规病鏈?visible content 鐨勫叏绋嬭 reasoning chunks 閫氳繃 `kind="reasoning"` 閫忓嚭銆?* **`.env.local` 閲嶅啓**锛氭竻妤氭爣娉?`MODEL=deepseek-chat` 璺敱鍒?deepseek-v4-flash 浣嗚蛋闈炴帹鐞嗘ā寮忥紙content 鐩存帴钀?`choice.message.content`锛屽皬鍥炵瓟 200-500 tokens 鍗冲锛夛紱鏂板 `AGENTOS_AI_LLM=on` / `AGENTOS_AI_TEMPERATURE=0.4` / `AGENTOS_AI_MAX_TOKENS=1500` / `AGENTOS_AI_MODEL=deepseek-chat`銆?* **搂15.39 v1.4 鍏ㄦ寜閽湡鎺ラ€?鈥?DONE**锛歚static/mydow/biz_v14/bridge_v14.js` 鏂板 搂15.39 娈碉紙line 2829-3120锛? 13 涓?capture-phase 鐩戝惉 鈫?`bindAllRemainingV39()`锛歝onfirmDelete 涓婁笅鏂囧寲璺敱锛坈ards/docs/folders DELETE锛? movePanel锛坧rompt 閫?folder + `/cards/{id}/move`锛? themeToggle锛坙ocalStorage + `<html data-theme>` + body class锛? prefToggle锛圥ATCH `/me/preferences` auto_save_enabled / two_factor_enabled锛? passwordModal锛坧rompt 脳 2 + POST `/me/password`锛? billing / emailVerify / permissions锛圴1 toast + V2 roadmap 鎻愮ず锛? storageRefresh锛堟媺 `/kb/overview` 鏄剧ず鐪熷疄瀹归噺锛? securityDevices / aiContextAdd锛圥ATCH `/ai/conversations/{id}` context_scope锛? duplicateFolder锛圥OST `/kb/folders` 鍒涘缓鍓湰锛? voicePause銆俁e-audit `.tmp/v14_hooks_audit.md`锛歵oast 瑕嗙洊鐜囦粠 **20/45 鈫?36/45**锛?16锛夛紝鍓?9 涓湰灏辩敱 modal-submit handlers (aiSave/skillRun/uploadFile/deepResearch/webLink/newFolder/notificationSettings/garden zoom) 鎺ョ锛岃繍琛屾椂 100% 瑕嗙洊銆?* **搂10.6 鎶曡祫鏉愭枡 8 寮?1920x1080 鎴浘 鈥?DONE**锛歚docs/assets/screenshots/01..08_*.png` 鍏ュ簱锛坙anding first paint / capture inflight / KB folders grid / KB folder detail / KB doc editor / digital garden / AI workspace streaming / insights full panel锛夈€傛埅鍥炬簮鑷?`.tmp/screenshots/v14_walk/` 14 鑺?acceptance 璧版煡锛坮eal LLM + 47 API calls + 0 errors锛夈€?* **搂14.13 v1.4 acceptance gate 澶嶆祴 鈥?DONE**锛歚.tmp/smoke_v14_walk.py 5248` 璺戦€?14/14 sections / 47 `/api/v1/*` calls / 0 console error / 0 page error / 0 API failure (`.tmp/v14_walk_after_15_39.log`)銆?* **`todo-tasks.md`**锛毬?4.14 / 搂15.37 / 搂15.39 / 搂10.6 鈫?`done`锛浡?.3.1 鏂板姞涓?`open` 璺熻釜 SSE Windows flake锛堜笉闃诲 acceptance锛夈€?
 ### Test evidence
 
 ```text
 PRD10 14-suite + landing + nginx + frontend_binding + prd10/ + v1_acceptance:
   pytest -q -p no:cacheprovider --tb=short --no-header --timeout=120
-  → 303 collected / 302 passed / 1 failed @ 887s (`.tmp/baseline_14_14.log`)
-  → §0 baseline 225 提升 +77
-  → 唯一失败 `test_sse_emits_ready_then_notification` 已知 §5.3 Windows flake，§5.3.1 跟踪
+  鈫?303 collected / 302 passed / 1 failed @ 887s (`.tmp/baseline_14_14.log`)
+  鈫?搂0 baseline 225 鎻愬崌 +77
+  鈫?鍞竴澶辫触 `test_sse_emits_ready_then_notification` 宸茬煡 搂5.3 Windows flake锛屄?.3.1 璺熻釜
 
 v14 walk e2e:
   pytest tests/e2e/test_v14_walk.py -q -p no:cacheprovider --tb=short --no-header --timeout=180
-  → 1 passed @ 22.26s (`.tmp/v14_walk_test_14_14.log`)
+  鈫?1 passed @ 22.26s (`.tmp/v14_walk_test_14_14.log`)
 
 Real LLM verifier:
   python .tmp/verify_real_llm.py
-  → real_llm_alive=true (`.tmp/verify_real_llm_report.json`)
-  → tokens_seen=115 / stream_content_len=195 / persisted_status=completed / persisted_model=litellm
+  鈫?real_llm_alive=true (`.tmp/verify_real_llm_report.json`)
+  鈫?tokens_seen=115 / stream_content_len=195 / persisted_status=completed / persisted_model=litellm
 
 v14 14-section walk against real-LLM uvicorn:
   python .tmp/smoke_v14_walk.py 5248 (real LLM enabled, port 5248)
-  → 14/14 sections OK / 47 /api/v1/* calls / 0 console / 0 page / 0 failure
-  → before §15.39 patches: same result (`.tmp/v14_walk_real_llm.log`)
-  → after  §15.39 patches: same result (`.tmp/v14_walk_after_15_39.log`)
+  鈫?14/14 sections OK / 47 /api/v1/* calls / 0 console / 0 page / 0 failure
+  鈫?before 搂15.39 patches: same result (`.tmp/v14_walk_real_llm.log`)
+  鈫?after  搂15.39 patches: same result (`.tmp/v14_walk_after_15_39.log`)
 
 Hooks audit:
   python .tmp/extract_v14_hooks.py
-  → toasts: 36/45 covered directly (+ 9 by modal-submit handlers = 45/45 runtime)
-  → data-open-modal: 13/15 直接接通 + 2 (insightHistory P2)
-  → data-notice-action: 5/5 全接
-  → data-inline-menu search filters (searchSort/Scope/Creator/Location/Date): 标记 §15.40 P1
+  鈫?toasts: 36/45 covered directly (+ 9 by modal-submit handlers = 45/45 runtime)
+  鈫?data-open-modal: 13/15 鐩存帴鎺ラ€?+ 2 (insightHistory P2)
+  鈫?data-notice-action: 5/5 鍏ㄦ帴
+  鈫?data-inline-menu search filters (searchSort/Scope/Creator/Location/Date): 鏍囪 搂15.40 P1
 ```
 
 ### Files
 
 * `src/agent_os/llm/litellm_impl.py` (reasoning_content fallback)
-* `static/mydow/biz_v14/bridge_v14.js` (+440 行 §15.39 / +1.6KB)
+* `static/mydow/biz_v14/bridge_v14.js` (+440 琛?搂15.39 / +1.6KB)
 * `.env.local` (deepseek-chat + AGENTOS_AI_LLM=on)
-* `.tmp/verify_real_llm.py` (新增 self-contained verifier)
-* `.tmp/extract_v14_hooks.py` (新增 audit 工具)
-* `.tmp/v14_hooks_audit.md` (audit 报告)
-* `docs/assets/screenshots/01..08_*.png` (8 张投资材料截图)
-* `todo-tasks.md` (§14.14 / §15.37 / §15.38 / §15.39 / §10.6 → done; §5.3.1 → open)
-* `agent-progress-report.md` (本 milestone)
+* `.tmp/verify_real_llm.py` (鏂板 self-contained verifier)
+* `.tmp/extract_v14_hooks.py` (鏂板 audit 宸ュ叿)
+* `.tmp/v14_hooks_audit.md` (audit 鎶ュ憡)
+* `docs/assets/screenshots/01..08_*.png` (8 寮犳姇璧勬潗鏂欐埅鍥?
+* `todo-tasks.md` (搂14.14 / 搂15.37 / 搂15.38 / 搂15.39 / 搂10.6 鈫?done; 搂5.3.1 鈫?open)
+* `agent-progress-report.md` (鏈?milestone)
 
 ### Follow-ups
 
-* **§5.3.1**: Windows uvicorn-in-thread + httpx 同步流式 reader 偶现 stuck（pre-existing flake, not blocking acceptance；上线前由谁有空认领修）。
-* **§15.40**: 全局搜索 5 个 inline-menu filter（sort/scope/creator/location/date）应在 click 时把 trigger label 写到 `_PENDING_SEARCH_FILTERS`，下次 `/search` request 带 query params。当前 v1.4 prototype IIFE 只更新 popover label。
-* 视频脚本 (`docs/demo-video-script-90s.md`) 仍需人工按 §13.5 录屏。
-
+* **搂5.3.1**: Windows uvicorn-in-thread + httpx 鍚屾娴佸紡 reader 鍋剁幇 stuck锛坧re-existing flake, not blocking acceptance锛涗笂绾垮墠鐢辫皝鏈夌┖璁ら淇級銆?* **搂15.40**: 鍏ㄥ眬鎼滅储 5 涓?inline-menu filter锛坰ort/scope/creator/location/date锛夊簲鍦?click 鏃舵妸 trigger label 鍐欏埌 `_PENDING_SEARCH_FILTERS`锛屼笅娆?`/search` request 甯?query params銆傚綋鍓?v1.4 prototype IIFE 鍙洿鏂?popover label銆?* 瑙嗛鑴氭湰 (`docs/demo-video-script-90s.md`) 浠嶉渶浜哄伐鎸?搂13.5 褰曞睆銆?
 ---
 
-## Milestone 47 · SPA 首页错误态 / 401 清空 / AI 气泡保存 — DELIVERED
+## Milestone 47 路 SPA 棣栭〉閿欒鎬?/ 401 娓呯┖ / AI 姘旀场淇濆瓨 鈥?DELIVERED
 
-**When**: 2026-05-07（Cursor Agent）
-
+**When**: 2026-05-07锛圕ursor Agent锛?
 ### Delivered
 
-* **`static/mydow/app.js`**：`renderHome` 对 `/today`、`/feed` 非 401 失败展示 `errorState`（不再用空 feed 伪装）；`api()` 在 401 时清空 `#page-region` 再 `renderAuthOverlay`；`renderPage` 无 token 早退；`hashchange` 无 token 清空主区并弹出登录层；`renderAssistantBubble` 固定 `dataset.role`，`decorateAssistantBubble` 同时认 `.assistant` class，修复助手「保存到知识库」等动作条在非流式兜底路径不出现的问题。
-* **`todo-tasks.md`**：§9.13 / §9.14 / §9.16 / §9.19 → `done`。
-
+* **`static/mydow/app.js`**锛歚renderHome` 瀵?`/today`銆乣/feed` 闈?401 澶辫触灞曠ず `errorState`锛堜笉鍐嶇敤绌?feed 浼锛夛紱`api()` 鍦?401 鏃舵竻绌?`#page-region` 鍐?`renderAuthOverlay`锛沗renderPage` 鏃?token 鏃╅€€锛沗hashchange` 鏃?token 娓呯┖涓诲尯骞跺脊鍑虹櫥褰曞眰锛沗renderAssistantBubble` 鍥哄畾 `dataset.role`锛宍decorateAssistantBubble` 鍚屾椂璁?`.assistant` class锛屼慨澶嶅姪鎵嬨€屼繚瀛樺埌鐭ヨ瘑搴撱€嶇瓑鍔ㄤ綔鏉″湪闈炴祦寮忓厹搴曡矾寰勪笉鍑虹幇鐨勯棶棰樸€?* **`todo-tasks.md`**锛毬?.13 / 搂9.14 / 搂9.16 / 搂9.19 鈫?`done`銆?
 ### Test evidence
 
 ```text
-pytest tests/integration/api/test_prd10_v1_acceptance.py tests/integration/api/test_prd10_frontend_binding.py tests/integration/api/test_prd10_app_wiring.py -q → 61 passed (≈188s)
-uvicorn + seed_prd10.py @ .tmp/smoke_mcp.db — 本地后台已拉起用于手工联调（Chrome MCP 会话在本机报 profile 占用未跑截图）
-```
+pytest tests/integration/api/test_prd10_v1_acceptance.py tests/integration/api/test_prd10_frontend_binding.py tests/integration/api/test_prd10_app_wiring.py -q 鈫?61 passed (鈮?88s)
+uvicorn + seed_prd10.py @ .tmp/smoke_mcp.db 鈥?鏈湴鍚庡彴宸叉媺璧风敤浜庢墜宸ヨ仈璋冿紙Chrome MCP 浼氳瘽鍦ㄦ湰鏈烘姤 profile 鍗犵敤鏈窇鎴浘锛?```
 
 ### Files
 
@@ -1112,54 +1105,40 @@ uvicorn + seed_prd10.py @ .tmp/smoke_mcp.db — 本地后台已拉起用于手�
 
 ---
 
-## Milestone 46 · §14.10 投资人 demo 路径 + v1.4 文档抽屉修复 — DELIVERED
+## Milestone 46 路 搂14.10 鎶曡祫浜?demo 璺緞 + v1.4 鏂囨。鎶藉眽淇 鈥?DELIVERED
 
-**When**: 2026-05-07（my-mcp-26）
-
+**When**: 2026-05-07锛坢y-mcp-26锛?
 ### Delivered
 
-* **`static/mydow/biz/bridge.js`**：`loadDocumentForDrawer` 稳健解析 `r.data`；`_hydrateItemDetailDrawerForDocument` 优先写入 `data-document-id`、去除并发 `cardId`；标题/副标题用 `.detail-drawer .drawer-head` 作用域。`hydrateItemDetailDrawer`（卡片路径）改为同一套 h2 选择器并清除文档 `data-document-id`，避免误劫持抽屉标题。
-* **`.tmp/smoke_demo_path.py`**：boot / AI workspace 选择器兼容 v1.4（`.ai-history-thread`）；§04 等待可见抽屉上 `data-document-id` 与首文档 id 一致。
-* **`docs/assets/screenshots/`**：同步 `.tmp/screenshots/investor_deck/` 10 张 PNG（landing + biz 闭环）。
-
+* **`static/mydow/biz/bridge.js`**锛歚loadDocumentForDrawer` 绋冲仴瑙ｆ瀽 `r.data`锛沗_hydrateItemDetailDrawerForDocument` 浼樺厛鍐欏叆 `data-document-id`銆佸幓闄ゅ苟鍙?`cardId`锛涙爣棰?鍓爣棰樼敤 `.detail-drawer .drawer-head` 浣滅敤鍩熴€俙hydrateItemDetailDrawer`锛堝崱鐗囪矾寰勶級鏀逛负鍚屼竴濂?h2 閫夋嫨鍣ㄥ苟娓呴櫎鏂囨。 `data-document-id`锛岄伩鍏嶈鍔寔鎶藉眽鏍囬銆?* **`.tmp/smoke_demo_path.py`**锛歜oot / AI workspace 閫夋嫨鍣ㄥ吋瀹?v1.4锛坄.ai-history-thread`锛夛紱搂04 绛夊緟鍙鎶藉眽涓?`data-document-id` 涓庨鏂囨。 id 涓€鑷淬€?* **`docs/assets/screenshots/`**锛氬悓姝?`.tmp/screenshots/investor_deck/` 10 寮?PNG锛坙anding + biz 闂幆锛夈€?
 ### Test evidence
 
 ```text
-python .tmp/smoke_demo_path.py 8890  → OK（10/10 sections, summary_ok=true, 0 console/page/failed API）
-node --check static/mydow/biz/bridge.js  → OK
+python .tmp/smoke_demo_path.py 8890  鈫?OK锛?0/10 sections, summary_ok=true, 0 console/page/failed API锛?node --check static/mydow/biz/bridge.js  鈫?OK
 ```
 
 ### Files
 
 * `static/mydow/biz/bridge.js`
 * `.tmp/smoke_demo_path.py`
-* `docs/assets/screenshots/*.png`（自 investor_deck 复制）
-* `todo-tasks.md`（§14.10 → done）
-
+* `docs/assets/screenshots/*.png`锛堣嚜 investor_deck 澶嶅埗锛?* `todo-tasks.md`锛埪?4.10 鈫?done锛?
 ### Follow-ups
 
-* §10.6 视频仍需人工按 `docs/demo-video-script-90s.md` 录屏；截图分辨率如需统一 1920×1080 可在 Playwright context 上改 viewport。
-
+* 搂10.6 瑙嗛浠嶉渶浜哄伐鎸?`docs/demo-video-script-90s.md` 褰曞睆锛涙埅鍥惧垎杈ㄧ巼濡傞渶缁熶竴 1920脳1080 鍙湪 Playwright context 涓婃敼 viewport銆?
 ---
 
-## Milestone 45 · §8.9 presign 接通模块化后端 + §9.9 biz 品牌 meta + stale §15.29/§15.30 收口 — DELIVERED
+## Milestone 45 路 搂8.9 presign 鎺ラ€氭ā鍧楀寲鍚庣 + 搂9.9 biz 鍝佺墝 meta + stale 搂15.29/搂15.30 鏀跺彛 鈥?DELIVERED
 
-**When**: 2026-05-07（Cursor Agent / Composer）
-
+**When**: 2026-05-07锛圕ursor Agent / Composer锛?
 ### Delivered
 
-* **`capture/router.py::presign_upload`**：`POST /api/v1/uploads/presign` 改为调用 `agent_os.uploads.presign.get_default_backend().presign()` → `PresignResult.to_payload()`（完整 §8.3 字段含 `expires_at` / `headers` / `fields` / `backend`）；`ValueError`→400、`RuntimeError`（例如 S3 未配置 bucket）→503。
-* **`tests/integration/api/prd10/test_prd10_presign_backends.py`**：local 契约扩展断言 + `AGENTOS_UPLOAD_BACKEND=s3` 且无 `AWS_S3_BUCKET` 时 503；模块 autouse 复位 singleton。
-* **`static/mydow/biz/bridge.js`**：`injectBrandMeta()`（landing 同源 SVG favicon + `theme-color` + OG/Twitter）于 `boot()` 调用并导出。
-* **`.env.example`**：`AGENTOS_UPLOAD_BACKEND` / presign TTL / max size / S3 变量块替代陈旧 `UPLOADS_BACKEND` 注释。
-* **`todo-tasks.md`**：§8.9 · §9.9 · §15.29 · §15.30（biz v1.4 合并行）标 **done**。
-
+* **`capture/router.py::presign_upload`**锛歚POST /api/v1/uploads/presign` 鏀逛负璋冪敤 `agent_os.uploads.presign.get_default_backend().presign()` 鈫?`PresignResult.to_payload()`锛堝畬鏁?搂8.3 瀛楁鍚?`expires_at` / `headers` / `fields` / `backend`锛夛紱`ValueError`鈫?00銆乣RuntimeError`锛堜緥濡?S3 鏈厤缃?bucket锛夆啋503銆?* **`tests/integration/api/prd10/test_prd10_presign_backends.py`**锛歭ocal 濂戠害鎵╁睍鏂█ + `AGENTOS_UPLOAD_BACKEND=s3` 涓旀棤 `AWS_S3_BUCKET` 鏃?503锛涙ā鍧?autouse 澶嶄綅 singleton銆?* **`static/mydow/biz/bridge.js`**锛歚injectBrandMeta()`锛坙anding 鍚屾簮 SVG favicon + `theme-color` + OG/Twitter锛変簬 `boot()` 璋冪敤骞跺鍑恒€?* **`.env.example`**锛歚AGENTOS_UPLOAD_BACKEND` / presign TTL / max size / S3 鍙橀噺鍧楁浛浠ｉ檲鏃?`UPLOADS_BACKEND` 娉ㄩ噴銆?* **`todo-tasks.md`**锛毬?.9 路 搂9.9 路 搂15.29 路 搂15.30锛坆iz v1.4 鍚堝苟琛岋級鏍?**done**銆?
 ### Test evidence
 
 ```text
-pytest tests/integration/api/prd10/test_prd10_presign_backends.py tests/integration/api/prd10/test_prd10_uploads_local_api.py -q  → 9 passed
-pytest tests/integration/api/test_prd10_frontend_binding.py -q  → 28 passed
-node --check static/mydow/biz/bridge.js  → OK
+pytest tests/integration/api/prd10/test_prd10_presign_backends.py tests/integration/api/prd10/test_prd10_uploads_local_api.py -q  鈫?9 passed
+pytest tests/integration/api/test_prd10_frontend_binding.py -q  鈫?28 passed
+node --check static/mydow/biz/bridge.js  鈫?OK
 ```
 
 ### Files
@@ -1172,24 +1151,19 @@ node --check static/mydow/biz/bridge.js  → OK
 
 ### Follow-ups
 
-* S3 真实 PUT 联调仍依赖 boto3 + bucket policy；可选补充 mock boto 的单测（本轮仅覆盖 misconfig 503）。
-
+* S3 鐪熷疄 PUT 鑱旇皟浠嶄緷璧?boto3 + bucket policy锛涘彲閫夎ˉ鍏?mock boto 鐨勫崟娴嬶紙鏈疆浠呰鐩?misconfig 503锛夈€?
 ---
 
-## Milestone 44 · §15.31–§15.33 v1.4 bridge 验收 + E2E smoke — DELIVERED
+## Milestone 44 路 搂15.31鈥撀?5.33 v1.4 bridge 楠屾敹 + E2E smoke 鈥?DELIVERED
 
-**When**: 2026-05-07（Cursor Agent）
-
+**When**: 2026-05-07锛圕ursor Agent锛?
 ### Delivered
 
-* **`tests/e2e/test_v14_walk.py`**：子进程 `uvicorn` + `seed_prd10` + Playwright 打开 `/mydow/biz_v14/?cb=`，避免父进程已加载 `tests/conftest.py` 时 `agent_os.db.base` 错误闩在默认 Postgres `DATABASE_URL` 导致 WinError 1225 / demo/login 500。
-* **`todo-tasks.md`**：§15.31 / §15.32 / §15.33 / 重复 §10.7 / stale §15.22 状态收口。
-* §7.27 已为 **done**（my-mcp-17），本条未改 `bridge.js`。
-
+* **`tests/e2e/test_v14_walk.py`**锛氬瓙杩涚▼ `uvicorn` + `seed_prd10` + Playwright 鎵撳紑 `/mydow/biz_v14/?cb=`锛岄伩鍏嶇埗杩涚▼宸插姞杞?`tests/conftest.py` 鏃?`agent_os.db.base` 閿欒闂╁湪榛樿 Postgres `DATABASE_URL` 瀵艰嚧 WinError 1225 / demo/login 500銆?* **`todo-tasks.md`**锛毬?5.31 / 搂15.32 / 搂15.33 / 閲嶅 搂10.7 / stale 搂15.22 鐘舵€佹敹鍙ｃ€?* 搂7.27 宸蹭负 **done**锛坢y-mcp-17锛夛紝鏈潯鏈敼 `bridge.js`銆?
 ### Test evidence
 
 ```text
-python -m pytest tests/e2e/test_v14_walk.py -q -p no:cacheprovider  → 1 passed
+python -m pytest tests/e2e/test_v14_walk.py -q -p no:cacheprovider  鈫?1 passed
 ```
 
 ### Files
@@ -1199,22 +1173,19 @@ python -m pytest tests/e2e/test_v14_walk.py -q -p no:cacheprovider  → 1 passed
 
 ### Follow-ups
 
-* §15.33 当前只做 boot + token + `apiFetchV14` + capture DOM + 零失败请求；全 11 模块 class 切换可比照 `.tmp/agent3_14_3_acceptance.py` 扩断言。
-
+* 搂15.33 褰撳墠鍙仛 boot + token + `apiFetchV14` + capture DOM + 闆跺け璐ヨ姹傦紱鍏?11 妯″潡 class 鍒囨崲鍙瘮鐓?`.tmp/agent3_14_3_acceptance.py` 鎵╂柇瑷€銆?
 ---
 
-## Milestone 43 · §10.3 biz onboarding tour 接通 boot + 演示重播入口 — DELIVERED
+## Milestone 43 路 搂10.3 biz onboarding tour 鎺ラ€?boot + 婕旂ず閲嶆挱鍏ュ彛 鈥?DELIVERED
 
-**When**: 2026-05-07（Cursor Agent / my-mcp-21）
-
+**When**: 2026-05-07锛圕ursor Agent / my-mcp-21锛?
 ### Delivered
 
-* **`static/mydow/biz/bridge.js`**：`boot()` 在 `Promise.allSettled` 成功后调用 `bootOnboardingIfFirstTime()`；侧栏 `.brand` 注入 `[data-restart-onboarding]` 演示 chip；`window.MydowBridge.restartOnboarding` 导出。
-
+* **`static/mydow/biz/bridge.js`**锛歚boot()` 鍦?`Promise.allSettled` 鎴愬姛鍚庤皟鐢?`bootOnboardingIfFirstTime()`锛涗晶鏍?`.brand` 娉ㄥ叆 `[data-restart-onboarding]` 婕旂ず chip锛沗window.MydowBridge.restartOnboarding` 瀵煎嚭銆?
 ### Test evidence
 
 ```text
-python .tmp/smoke_10_3_onboarding.py 8890 → exit 0
+python .tmp/smoke_10_3_onboarding.py 8890 鈫?exit 0
 ```
 
 ### Files
@@ -1224,38 +1195,29 @@ python .tmp/smoke_10_3_onboarding.py 8890 → exit 0
 
 ---
 
-## Milestone 42 · SPA §7.25/§7.26 + KB 列表查询扩展 — DELIVERED
+## Milestone 42 路 SPA 搂7.25/搂7.26 + KB 鍒楄〃鏌ヨ鎵╁睍 鈥?DELIVERED
 
-**When**: 2026-05-07（Cursor Agent / my-mcp-21）
-
+**When**: 2026-05-07锛圕ursor Agent / my-mcp-21锛?
 ### Delivered
 
-* **`src/agent_os/kb/router.py`**：`GET /api/v1/kb/folders` 支持 `is_favorite=true`（仅收藏）与 `sort_by=updated_at`（按更新时间降序）。
-* **`static/mydow/app.js`**：知识库页工具栏改为服务端筛选 + skeleton；首页「深度研究」`mode:"report"` 修复非法 `research`；上传兼容多种 presign 字段形态。
-* **`tests/integration/api/prd10/test_prd10_kb_api.py`**：`test_list_folders_is_favorite_filter_and_sort_by_updated_at`。
-* **`docs/agent-2-spa-binding-guide.md`**：folders 查询参数文档同步。
-
+* **`src/agent_os/kb/router.py`**锛歚GET /api/v1/kb/folders` 鏀寔 `is_favorite=true`锛堜粎鏀惰棌锛変笌 `sort_by=updated_at`锛堟寜鏇存柊鏃堕棿闄嶅簭锛夈€?* **`static/mydow/app.js`**锛氱煡璇嗗簱椤靛伐鍏锋爮鏀逛负鏈嶅姟绔瓫閫?+ skeleton锛涢椤点€屾繁搴︾爺绌躲€峘mode:"report"` 淇闈炴硶 `research`锛涗笂浼犲吋瀹瑰绉?presign 瀛楁褰㈡€併€?* **`tests/integration/api/prd10/test_prd10_kb_api.py`**锛歚test_list_folders_is_favorite_filter_and_sort_by_updated_at`銆?* **`docs/agent-2-spa-binding-guide.md`**锛歠olders 鏌ヨ鍙傛暟鏂囨。鍚屾銆?
 ### Test evidence
 
 ```text
-pytest tests/integration/api/prd10/test_prd10_kb_api.py -q → 26 passed
-pytest tests/integration/api/test_prd10_frontend_binding.py -q → 28 passed
-node --check static/mydow/app.js → exit 0
+pytest tests/integration/api/prd10/test_prd10_kb_api.py -q 鈫?26 passed
+pytest tests/integration/api/test_prd10_frontend_binding.py -q 鈫?28 passed
+node --check static/mydow/app.js 鈫?exit 0
 ```
 
 ---
 
-## Milestone 41 · §5.3 Windows SSE 通知流集成测试 — DELIVERED
+## Milestone 41 路 搂5.3 Windows SSE 閫氱煡娴侀泦鎴愭祴璇?鈥?DELIVERED
 
-**When**: 2026-05-07 15:57（Agent / my-mcp-15）
-
-**Why**: `todo-tasks.md` §5.3 长期处于 `open`（`httpx` + `ASGITransport` 在 Windows 下与 Starlette SSE / `BaseHTTPMiddleware` 的组合易死锁）。
-
+**When**: 2026-05-07 15:57锛圓gent / my-mcp-15锛?
+**Why**: `todo-tasks.md` 搂5.3 闀挎湡澶勪簬 `open`锛坄httpx` + `ASGITransport` 鍦?Windows 涓嬩笌 Starlette SSE / `BaseHTTPMiddleware` 鐨勭粍鍚堟槗姝婚攣锛夈€?
 ### Delivered / verified
 
-* **`tests/integration/api/prd10/test_prd10_sse_notifications_api.py`**：已通过 **嵌入式 `uvicorn.Server`（daemon 线程）+ 同步 TCP `httpx.Client`** 驱动两条用例（ready→`job_completed` 通知、跨用户隔离），与产线路径一致。
-* **`tests/integration/api/prd10/conftest.py`**：`_build_app(..., with_request_id_middleware=False)` 供 `prd10_app` / `prd10_other_app`（及 `prd10_dual_asgi_clients` 文档注释）专用于 SSE harness，避免 `RequestIdMiddleware`（`BaseHTTPMiddleware`）叠加长连接时的 ASGI `receive` 卡死。
-
+* **`tests/integration/api/prd10/test_prd10_sse_notifications_api.py`**锛氬凡閫氳繃 **宓屽叆寮?`uvicorn.Server`锛坉aemon 绾跨▼锛? 鍚屾 TCP `httpx.Client`** 椹卞姩涓ゆ潯鐢ㄤ緥锛坮eady鈫抈job_completed` 閫氱煡銆佽法鐢ㄦ埛闅旂锛夛紝涓庝骇绾胯矾寰勪竴鑷淬€?* **`tests/integration/api/prd10/conftest.py`**锛歚_build_app(..., with_request_id_middleware=False)` 渚?`prd10_app` / `prd10_other_app`锛堝強 `prd10_dual_asgi_clients` 鏂囨。娉ㄩ噴锛変笓鐢ㄤ簬 SSE harness锛岄伩鍏?`RequestIdMiddleware`锛坄BaseHTTPMiddleware`锛夊彔鍔犻暱杩炴帴鏃剁殑 ASGI `receive` 鍗℃銆?
 ### Test evidence
 
 ```text
@@ -1263,23 +1225,18 @@ pytest tests/integration/api/prd10/test_prd10_sse_notifications_api.py -vv -p no
 # 2 passed (win32), ~7.8s
 ```
 
-* `todo-tasks.md` §5.3 → `done`
+* `todo-tasks.md` 搂5.3 鈫?`done`
 
 ---
 
-## Milestone 41 · Acceptance Gate §14.9（HTTPS 公网 `/mydow/` 运维契约） — DELIVERED
+## Milestone 41 路 Acceptance Gate 搂14.9锛圚TTPS 鍏綉 `/mydow/` 杩愮淮濂戠害锛?鈥?DELIVERED
 
-**When**: 2026-05-07（Cursor Agent / Composer）
-
-**Why**: `todo-tasks.md` §14.9 长期 `open`，需要把「compose + nginx + TLS + 域名 + curl 烟测」写成可执行运维段落，并用静态测试锁住 `locations.conf.inc` 对 `/mydow` 的转发事实，避免回归。
-
+**When**: 2026-05-07锛圕ursor Agent / Composer锛?
+**Why**: `todo-tasks.md` 搂14.9 闀挎湡 `open`锛岄渶瑕佹妸銆宑ompose + nginx + TLS + 鍩熷悕 + curl 鐑熸祴銆嶅啓鎴愬彲鎵ц杩愮淮娈佃惤锛屽苟鐢ㄩ潤鎬佹祴璇曢攣浣?`locations.conf.inc` 瀵?`/mydow` 鐨勮浆鍙戜簨瀹烇紝閬垮厤鍥炲綊銆?
 ### Delivered
 
 * **`docs/11-deployment/docker.md`**
-  * 新增 **「生产域名与 `/mydow/` 入口（Acceptance Gate §14.9）」**：`--profile nginx`、`BASE_URL` / `CORS_ORIGINS`、`curl https://demo.example.com/mydow/` 与 `/health`、指到 `https.md`。
-  * 重写 **HTTPS 配置** 小节，去除过时的「手动取消注释 HTTPS 块」，与当前 `mydow.conf` + `entrypoint.sh` 行为一致。
-* **`tests/integration/api/test_prd10_deployment_nginx.py`**：`test_locations_inc_proxies_mydow_shell` + `test_docker_md_documents_acceptance_gate_14_9`。
-
+  * 鏂板 **銆岀敓浜у煙鍚嶄笌 `/mydow/` 鍏ュ彛锛圓cceptance Gate 搂14.9锛夈€?*锛歚--profile nginx`銆乣BASE_URL` / `CORS_ORIGINS`銆乣curl https://demo.example.com/mydow/` 涓?`/health`銆佹寚鍒?`https.md`銆?  * 閲嶅啓 **HTTPS 閰嶇疆** 灏忚妭锛屽幓闄よ繃鏃剁殑銆屾墜鍔ㄥ彇娑堟敞閲?HTTPS 鍧椼€嶏紝涓庡綋鍓?`mydow.conf` + `entrypoint.sh` 琛屼负涓€鑷淬€?* **`tests/integration/api/test_prd10_deployment_nginx.py`**锛歚test_locations_inc_proxies_mydow_shell` + `test_docker_md_documents_acceptance_gate_14_9`銆?
 ### Verified
 
 ```text
@@ -1291,21 +1248,16 @@ pytest tests/integration/api/test_prd10_deployment_nginx.py -q -p no:cacheprovid
 
 * `docs/11-deployment/docker.md`
 * `tests/integration/api/test_prd10_deployment_nginx.py`
-* `todo-tasks.md`（§14.9 → `done`）
-
+* `todo-tasks.md`锛埪?4.9 鈫?`done`锛?
 ---
 
-## Milestone 40 · §11.9 Production seed 收尾（env 手册 + 契约测试） — DELIVERED
+## Milestone 40 路 搂11.9 Production seed 鏀跺熬锛坋nv 鎵嬪唽 + 濂戠害娴嬭瘯锛?鈥?DELIVERED
 
-**When**: 2026-05-07（Cursor Agent / Composer）
-
-**Why**: `todo-tasks.md` §11.9 仍标 `doing`（claude-opus 接手条目标注缺测试与 `env-vars.md`）；`test_prd10_production_seed.py` 与 `production-seed.md` 已绿，补完运维手册侧同步并关闭任务。
-
+**When**: 2026-05-07锛圕ursor Agent / Composer锛?
+**Why**: `todo-tasks.md` 搂11.9 浠嶆爣 `doing`锛坈laude-opus 鎺ユ墜鏉＄洰鏍囨敞缂烘祴璇曚笌 `env-vars.md`锛夛紱`test_prd10_production_seed.py` 涓?`production-seed.md` 宸茬豢锛岃ˉ瀹岃繍缁存墜鍐屼晶鍚屾骞跺叧闂换鍔°€?
 ### Delivered
 
-* **`docs/11-deployment/env-vars.md`**：在 §5「PRD10 行为开关」下新增 **「PRD10 §11.9 生产 Seed」** 子节，表格式列出 `AGENTOS_PROD_SEED_ON_BOOT` / `FORCE` / `EMAIL` / `PASSWORD` / `FULLNAME`，并链到 `production-seed.md`。
-* **`tests/integration/api/test_prd10_production_seed.py`**：新增 `test_env_vars_handbook_mentions_prod_seed`，防止 env 手册与种子脚本漂移。
-
+* **`docs/11-deployment/env-vars.md`**锛氬湪 搂5銆孭RD10 琛屼负寮€鍏炽€嶄笅鏂板 **銆孭RD10 搂11.9 鐢熶骇 Seed銆?* 瀛愯妭锛岃〃鏍煎紡鍒楀嚭 `AGENTOS_PROD_SEED_ON_BOOT` / `FORCE` / `EMAIL` / `PASSWORD` / `FULLNAME`锛屽苟閾惧埌 `production-seed.md`銆?* **`tests/integration/api/test_prd10_production_seed.py`**锛氭柊澧?`test_env_vars_handbook_mentions_prod_seed`锛岄槻姝?env 鎵嬪唽涓庣瀛愯剼鏈紓绉汇€?
 ### Verified
 
 ```text
@@ -1317,83 +1269,45 @@ pytest tests/integration/api/test_prd10_production_seed.py -q -p no:cacheprovide
 
 * `docs/11-deployment/env-vars.md`
 * `tests/integration/api/test_prd10_production_seed.py`
-* `todo-tasks.md`（§11.9 → `done`）
-
+* `todo-tasks.md`锛埪?1.9 鈫?`done`锛?
 ---
 
-## Milestone 39 · §12.5 文件上传分片 + 断点续传（PRD10 §16.3 / §29 大文件风险闭环） — DELIVERED
+## Milestone 39 路 搂12.5 鏂囦欢涓婁紶鍒嗙墖 + 鏂偣缁紶锛圥RD10 搂16.3 / 搂29 澶ф枃浠堕闄╅棴鐜級 鈥?DELIVERED
 
-**When**: 2026-05-07 10:25（本会话续，by Agent / my-mcp-22）
-
-**Why**: PRD10 §29 把「大文件解析失败 / 上传卡顿」列为关键风险；§16.3 异步任务表里的「文件上传分片 + 断点续传」一直 `open` 没人接。biz `uploadFile` modal 当前用单次 `PUT /api/v1/uploads/local/{id}`，FastAPI 默认 body limit + ASGI 单次内存峰值在大 PDF / 视频上会被掐死，**投资演示真上传 100 MB 视频就翻车**。本里程碑把分片上传后端打通，形态对齐 S3/R2 multipart（client 切到真对象存储时只换 storage adapter，路由层零改），让 SPA 后续切片接入即可。
-
-按 §3 领地协调：`uploads/router.py` + `uploads/storage.py` + `tests/integration/api/prd10/` 都没在别人的 `doing` 中（最近的 §15.7 4 modals 已 done），全程独立动文件。
-
+**When**: 2026-05-07 10:25锛堟湰浼氳瘽缁紝by Agent / my-mcp-22锛?
+**Why**: PRD10 搂29 鎶娿€屽ぇ鏂囦欢瑙ｆ瀽澶辫触 / 涓婁紶鍗￠】銆嶅垪涓哄叧閿闄╋紱搂16.3 寮傛浠诲姟琛ㄩ噷鐨勩€屾枃浠朵笂浼犲垎鐗?+ 鏂偣缁紶銆嶄竴鐩?`open` 娌′汉鎺ャ€俠iz `uploadFile` modal 褰撳墠鐢ㄥ崟娆?`PUT /api/v1/uploads/local/{id}`锛孎astAPI 榛樿 body limit + ASGI 鍗曟鍐呭瓨宄板€煎湪澶?PDF / 瑙嗛涓婁細琚帎姝伙紝**鎶曡祫婕旂ず鐪熶笂浼?100 MB 瑙嗛灏辩炕杞?*銆傛湰閲岀▼纰戞妸鍒嗙墖涓婁紶鍚庣鎵撻€氾紝褰㈡€佸榻?S3/R2 multipart锛坈lient 鍒囧埌鐪熷璞″瓨鍌ㄦ椂鍙崲 storage adapter锛岃矾鐢卞眰闆舵敼锛夛紝璁?SPA 鍚庣画鍒囩墖鎺ュ叆鍗冲彲銆?
+鎸?搂3 棰嗗湴鍗忚皟锛歚uploads/router.py` + `uploads/storage.py` + `tests/integration/api/prd10/` 閮芥病鍦ㄥ埆浜虹殑 `doing` 涓紙鏈€杩戠殑 搂15.7 4 modals 宸?done锛夛紝鍏ㄧ▼鐙珛鍔ㄦ枃浠躲€?
 ### Delivered
 
-* **`uploads/storage.py`**（+~430 行）：
-  * `_multipart_chunk_size_default` / `_multipart_ttl_seconds_default` / `_multipart_max_total_size_default`：env-driven 默认值，分别钳到 64 KiB – 64 MiB / 60 s – 7 d / ≥ 1 MiB，避免 hostile env 把服务玩坏。
-  * `ChunkInfo` dataclass — `(index, size_bytes, sha256)` 暴露给 client。
-  * `MultipartSession` dataclass — 持久化字段：`upload_id / user_id / filename / mime_type / total_size_bytes / chunk_size / total_chunks / created_at / expires_at / chunks: dict[int, ChunkInfo] / completed_at`，`to_dict / from_dict` 用 ISO 8601 + JSON 序列化；`is_expired / is_complete / received_indices / missing_indices` 4 个查询方法。
-  * `MultipartUploadError(ValueError)` — 带 `code` (NOT_FOUND / VALIDATION_ERROR) 让 router 一行 if-else 翻成 PRD10 envelope。
-  * `MultipartStorage` 类（singleton + `get_default_multipart_storage` / `set_default_multipart_storage` 测试钩子）：
-    * `init_session(user_id, upload_id, filename, total_size_bytes, mime_type, chunk_size)` — 计算 `total_chunks = ceil(total_size / chunk_size)`，atomic-rename `meta.json`，建立 `chunks/` 目录；hostile filename 经 `UploadStorage._safe_filename` 规则化。
-    * `get_session` — 读 `meta.json` + JSON 解析；任何异常返 None（避免污染上层 trace）。
-    * `write_chunk(user_id, upload_id, chunk_index, data)` — 校验 expired / completed / index 范围 / chunk size（非末尾必须 == `chunk_size`，末尾 == `total_size - chunk_size * (total_chunks-1)`）/ 空 body；写 `chunks/{index:08d}.part` + 更新 meta 落盘。
-    * `assemble(user_id, upload_id, target_storage)` — 流式按 index 顺序拼接（每片 64 KiB 缓冲读 → 写最终文件）→ 总大小校验 → 返回 `(MultipartSession, StoredUpload)` + `_purge` 清空 multipart 临时目录；assembled-size 不一致时回滚最终文件并保留 multipart 让 client retry。
-    * `cancel(user_id, upload_id)` — `shutil.rmtree(ignore_errors=True)`，幂等（不存在返 False，存在返 True）。
-* **`uploads/router.py`**（+~250 行）：5 个端点全部走 PRD10 envelope（router prefix `/api/v1/uploads`）：
-  * `POST /multipart/init` — 接 `MultipartInitRequest`（filename min=1/max=500 + total_size_bytes>0 + optional mime_type/chunk_size{ge=1024,le=64MiB}，`extra="forbid"`），返回 session 描述符 dict。
-  * `PUT /multipart/{upload_id}/{chunk_index}` — 读 `request.body()`（裸 bytes，与单 PUT 同形态）→ `write_chunk` → 返回 `{chunk_index, size_bytes, sha256, received_count, total_chunks, is_complete}`。
-  * `GET /multipart/{upload_id}` — 返回 `_multipart_session_payload`（含 `received_chunks` 排序数组 + `missing_chunks` 数组 + `status: in_progress|ready|completed`），cross-user 404。
-  * `POST /multipart/{upload_id}/complete` — `assemble` → upsert `prd10_sources` 行（`source_type="file" / parse_status="uploaded" / storage_path / size_bytes / mime_type`）→ commit；返回与单 PUT **完全一致**的 envelope（`{upload_id, filename, size_bytes, file_url}` + 加 `completed_at, total_chunks`），让 `/capture/file/commit` 零修改即可消费。
-  * `DELETE /multipart/{upload_id}` — 幂等清理，返 `{upload_id, cancelled: bool}`。
-  * `_multipart_session_payload` / `_raise_multipart_error` 两个 helper 让 NOT_FOUND→404 + VALIDATION_ERROR→400 翻译只有一行。
-* **`.env.example`** §7 加 4 行 env：`PRD10_UPLOADS_MULTIPART_BASE` / `AGENTOS_UPLOAD_MULTIPART_CHUNK_SIZE` / `AGENTOS_UPLOAD_MULTIPART_TTL_SECONDS` / `AGENTOS_UPLOAD_MULTIPART_MAX_BYTES`。
-* **`docs/11-deployment/env-vars.md`** §7 同步 4 行表。
-* **`docs/11-deployment/api-reference.md`** §3 端点表加 5 行 multipart + §3.1 整章「大文件分片上传」5 步 curl 示例（init / 循环 PUT / resume / complete / cancel）+ 关键实现细节段。
-
+* **`uploads/storage.py`**锛?~430 琛岋級锛?  * `_multipart_chunk_size_default` / `_multipart_ttl_seconds_default` / `_multipart_max_total_size_default`锛歟nv-driven 榛樿鍊硷紝鍒嗗埆閽冲埌 64 KiB 鈥?64 MiB / 60 s 鈥?7 d / 鈮?1 MiB锛岄伩鍏?hostile env 鎶婃湇鍔＄帺鍧忋€?  * `ChunkInfo` dataclass 鈥?`(index, size_bytes, sha256)` 鏆撮湶缁?client銆?  * `MultipartSession` dataclass 鈥?鎸佷箙鍖栧瓧娈碉細`upload_id / user_id / filename / mime_type / total_size_bytes / chunk_size / total_chunks / created_at / expires_at / chunks: dict[int, ChunkInfo] / completed_at`锛宍to_dict / from_dict` 鐢?ISO 8601 + JSON 搴忓垪鍖栵紱`is_expired / is_complete / received_indices / missing_indices` 4 涓煡璇㈡柟娉曘€?  * `MultipartUploadError(ValueError)` 鈥?甯?`code` (NOT_FOUND / VALIDATION_ERROR) 璁?router 涓€琛?if-else 缈绘垚 PRD10 envelope銆?  * `MultipartStorage` 绫伙紙singleton + `get_default_multipart_storage` / `set_default_multipart_storage` 娴嬭瘯閽╁瓙锛夛細
+    * `init_session(user_id, upload_id, filename, total_size_bytes, mime_type, chunk_size)` 鈥?璁＄畻 `total_chunks = ceil(total_size / chunk_size)`锛宎tomic-rename `meta.json`锛屽缓绔?`chunks/` 鐩綍锛沨ostile filename 缁?`UploadStorage._safe_filename` 瑙勫垯鍖栥€?    * `get_session` 鈥?璇?`meta.json` + JSON 瑙ｆ瀽锛涗换浣曞紓甯歌繑 None锛堥伩鍏嶆薄鏌撲笂灞?trace锛夈€?    * `write_chunk(user_id, upload_id, chunk_index, data)` 鈥?鏍￠獙 expired / completed / index 鑼冨洿 / chunk size锛堥潪鏈熬蹇呴』 == `chunk_size`锛屾湯灏?== `total_size - chunk_size * (total_chunks-1)`锛? 绌?body锛涘啓 `chunks/{index:08d}.part` + 鏇存柊 meta 钀界洏銆?    * `assemble(user_id, upload_id, target_storage)` 鈥?娴佸紡鎸?index 椤哄簭鎷兼帴锛堟瘡鐗?64 KiB 缂撳啿璇?鈫?鍐欐渶缁堟枃浠讹級鈫?鎬诲ぇ灏忔牎楠?鈫?杩斿洖 `(MultipartSession, StoredUpload)` + `_purge` 娓呯┖ multipart 涓存椂鐩綍锛沘ssembled-size 涓嶄竴鑷存椂鍥炴粴鏈€缁堟枃浠跺苟淇濈暀 multipart 璁?client retry銆?    * `cancel(user_id, upload_id)` 鈥?`shutil.rmtree(ignore_errors=True)`锛屽箓绛夛紙涓嶅瓨鍦ㄨ繑 False锛屽瓨鍦ㄨ繑 True锛夈€?* **`uploads/router.py`**锛?~250 琛岋級锛? 涓鐐瑰叏閮ㄨ蛋 PRD10 envelope锛坮outer prefix `/api/v1/uploads`锛夛細
+  * `POST /multipart/init` 鈥?鎺?`MultipartInitRequest`锛坒ilename min=1/max=500 + total_size_bytes>0 + optional mime_type/chunk_size{ge=1024,le=64MiB}锛宍extra="forbid"`锛夛紝杩斿洖 session 鎻忚堪绗?dict銆?  * `PUT /multipart/{upload_id}/{chunk_index}` 鈥?璇?`request.body()`锛堣８ bytes锛屼笌鍗?PUT 鍚屽舰鎬侊級鈫?`write_chunk` 鈫?杩斿洖 `{chunk_index, size_bytes, sha256, received_count, total_chunks, is_complete}`銆?  * `GET /multipart/{upload_id}` 鈥?杩斿洖 `_multipart_session_payload`锛堝惈 `received_chunks` 鎺掑簭鏁扮粍 + `missing_chunks` 鏁扮粍 + `status: in_progress|ready|completed`锛夛紝cross-user 404銆?  * `POST /multipart/{upload_id}/complete` 鈥?`assemble` 鈫?upsert `prd10_sources` 琛岋紙`source_type="file" / parse_status="uploaded" / storage_path / size_bytes / mime_type`锛夆啋 commit锛涜繑鍥炰笌鍗?PUT **瀹屽叏涓€鑷?*鐨?envelope锛坄{upload_id, filename, size_bytes, file_url}` + 鍔?`completed_at, total_chunks`锛夛紝璁?`/capture/file/commit` 闆朵慨鏀瑰嵆鍙秷璐广€?  * `DELETE /multipart/{upload_id}` 鈥?骞傜瓑娓呯悊锛岃繑 `{upload_id, cancelled: bool}`銆?  * `_multipart_session_payload` / `_raise_multipart_error` 涓や釜 helper 璁?NOT_FOUND鈫?04 + VALIDATION_ERROR鈫?00 缈昏瘧鍙湁涓€琛屻€?* **`.env.example`** 搂7 鍔?4 琛?env锛歚PRD10_UPLOADS_MULTIPART_BASE` / `AGENTOS_UPLOAD_MULTIPART_CHUNK_SIZE` / `AGENTOS_UPLOAD_MULTIPART_TTL_SECONDS` / `AGENTOS_UPLOAD_MULTIPART_MAX_BYTES`銆?* **`docs/11-deployment/env-vars.md`** 搂7 鍚屾 4 琛岃〃銆?* **`docs/11-deployment/api-reference.md`** 搂3 绔偣琛ㄥ姞 5 琛?multipart + 搂3.1 鏁寸珷銆屽ぇ鏂囦欢鍒嗙墖涓婁紶銆? 姝?curl 绀轰緥锛坕nit / 寰幆 PUT / resume / complete / cancel锛? 鍏抽敭瀹炵幇缁嗚妭娈点€?
 ### Test evidence
 
-新加 `tests/integration/api/prd10/test_prd10_uploads_multipart.py`（**+450 行 / 18 用例 / 18 PASS @ 4.01s**），覆盖 init shape / 0-size 422 / too-large 400 / forbid extra；PUT persist+progress / 乱序后 complete（字节级 `read_bytes() == payload`）/ wrong size 400 / index out-of-range 400 / unknown session 404；complete missing-chunks 400 / Source row 落库字段全对 / envelope 与 single-PUT 同 shape / 与 `/capture/file/commit` 端到端走通；resume missing-chunks / 404；cancel cleanup / unknown idempotent；cross-user GET/PUT/POST 全部 404。
-
-**联合 PRD10 全 14 套件 + prd10/ 矩阵 271 passed @ 161.37s** (`.tmp/baseline-12-5.log`)，比 §0 baseline 225 提升 **+46**，零回归。
-
+鏂板姞 `tests/integration/api/prd10/test_prd10_uploads_multipart.py`锛?*+450 琛?/ 18 鐢ㄤ緥 / 18 PASS @ 4.01s**锛夛紝瑕嗙洊 init shape / 0-size 422 / too-large 400 / forbid extra锛汸UT persist+progress / 涔卞簭鍚?complete锛堝瓧鑺傜骇 `read_bytes() == payload`锛? wrong size 400 / index out-of-range 400 / unknown session 404锛沜omplete missing-chunks 400 / Source row 钀藉簱瀛楁鍏ㄥ / envelope 涓?single-PUT 鍚?shape / 涓?`/capture/file/commit` 绔埌绔蛋閫氾紱resume missing-chunks / 404锛沜ancel cleanup / unknown idempotent锛沜ross-user GET/PUT/POST 鍏ㄩ儴 404銆?
+**鑱斿悎 PRD10 鍏?14 濂椾欢 + prd10/ 鐭╅樀 271 passed @ 161.37s** (`.tmp/baseline-12-5.log`)锛屾瘮 搂0 baseline 225 鎻愬崌 **+46**锛岄浂鍥炲綊銆?
 ### Files touched
 
-* `src/agent_os/uploads/storage.py`（+~430 行）
-* `src/agent_os/uploads/router.py`（+~250 行）
-* `tests/integration/api/prd10/test_prd10_uploads_multipart.py`（**新建**，450 行，18 用例）
-* `.env.example`（+4 env）
-* `docs/11-deployment/env-vars.md`（+4 行表）
-* `docs/11-deployment/api-reference.md`（§3 +5 行 + 新 §3.1）
-* `todo-tasks.md` §12.5 `doing` → `done` + 完整证据
-* 本 milestone 写入 `agent-progress-report.md`
+* `src/agent_os/uploads/storage.py`锛?~430 琛岋級
+* `src/agent_os/uploads/router.py`锛?~250 琛岋級
+* `tests/integration/api/prd10/test_prd10_uploads_multipart.py`锛?*鏂板缓**锛?50 琛岋紝18 鐢ㄤ緥锛?* `.env.example`锛?4 env锛?* `docs/11-deployment/env-vars.md`锛?4 琛岃〃锛?* `docs/11-deployment/api-reference.md`锛埪? +5 琛?+ 鏂?搂3.1锛?* `todo-tasks.md` 搂12.5 `doing` 鈫?`done` + 瀹屾暣璇佹嵁
+* 鏈?milestone 鍐欏叆 `agent-progress-report.md`
 
-**未动**：`static/mydow/*`、`bridge.js`、`/uploads/local/{id}` 单 PUT 路径、其他 agent 在 `auth/router.py` / `account/router.py` / `common/middleware.py` 等已写的代码。
-
+**鏈姩**锛歚static/mydow/*`銆乣bridge.js`銆乣/uploads/local/{id}` 鍗?PUT 璺緞銆佸叾浠?agent 鍦?`auth/router.py` / `account/router.py` / `common/middleware.py` 绛夊凡鍐欑殑浠ｇ爜銆?
 ### Follow-ups
 
-1. **SPA 接入**（开新 task §15.x）：`bridge.js::handleUploadFileModal` 升级支持 multipart 切片：file.size > 10 MiB 走 `multipart/init` → 并发 `PUT` chunks → `complete`，否则保留单 PUT 路径。
-2. **多实例部署**：当前 multipart staging 落本地磁盘，多实例时不同 worker 看到的 session 不一致。投资演示单实例 OK；上线前换共享 FS（NFS / EFS）或切 S3 multipart（API 形态已对齐）。
-3. **过期 session 清理 cron**：当前 TTL 检查只在 PUT 时触发，过期临时目录会驻留。可加一个 `scripts/cleanup_multipart_sessions.py` 与 §10.7 demo 重置脚本协同。
-
+1. **SPA 鎺ュ叆**锛堝紑鏂?task 搂15.x锛夛細`bridge.js::handleUploadFileModal` 鍗囩骇鏀寔 multipart 鍒囩墖锛歠ile.size > 10 MiB 璧?`multipart/init` 鈫?骞跺彂 `PUT` chunks 鈫?`complete`锛屽惁鍒欎繚鐣欏崟 PUT 璺緞銆?2. **澶氬疄渚嬮儴缃?*锛氬綋鍓?multipart staging 钀芥湰鍦扮鐩橈紝澶氬疄渚嬫椂涓嶅悓 worker 鐪嬪埌鐨?session 涓嶄竴鑷淬€傛姇璧勬紨绀哄崟瀹炰緥 OK锛涗笂绾垮墠鎹㈠叡浜?FS锛圢FS / EFS锛夋垨鍒?S3 multipart锛圓PI 褰㈡€佸凡瀵归綈锛夈€?3. **杩囨湡 session 娓呯悊 cron**锛氬綋鍓?TTL 妫€鏌ュ彧鍦?PUT 鏃惰Е鍙戯紝杩囨湡涓存椂鐩綍浼氶┗鐣欍€傚彲鍔犱竴涓?`scripts/cleanup_multipart_sessions.py` 涓?搂10.7 demo 閲嶇疆鑴氭湰鍗忓悓銆?
 ---
 
-## Milestone 38 · §11.5b Sentry P1 follow-up：request_id ↔ scope 绑定 + smoke 端点 + 部署手册 — DELIVERED
+## Milestone 38 路 搂11.5b Sentry P1 follow-up锛歳equest_id 鈫?scope 缁戝畾 + smoke 绔偣 + 閮ㄧ讲鎵嬪唽 鈥?DELIVERED
 
-**When**: 2026-05-07 10:25（本会话续，by Agent / my-mcp-24）
-
-**Why**: §11.5（Sentry 接入）已 done（其他 agent 协同标 done，复用我之前的 `sentry_setup.py`）；§11.5b 是同名 follow-up：把 PRD10 §11.6 已经在用的 request_id 字段串到 Sentry scope（关联日志 ↔ event）+ 给运维一个零接触验证 Sentry 真接通的 smoke 端点 + 把整套从 0 到生产的部署步骤写成手册。
-
-按多人协作规则（§3 / §5.5）：本任务挂在「Sentry / 监控」lane，不撞任何当前 `doing` 任务（避免 §15.x 区块、不动 SPA 文件、不动 router include 顺序之外的领地）。
-
+**When**: 2026-05-07 10:25锛堟湰浼氳瘽缁紝by Agent / my-mcp-24锛?
+**Why**: 搂11.5锛圫entry 鎺ュ叆锛夊凡 done锛堝叾浠?agent 鍗忓悓鏍?done锛屽鐢ㄦ垜涔嬪墠鐨?`sentry_setup.py`锛夛紱搂11.5b 鏄悓鍚?follow-up锛氭妸 PRD10 搂11.6 宸茬粡鍦ㄧ敤鐨?request_id 瀛楁涓插埌 Sentry scope锛堝叧鑱旀棩蹇?鈫?event锛? 缁欒繍缁翠竴涓浂鎺ヨЕ楠岃瘉 Sentry 鐪熸帴閫氱殑 smoke 绔偣 + 鎶婃暣濂椾粠 0 鍒扮敓浜х殑閮ㄧ讲姝ラ鍐欐垚鎵嬪唽銆?
+鎸夊浜哄崗浣滆鍒欙紙搂3 / 搂5.5锛夛細鏈换鍔℃寕鍦ㄣ€孲entry / 鐩戞帶銆峫ane锛屼笉鎾炰换浣曞綋鍓?`doing` 浠诲姟锛堥伩鍏?搂15.x 鍖哄潡銆佷笉鍔?SPA 鏂囦欢銆佷笉鍔?router include 椤哄簭涔嬪鐨勯鍦帮級銆?
 ### Delivered
 
-#### 1. `RequestIdMiddleware` ↔ Sentry isolation scope（`common/middleware.py`）
-
-在 stamp `request.state.request_id` 之后、`call_next` 之前，加一段条件 sentry tagging：
-
+#### 1. `RequestIdMiddleware` 鈫?Sentry isolation scope锛坄common/middleware.py`锛?
+鍦?stamp `request.state.request_id` 涔嬪悗銆乣call_next` 涔嬪墠锛屽姞涓€娈垫潯浠?sentry tagging锛?
 ```python
 if is_sentry_enabled():
     import sentry_sdk
@@ -1404,57 +1318,34 @@ if is_sentry_enabled():
     })
 ```
 
-设计要点：
-- 用 sentry-sdk **2.x module-level** API（`sentry_sdk.set_tag` / `sentry_sdk.set_context`），不是 deprecated 的 `with sentry_sdk.configure_scope() as scope: scope.set_tag(...)`；后者会发 DeprecationWarning，2.x 版本里改成等价的 module-level helper（写当前 isolation scope）。
-- 整段用 `try/except Exception: pass` 包裹 — 监控失败永远不能传染业务请求路径。
-- `is_sentry_enabled()` 短路 + 局部 `import sentry_sdk` 让 sentry 关闭时几乎零开销（两个属性查找）。
+璁捐瑕佺偣锛?- 鐢?sentry-sdk **2.x module-level** API锛坄sentry_sdk.set_tag` / `sentry_sdk.set_context`锛夛紝涓嶆槸 deprecated 鐨?`with sentry_sdk.configure_scope() as scope: scope.set_tag(...)`锛涘悗鑰呬細鍙?DeprecationWarning锛?.x 鐗堟湰閲屾敼鎴愮瓑浠风殑 module-level helper锛堝啓褰撳墠 isolation scope锛夈€?- 鏁存鐢?`try/except Exception: pass` 鍖呰９ 鈥?鐩戞帶澶辫触姘歌繙涓嶈兘浼犳煋涓氬姟璇锋眰璺緞銆?- `is_sentry_enabled()` 鐭矾 + 灞€閮?`import sentry_sdk` 璁?sentry 鍏抽棴鏃跺嚑涔庨浂寮€閿€锛堜袱涓睘鎬ф煡鎵撅級銆?
+#### 2. `__sentry_test__` smoke 绔偣锛坄common/sentry_test_router.py`锛寏85 琛岋級
 
-#### 2. `__sentry_test__` smoke 端点（`common/sentry_test_router.py`，~85 行）
+`POST /api/v1/__sentry_test__`锛?- `capture_message("sentry_smoke_test_message", level="info", request_id=...)` 涓€鏉?info-level 浜嬩欢
+- 涓诲姩 `1/0` 瑙﹀彂 ZeroDivisionError
+- `capture_exception(exc, request_id=..., synthetic=True)` 鍖呰涓婃姤
+- 杩斿洖 PRD10 envelope `500 INTERNAL_ERROR` with `details={synthetic: true, endpoint: "/api/v1/__sentry_test__"}`
 
-`POST /api/v1/__sentry_test__`：
-- `capture_message("sentry_smoke_test_message", level="info", request_id=...)` 一条 info-level 事件
-- 主动 `1/0` 触发 ZeroDivisionError
-- `capture_exception(exc, request_id=..., synthetic=True)` 包装上报
-- 返回 PRD10 envelope `500 INTERNAL_ERROR` with `details={synthetic: true, endpoint: "/api/v1/__sentry_test__"}`
+鎸傝浇閫昏緫锛堝弻閲?gating锛夛細
+- `is_sentry_test_endpoint_enabled()` 鍚屾椂瑕佹眰锛歚AGENTOS_SENTRY_TEST=on/1/true/yes/enabled` AND `is_sentry_enabled()`锛堝嵆 DSN 宸查厤 + init 鎴愬姛锛?- 鍙弧瓒充竴涓笉鎸傝浇锛堣矾寰勮繑 404锛?- 闃叉鐢熶骇娉勬紡锛氭搷浣滃憳楠岃瘉瀹屾瘯鍚?unset env 鍗冲交搴曞叧闂?
+`server/app.py` 鐢?try/except 鍖呰９ include_router锛岄伩鍏嶆寕杞藉け璐ョ牬鍧?startup銆?
+#### 3. `capture_message` / `capture_exception` 鍚屾杩佺Щ鍒?sentry-sdk 2.x
 
-挂载逻辑（双重 gating）：
-- `is_sentry_test_endpoint_enabled()` 同时要求：`AGENTOS_SENTRY_TEST=on/1/true/yes/enabled` AND `is_sentry_enabled()`（即 DSN 已配 + init 成功）
-- 只满足一个不挂载（路径返 404）
-- 防止生产泄漏：操作员验证完毕后 unset env 即彻底关闭
+`common/sentry_setup.py` 鎶?deprecated `with sentry_sdk.push_scope() as scope:` 鏀逛负 `with sentry_sdk.new_scope() as scope:`锛?.x 鎺ㄨ崘 API锛夈€傝涔変竴鑷达細per-call extras 涓嶄細娉勬紡鍒板悓 task 鍚庣画 captures銆?
+#### 4. 閮ㄧ讲鎵嬪唽 `docs/11-deployment/sentry.md`锛?0 绔?/ ~250 琛岋級
 
-`server/app.py` 用 try/except 包裹 include_router，避免挂载失败破坏 startup。
-
-#### 3. `capture_message` / `capture_exception` 同步迁移到 sentry-sdk 2.x
-
-`common/sentry_setup.py` 把 deprecated `with sentry_sdk.push_scope() as scope:` 改为 `with sentry_sdk.new_scope() as scope:`（2.x 推荐 API）。语义一致：per-call extras 不会泄漏到同 task 后续 captures。
-
-#### 4. 部署手册 `docs/11-deployment/sentry.md`（10 章 / ~250 行）
-
-完整章节：
-1. 架构总览（ASCII 图：Mydow → SDK → SaaS）
-2. 5 分钟接入（拿 DSN → 配 .env → 重启 → smoke 验证 → 关 smoke 开关）
-3. `/ready` 自检 JSON 示例
-4. PII 剥离规则表（7 个 header keys + 11 个 body keys）
-5. 噪音过滤（drop /health /ready /metrics /favicon.ico）
-6. Source maps 计划（当前 SPA 走原生 ESM 不需要 sourcemap）
-7. 推荐 Alert Rules 表（5xx spike / new issue / AI streaming / rate limit / dead-letter / 503，关联 PagerDuty/Slack）
-8. 与 §11.6 logging 协同（breadcrumb / event / SQL 自动捕获 / context.request_meta）
-9. 9 条常见故障排查表
-10. 测试覆盖清单 + 关键覆盖点
-
-#### 5. 测试（11 个新 cases，全过 0 deprecation warnings）
-
+瀹屾暣绔犺妭锛?1. 鏋舵瀯鎬昏锛圓SCII 鍥撅細Mydow 鈫?SDK 鈫?SaaS锛?2. 5 鍒嗛挓鎺ュ叆锛堟嬁 DSN 鈫?閰?.env 鈫?閲嶅惎 鈫?smoke 楠岃瘉 鈫?鍏?smoke 寮€鍏筹級
+3. `/ready` 鑷 JSON 绀轰緥
+4. PII 鍓ョ瑙勫垯琛紙7 涓?header keys + 11 涓?body keys锛?5. 鍣煶杩囨护锛坉rop /health /ready /metrics /favicon.ico锛?6. Source maps 璁″垝锛堝綋鍓?SPA 璧板師鐢?ESM 涓嶉渶瑕?sourcemap锛?7. 鎺ㄨ崘 Alert Rules 琛紙5xx spike / new issue / AI streaming / rate limit / dead-letter / 503锛屽叧鑱?PagerDuty/Slack锛?8. 涓?搂11.6 logging 鍗忓悓锛坆readcrumb / event / SQL 鑷姩鎹曡幏 / context.request_meta锛?9. 9 鏉″父瑙佹晠闅滄帓鏌ヨ〃
+10. 娴嬭瘯瑕嗙洊娓呭崟 + 鍏抽敭瑕嗙洊鐐?
+#### 5. 娴嬭瘯锛?1 涓柊 cases锛屽叏杩?0 deprecation warnings锛?
 - **`tests/integration/api/test_prd10_sentry_request_id.py` (8 tests)**:
-  - `test_request_id_middleware_does_not_touch_sentry_when_disabled` — 默认无 DSN 时 SDK 完全 untouched
-  - `test_request_id_middleware_tags_sentry_scope_when_enabled` — set_tag + set_context 真调用
-  - `test_request_id_middleware_resilient_against_sdk_errors` — SDK 抛异常时业务请求仍 200
-  - `test_smoke_endpoint_gated_off_by_default` — 默认 404
-  - `test_smoke_endpoint_gated_off_when_only_env_set` — 单边开关无效
-  - `test_smoke_endpoint_gated_off_when_only_sentry_on` — 单边开关无效
-  - `test_smoke_endpoint_active_when_both_set` — 双开关同时 on 才生效
-  - `test_smoke_endpoint_returns_prd10_envelope` — 命中后真返 500 + PRD10 envelope + synthetic=true
+  - `test_request_id_middleware_does_not_touch_sentry_when_disabled` 鈥?榛樿鏃?DSN 鏃?SDK 瀹屽叏 untouched
+  - `test_request_id_middleware_tags_sentry_scope_when_enabled` 鈥?set_tag + set_context 鐪熻皟鐢?  - `test_request_id_middleware_resilient_against_sdk_errors` 鈥?SDK 鎶涘紓甯告椂涓氬姟璇锋眰浠?200
+  - `test_smoke_endpoint_gated_off_by_default` 鈥?榛樿 404
+  - `test_smoke_endpoint_gated_off_when_only_env_set` 鈥?鍗曡竟寮€鍏虫棤鏁?  - `test_smoke_endpoint_gated_off_when_only_sentry_on` 鈥?鍗曡竟寮€鍏虫棤鏁?  - `test_smoke_endpoint_active_when_both_set` 鈥?鍙屽紑鍏冲悓鏃?on 鎵嶇敓鏁?  - `test_smoke_endpoint_returns_prd10_envelope` 鈥?鍛戒腑鍚庣湡杩?500 + PRD10 envelope + synthetic=true
 
-- **`tests/unit/common/test_sentry_setup.py::test_capture_helpers_swallow_internal_errors`** 同步改 mock `new_scope` 而非 `push_scope`（2.x 一致性）
+- **`tests/unit/common/test_sentry_setup.py::test_capture_helpers_swallow_internal_errors`** 鍚屾鏀?mock `new_scope` 鑰岄潪 `push_scope`锛?.x 涓€鑷存€э級
 
 ### Test evidence
 
@@ -1463,8 +1354,7 @@ $ pytest tests/unit/common/test_sentry_setup.py \
         tests/integration/api/test_prd10_sentry_integration.py \
         tests/integration/api/test_prd10_sentry_request_id.py
   42 passed in 10.82s
-  # 0 sentry-sdk DeprecationWarning（2.x API 全部对齐）
-
+  # 0 sentry-sdk DeprecationWarning锛?.x API 鍏ㄩ儴瀵归綈锛?
 $ pytest tests/integration/api/test_prd10_*.py \
         tests/integration/api/prd10/ \
         tests/integration/api/test_prd10_rate_limit.py \
@@ -1474,38 +1364,26 @@ $ pytest tests/integration/api/test_prd10_*.py \
   373 passed in 173.02s
 ```
 
-**Baseline 回归**：上一轮 §12.2 done 后 250 → 本轮 373，**+123**（含 8 sentry_request_id 新加 + 31 sentry_setup unit 重新跑 + Milestone 27/28 之后其他 agent 加的若干 done 任务的额外 cases）。**无任何回归 / 无任何失败**。
-
+**Baseline 鍥炲綊**锛氫笂涓€杞?搂12.2 done 鍚?250 鈫?鏈疆 373锛?*+123**锛堝惈 8 sentry_request_id 鏂板姞 + 31 sentry_setup unit 閲嶆柊璺?+ Milestone 27/28 涔嬪悗鍏朵粬 agent 鍔犵殑鑻ュ共 done 浠诲姟鐨勯澶?cases锛夈€?*鏃犱换浣曞洖褰?/ 鏃犱换浣曞け璐?*銆?
 ### Files touched
 
-新增：
-- `src/agent_os/common/sentry_test_router.py`（~85 行）
-- `tests/integration/api/test_prd10_sentry_request_id.py`（8 tests）
-- `docs/11-deployment/sentry.md`（10 章 / ~250 行）
+鏂板锛?- `src/agent_os/common/sentry_test_router.py`锛垀85 琛岋級
+- `tests/integration/api/test_prd10_sentry_request_id.py`锛? tests锛?- `docs/11-deployment/sentry.md`锛?0 绔?/ ~250 琛岋級
 
-修改：
-- `src/agent_os/common/middleware.py::RequestIdMiddleware`（~28 行新增 sentry-sdk 2.x set_tag/set_context）
-- `src/agent_os/common/sentry_setup.py`：`capture_message` / `capture_exception` 改用 `new_scope` 而非 deprecated `push_scope`
-- `src/agent_os/server/app.py`：try/except 条件 include `sentry_test_router`
-- `tests/unit/common/test_sentry_setup.py`：1 个 mock 名替换（push_scope → new_scope）
-- `todo-tasks.md` §11.5b `open` → `done`（完整证据）
-- `agent-progress-report.md`（本 milestone）
-
-**未动**：`static/mydow/*` / 任何 SPA 实现 / 任何 router include 顺序 / 任何其他 middleware；不撞任何 `doing` 中的实现领地。
-
+淇敼锛?- `src/agent_os/common/middleware.py::RequestIdMiddleware`锛垀28 琛屾柊澧?sentry-sdk 2.x set_tag/set_context锛?- `src/agent_os/common/sentry_setup.py`锛歚capture_message` / `capture_exception` 鏀圭敤 `new_scope` 鑰岄潪 deprecated `push_scope`
+- `src/agent_os/server/app.py`锛歵ry/except 鏉′欢 include `sentry_test_router`
+- `tests/unit/common/test_sentry_setup.py`锛? 涓?mock 鍚嶆浛鎹紙push_scope 鈫?new_scope锛?- `todo-tasks.md` 搂11.5b `open` 鈫?`done`锛堝畬鏁磋瘉鎹級
+- `agent-progress-report.md`锛堟湰 milestone锛?
+**鏈姩**锛歚static/mydow/*` / 浠讳綍 SPA 瀹炵幇 / 浠讳綍 router include 椤哄簭 / 浠讳綍鍏朵粬 middleware锛涗笉鎾炰换浣?`doing` 涓殑瀹炵幇棰嗗湴銆?
 ### Follow-ups
 
-1. **Sentry × 业务 SLO 对接**：建议把 `prd10_rate_limited` 日志计数 + `MAX_RETRIES_EXCEEDED` job dead-letter 计数 + AI streaming 异常计数都加 `tag` 让 Sentry alert 自动按 tag 分流到不同 Slack channel。
-2. **Source maps**：等前端引入 vite/webpack 后再补（当前 biz/index.html + bridge.js 走原生 ESM 不需要）。
-3. **Sentry → PagerDuty webhook**：投资演示前必配，已在 docs/11-deployment/sentry.md §7 列出 5 条推荐 alert rule 方案。
-4. **`/__sentry_test__` 在生产部署 smoke 之后** unset `AGENTOS_SENTRY_TEST` 并通知运维（已在文档 §2 步骤 5 强调）。
-
+1. **Sentry 脳 涓氬姟 SLO 瀵规帴**锛氬缓璁妸 `prd10_rate_limited` 鏃ュ織璁℃暟 + `MAX_RETRIES_EXCEEDED` job dead-letter 璁℃暟 + AI streaming 寮傚父璁℃暟閮藉姞 `tag` 璁?Sentry alert 鑷姩鎸?tag 鍒嗘祦鍒颁笉鍚?Slack channel銆?2. **Source maps**锛氱瓑鍓嶇寮曞叆 vite/webpack 鍚庡啀琛ワ紙褰撳墠 biz/index.html + bridge.js 璧板師鐢?ESM 涓嶉渶瑕侊級銆?3. **Sentry 鈫?PagerDuty webhook**锛氭姇璧勬紨绀哄墠蹇呴厤锛屽凡鍦?docs/11-deployment/sentry.md 搂7 鍒楀嚭 5 鏉℃帹鑽?alert rule 鏂规銆?4. **`/__sentry_test__` 鍦ㄧ敓浜ч儴缃?smoke 涔嬪悗** unset `AGENTOS_SENTRY_TEST` 骞堕€氱煡杩愮淮锛堝凡鍦ㄦ枃妗?搂2 姝ラ 5 寮鸿皟锛夈€?
 ---
 
 ## Milestone 37 - SPA a11y critical contrast closeout - DELIVERED
 
 **When**: 2026-05-06 14:31-15:20 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §14.7 still required a critical-grade accessibility pass on the SPA lane, and Lighthouse had narrowed the remaining failures to the auth overlay under dark mode.
+**Why**: `todo-tasks.md` 搂14.7 still required a critical-grade accessibility pass on the SPA lane, and Lighthouse had narrowed the remaining failures to the auth overlay under dark mode.
 
 ### Delivered
 
@@ -1528,14 +1406,14 @@ $ pytest tests/integration/api/test_prd10_*.py \
 
 ### Follow-ups
 
-* Next high-signal SPA gap is AI assistant action wiring (`save-to-kb` / `create-tasks` / `regenerate` / stop-cancel) from §9.19 + §8.11.
+* Next high-signal SPA gap is AI assistant action wiring (`save-to-kb` / `create-tasks` / `regenerate` / stop-cancel) from 搂9.19 + 搂8.11.
 
 ---
 
 ## Milestone 36 - PRD10 B-13 semantic search embeddings - DELIVERED
 
 **When**: 2026-05-06 14:40-15:05 UTC+8 (by Codex)
-**Why**: `todo-tasks.md` §3.12 required B-13 embedding support so `/api/v1/search` can expose real `semantic` / `hybrid` ranking instead of lexical-only fallback.
+**Why**: `todo-tasks.md` 搂3.12 required B-13 embedding support so `/api/v1/search` can expose real `semantic` / `hybrid` ranking instead of lexical-only fallback.
 
 ### Delivered
 
@@ -1560,55 +1438,36 @@ $ pytest tests/integration/api/test_prd10_*.py \
 
 ---
 
-## Milestone 35 · §7.30 biz modal/drawer open markers — DELIVERED
+## Milestone 35 路 搂7.30 biz modal/drawer open markers 鈥?DELIVERED
 
-**When**: 2026-05-06 13:56–14:08 UTC+8（by Codex）
-
-**Why**: §7.30 要求业务方 zip 展示页的 modal/drawer 打开状态具备统一可检测标记，否则 nav sweep / e2e / a11y 无法判断按钮点击后是否真的打开了弹层。
-
+**When**: 2026-05-06 13:56鈥?4:08 UTC+8锛坆y Codex锛?
+**Why**: 搂7.30 瑕佹眰涓氬姟鏂?zip 灞曠ず椤电殑 modal/drawer 鎵撳紑鐘舵€佸叿澶囩粺涓€鍙娴嬫爣璁帮紝鍚﹀垯 nav sweep / e2e / a11y 鏃犳硶鍒ゆ柇鎸夐挳鐐瑰嚮鍚庢槸鍚︾湡鐨勬墦寮€浜嗗脊灞傘€?
 ### Delivered
 
-* `static/mydow/biz/bridge.js` 新增 §7.30 layer marker：通过 `MutationObserver` 监听 `.surface-layer[data-modal]` / `.drawer-layer[data-drawer]` 的 `hidden` 状态。
-* 打开 modal 时同步：`document.documentElement.dataset.modal`、`data-modal-open="{name}"`、可见 layer 上 `data-modal-open="true"`、`body.is-modal-open`。
-* 打开 drawer 时同步：`document.documentElement.dataset.drawer`、`data-drawer-open="{name}"`、可见 layer 上 `data-drawer-open="true"`、`body.is-drawer-open`。
-* 关闭时清理 root/layer/body 标记，并把 `closeAllModals()` 接入同一套状态同步。
-
+* `static/mydow/biz/bridge.js` 鏂板 搂7.30 layer marker锛氶€氳繃 `MutationObserver` 鐩戝惉 `.surface-layer[data-modal]` / `.drawer-layer[data-drawer]` 鐨?`hidden` 鐘舵€併€?* 鎵撳紑 modal 鏃跺悓姝ワ細`document.documentElement.dataset.modal`銆乣data-modal-open="{name}"`銆佸彲瑙?layer 涓?`data-modal-open="true"`銆乣body.is-modal-open`銆?* 鎵撳紑 drawer 鏃跺悓姝ワ細`document.documentElement.dataset.drawer`銆乣data-drawer-open="{name}"`銆佸彲瑙?layer 涓?`data-drawer-open="true"`銆乣body.is-drawer-open`銆?* 鍏抽棴鏃舵竻鐞?root/layer/body 鏍囪锛屽苟鎶?`closeAllModals()` 鎺ュ叆鍚屼竴濂楃姸鎬佸悓姝ャ€?
 ### Test Evidence
 
-* Syntax: `node --check static/mydow/biz/bridge.js` → PASS。
-* Contract: `python -m pytest tests/integration/api/test_prd10_frontend_binding.py -q -p no:cacheprovider --tb=short --no-header` → **27 passed**。
-* Browser proof: Playwright 真浏览器打开 `http://127.0.0.1:8000/mydow/biz/`，实点 `webLink` quick-action modal 与首页 `.idea-card` detail drawer；open/close markers 全部 PASS，0 console error。截图：`.tmp/screenshots/biz_walk/7_30_modal_marker.png`、`.tmp/screenshots/biz_walk/7_30_drawer_marker.png`。
-* Chrome DevTools MCP note: 当前 MCP profile 被既有 `chrome-devtools-mcp` Chrome 实例锁住，工具返回 profile already running；本轮用 Playwright 完成同等浏览器联调证据。
-
+* Syntax: `node --check static/mydow/biz/bridge.js` 鈫?PASS銆?* Contract: `python -m pytest tests/integration/api/test_prd10_frontend_binding.py -q -p no:cacheprovider --tb=short --no-header` 鈫?**27 passed**銆?* Browser proof: Playwright 鐪熸祻瑙堝櫒鎵撳紑 `http://127.0.0.1:8000/mydow/biz/`锛屽疄鐐?`webLink` quick-action modal 涓庨椤?`.idea-card` detail drawer锛沷pen/close markers 鍏ㄩ儴 PASS锛? console error銆傛埅鍥撅細`.tmp/screenshots/biz_walk/7_30_modal_marker.png`銆乣.tmp/screenshots/biz_walk/7_30_drawer_marker.png`銆?* Chrome DevTools MCP note: 褰撳墠 MCP profile 琚棦鏈?`chrome-devtools-mcp` Chrome 瀹炰緥閿佷綇锛屽伐鍏疯繑鍥?profile already running锛涙湰杞敤 Playwright 瀹屾垚鍚岀瓑娴忚鍣ㄨ仈璋冭瘉鎹€?
 ### Files Touched
 
 `static/mydow/biz/bridge.js`, `todo-tasks.md`, `agent-progress-report.md`.
 
 ### Follow-ups
 
-§7.28/§7.29 中头像/通知抽屉误判现在可依赖 `[data-drawer-open]` marker 复测；§7.31 全 nav sweep 仍需在 §7.25–§7.30 全部完成后统一跑。
-
+搂7.28/搂7.29 涓ご鍍?閫氱煡鎶藉眽璇垽鐜板湪鍙緷璧?`[data-drawer-open]` marker 澶嶆祴锛浡?.31 鍏?nav sweep 浠嶉渶鍦?搂7.25鈥撀?.30 鍏ㄩ儴瀹屾垚鍚庣粺涓€璺戙€?
 ---
 
-## Milestone 34 · §15.27/§15.28 biz bridge boot + AI-action buttons — DELIVERED
+## Milestone 34 路 搂15.27/搂15.28 biz bridge boot + AI-action buttons 鈥?DELIVERED
 
-**When**: 2026-05-06 13:56–14:30 UTC+8（by Codex）
-
-**Why**: `todo-tasks.md` §15.28 长时间 `doing`，且浏览器实测发现 `bridge.js` 因 `bindDrawerAiActionButtons` 重复声明直接 SyntaxError，业务方原型桥接不 boot；这会让 `/mydow/biz/` 回退成静态 zip 效果，所有真实 API 按钮失效。
-
+**When**: 2026-05-06 13:56鈥?4:30 UTC+8锛坆y Codex锛?
+**Why**: `todo-tasks.md` 搂15.28 闀挎椂闂?`doing`锛屼笖娴忚鍣ㄥ疄娴嬪彂鐜?`bridge.js` 鍥?`bindDrawerAiActionButtons` 閲嶅澹版槑鐩存帴 SyntaxError锛屼笟鍔℃柟鍘熷瀷妗ユ帴涓?boot锛涜繖浼氳 `/mydow/biz/` 鍥為€€鎴愰潤鎬?zip 鏁堟灉锛屾墍鏈夌湡瀹?API 鎸夐挳澶辨晥銆?
 ### Delivered
 
-* `tests/integration/api/test_prd10_frontend_binding.py` 增加 `_envelope_data()`，同步断言 `/api/v1/demo/status` 与 `/api/v1/demo/login` 返回 PRD10 envelope，同时继续兼容旧 flat shape。
-* `static/mydow/biz/bridge.js` 删除重复的 no-op `bindDrawerAiActionButtons()` stub，保留 §15.27 的真实 capture-phase handler，修复浏览器 SyntaxError。
-* `bridge.js` 增加 `window.__MYDOW_BRIDGE_BOOTED` 与 `window.MydowBridge.booted` 标记，后续 Chrome/Playwright sweep 可稳定判断桥接已完成。
-* §15.27 AI-action 数据源补全：`_readVisibleDocEditorSubject()` + `_readCurrentAiActionSubject()` 让按钮既支持 `itemDetail` 卡片抽屉，也支持业务原型实际按钮所在的 `.doc-editor-main/.doc-editor-drawer` 文档编辑页。
-
+* `tests/integration/api/test_prd10_frontend_binding.py` 澧炲姞 `_envelope_data()`锛屽悓姝ユ柇瑷€ `/api/v1/demo/status` 涓?`/api/v1/demo/login` 杩斿洖 PRD10 envelope锛屽悓鏃剁户缁吋瀹规棫 flat shape銆?* `static/mydow/biz/bridge.js` 鍒犻櫎閲嶅鐨?no-op `bindDrawerAiActionButtons()` stub锛屼繚鐣?搂15.27 鐨勭湡瀹?capture-phase handler锛屼慨澶嶆祻瑙堝櫒 SyntaxError銆?* `bridge.js` 澧炲姞 `window.__MYDOW_BRIDGE_BOOTED` 涓?`window.MydowBridge.booted` 鏍囪锛屽悗缁?Chrome/Playwright sweep 鍙ǔ瀹氬垽鏂ˉ鎺ュ凡瀹屾垚銆?* 搂15.27 AI-action 鏁版嵁婧愯ˉ鍏細`_readVisibleDocEditorSubject()` + `_readCurrentAiActionSubject()` 璁╂寜閽棦鏀寔 `itemDetail` 鍗＄墖鎶藉眽锛屼篃鏀寔涓氬姟鍘熷瀷瀹為檯鎸夐挳鎵€鍦ㄧ殑 `.doc-editor-main/.doc-editor-drawer` 鏂囨。缂栬緫椤点€?
 ### Test Evidence
 
-* Syntax: `node --check static/mydow/biz/bridge.js` → PASS。
-* Contract: `python -m pytest tests/integration/api/test_prd10_frontend_binding.py -q -p no:cacheprovider --tb=short --no-header` → **27 passed**。
-* Browser smoke §15.28 @ `:8802/mydow/biz/`: `window.MydowBridge.booted=true` / demo login response keys `success,data,request_id` / token persisted / skills grid IDs exactly match live `/api/v1/skills?page_size=20` / 8 real idea cards / 0 console error / 0 page error / 0 failed API. Screenshot: `.tmp/screenshots/biz_walk/15_28_bridge_boot.png`.
-* Browser smoke §15.27 @ `:8802/mydow/biz/`: doc editor `AI 摘要` button triggered `POST /api/v1/skills/9fe18a29-.../run`; `生成知识卡片` triggered `POST /api/v1/cards`; feed total **30 → 31**; 0 console/page/API failed. Screenshot: `.tmp/screenshots/biz_walk/15_27_doc_ai_actions.png`.
+* Syntax: `node --check static/mydow/biz/bridge.js` 鈫?PASS銆?* Contract: `python -m pytest tests/integration/api/test_prd10_frontend_binding.py -q -p no:cacheprovider --tb=short --no-header` 鈫?**27 passed**銆?* Browser smoke 搂15.28 @ `:8802/mydow/biz/`: `window.MydowBridge.booted=true` / demo login response keys `success,data,request_id` / token persisted / skills grid IDs exactly match live `/api/v1/skills?page_size=20` / 8 real idea cards / 0 console error / 0 page error / 0 failed API. Screenshot: `.tmp/screenshots/biz_walk/15_28_bridge_boot.png`.
+* Browser smoke 搂15.27 @ `:8802/mydow/biz/`: doc editor `AI 鎽樿` button triggered `POST /api/v1/skills/9fe18a29-.../run`; `鐢熸垚鐭ヨ瘑鍗＄墖` triggered `POST /api/v1/cards`; feed total **30 鈫?31**; 0 console/page/API failed. Screenshot: `.tmp/screenshots/biz_walk/15_27_doc_ai_actions.png`.
 
 ### Files Touched
 
@@ -1620,11 +1479,10 @@ $ pytest tests/integration/api/test_prd10_*.py \
 
 ---
 
-## Milestone 35 · §14.3 full demo acceptance on biz prototype — DELIVERED
+## Milestone 35 路 搂14.3 full demo acceptance on biz prototype 鈥?DELIVERED
 
-**When**: 2026-05-06 14:35–14:45 UTC+8（by Codex）
-
-**Why**: §14.3 was still `open` because the older SPA sweep had 18 issues / 102 candidates. Since §15.20 already makes `/mydow/` redirect to the business prototype, the acceptance gate should validate the zip-equivalent biz surface, not the obsolete SPA lane.
+**When**: 2026-05-06 14:35鈥?4:45 UTC+8锛坆y Codex锛?
+**Why**: 搂14.3 was still `open` because the older SPA sweep had 18 issues / 102 candidates. Since 搂15.20 already makes `/mydow/` redirect to the business prototype, the acceptance gate should validate the zip-equivalent biz surface, not the obsolete SPA lane.
 
 ### Delivered
 
@@ -1634,11 +1492,11 @@ $ pytest tests/integration/api/test_prd10_*.py \
 
 ### Test Evidence
 
-* `python .tmp/agent3_14_3_acceptance.py 8802` → **11/11 sections ok**:
+* `python .tmp/agent3_14_3_acceptance.py 8802` 鈫?**11/11 sections ok**:
   boot/demo auto-login, capture text, home feed, KB folders, notification badge, profile chip, garden board, AI SSE send, skills grid, insights full, global search.
   Summary: `console_errors_count=0`, `page_errors_count=0`, `real_failed_requests=[]`.
 * Supplemental Playwright smoke:
-  `/mydow/?cb=...` → `/mydow/biz/`; `window.MydowBridge.booted=true`; `tokenLen=209`; 8 idea cards, 6 folders, 5 skills, notification badge 6, profileName Demo User; 0 console/page/API failed.
+  `/mydow/?cb=...` 鈫?`/mydow/biz/`; `window.MydowBridge.booted=true`; `tokenLen=209`; 8 idea cards, 6 folders, 5 skills, notification badge 6, profileName Demo User; 0 console/page/API failed.
   Screenshot: `.tmp/screenshots/biz_walk/14_3_codex_full_demo.png`.
 
 ### Files Touched
@@ -1647,53 +1505,37 @@ $ pytest tests/integration/api/test_prd10_*.py \
 
 ---
 
-## Milestone 34 · SPA AI 入口反馈 + 暗色模式 token 回归 — DELIVERED
+## Milestone 34 路 SPA AI 鍏ュ彛鍙嶉 + 鏆楄壊妯″紡 token 鍥炲綊 鈥?DELIVERED
 
-**When**: 2026-05-06 13:55–14:31 UTC+8（by Codex）
-
-**Why**: `todo-tasks.md` 中的 SPA lane 还留着两类会直接影响演示质量的问题：一类是 AI 页和头像入口“点了没反馈 / sweep 看不到反馈”，另一类是 SPA 在 `prefers-color-scheme: dark` 下没有独立 token，暗色回归没有证据。
-
+**When**: 2026-05-06 13:55鈥?4:31 UTC+8锛坆y Codex锛?
+**Why**: `todo-tasks.md` 涓殑 SPA lane 杩樼暀鐫€涓ょ被浼氱洿鎺ュ奖鍝嶆紨绀鸿川閲忕殑闂锛氫竴绫绘槸 AI 椤靛拰澶村儚鍏ュ彛鈥滅偣浜嗘病鍙嶉 / sweep 鐪嬩笉鍒板弽棣堚€濓紝鍙︿竴绫绘槸 SPA 鍦?`prefers-color-scheme: dark` 涓嬫病鏈夌嫭绔?token锛屾殫鑹插洖褰掓病鏈夎瘉鎹€?
 ### Delivered
 
-* [app.js](D:/Codes/whyme/static/mydow/app.js) 增加 icon-only button 的 `title -> aria-label` 自动映射，补齐 AI 任务移除按钮和各类 close icon 的可访问名称。
-* AI composer 空发送不再静默：点击 `发送` 且内容为空时，live region 会显示“请先输入消息”，并把焦点留在输入框。
-* `openUserMenu()` 从 toast 升级成真实 `profile-drawer`，展示账号 / 用户名 / 计划，并提供可用的 `关闭` / `退出登录` 行为；打开后会复用已有 drawer marker 让自动化可见。
-* [style.css](D:/Codes/whyme/static/mydow/style.css) 新增 `@media (prefers-color-scheme: dark)` 设计令牌覆盖，暗色仅通过 token 切换，不改页面结构。
-
+* [app.js](D:/Codes/whyme/static/mydow/app.js) 澧炲姞 icon-only button 鐨?`title -> aria-label` 鑷姩鏄犲皠锛岃ˉ榻?AI 浠诲姟绉婚櫎鎸夐挳鍜屽悇绫?close icon 鐨勫彲璁块棶鍚嶇О銆?* AI composer 绌哄彂閫佷笉鍐嶉潤榛橈細鐐瑰嚮 `鍙戦€乣 涓斿唴瀹逛负绌烘椂锛宭ive region 浼氭樉绀衡€滆鍏堣緭鍏ユ秷鎭€濓紝骞舵妸鐒︾偣鐣欏湪杈撳叆妗嗐€?* `openUserMenu()` 浠?toast 鍗囩骇鎴愮湡瀹?`profile-drawer`锛屽睍绀鸿处鍙?/ 鐢ㄦ埛鍚?/ 璁″垝锛屽苟鎻愪緵鍙敤鐨?`鍏抽棴` / `閫€鍑虹櫥褰昤 琛屼负锛涙墦寮€鍚庝細澶嶇敤宸叉湁 drawer marker 璁╄嚜鍔ㄥ寲鍙銆?* [style.css](D:/Codes/whyme/static/mydow/style.css) 鏂板 `@media (prefers-color-scheme: dark)` 璁捐浠ょ墝瑕嗙洊锛屾殫鑹蹭粎閫氳繃 token 鍒囨崲锛屼笉鏀归〉闈㈢粨鏋勩€?
 ### Test Evidence
 
-* Syntax: `node --check static/mydow/app.js` → PASS.
-* Binding regression: `python -m pytest tests/integration/api/test_prd10_frontend_binding.py -q -p no:cacheprovider --tb=short --no-header` → **27 passed**.
+* Syntax: `node --check static/mydow/app.js` 鈫?PASS.
+* Binding regression: `python -m pytest tests/integration/api/test_prd10_frontend_binding.py -q -p no:cacheprovider --tb=short --no-header` 鈫?**27 passed**.
 * Chrome MCP on `http://127.0.0.1:8001/mydow/index.html#/ai`:
-  `发送` 空内容后出现 live text “请先输入消息”；点击头像后 root marker = `{page:'ai', drawer:'profile-drawer', drawerOpen:'true'}`，且 `unlabeledVisibleIconButtons=[]`。
-* Chrome MCP dark mode on `http://127.0.0.1:8001/mydow/index.html`:
-  首页 / 知识库 / AI 三页在 dark scheme 下均正常渲染，计算值 `--bg=#12161f`、`--bg-card=#181d27`、`--text=#eef2fb`。
-
+  `鍙戦€乣 绌哄唴瀹瑰悗鍑虹幇 live text 鈥滆鍏堣緭鍏ユ秷鎭€濓紱鐐瑰嚮澶村儚鍚?root marker = `{page:'ai', drawer:'profile-drawer', drawerOpen:'true'}`锛屼笖 `unlabeledVisibleIconButtons=[]`銆?* Chrome MCP dark mode on `http://127.0.0.1:8001/mydow/index.html`:
+  棣栭〉 / 鐭ヨ瘑搴?/ AI 涓夐〉鍦?dark scheme 涓嬪潎姝ｅ父娓叉煋锛岃绠楀€?`--bg=#12161f`銆乣--bg-card=#181d27`銆乣--text=#eef2fb`銆?
 ### Files Touched
 
 `static/mydow/app.js`, `static/mydow/style.css`, `tests/integration/api/test_prd10_frontend_binding.py`, `todo-tasks.md`.
 
 ---
 
-## Milestone 33 · PRD10 §14 任务真实表链路 — DELIVERED
+## Milestone 33 路 PRD10 搂14 浠诲姟鐪熷疄琛ㄩ摼璺?鈥?DELIVERED
 
-**When**: 2026-05-06 14:05–14:35 UTC+8（by Agent Codex）
-
-**Why**: `todo-tasks.md` §2.22 / §6.9 标记 `Task.user_id Integer→UUID 调和` 仍 open，阻塞真正 PRD10 §14 任务接入；现有 `/today.tasks`、seed、AI 生成任务 worker 仍走 `Prd10InboxItem(type=manual_task)` 替代链路。
-
+**When**: 2026-05-06 14:05鈥?4:35 UTC+8锛坆y Agent Codex锛?
+**Why**: `todo-tasks.md` 搂2.22 / 搂6.9 鏍囪 `Task.user_id Integer鈫扷UID 璋冨拰` 浠?open锛岄樆濉炵湡姝?PRD10 搂14 浠诲姟鎺ュ叆锛涚幇鏈?`/today.tasks`銆乻eed銆丄I 鐢熸垚浠诲姟 worker 浠嶈蛋 `Prd10InboxItem(type=manual_task)` 鏇夸唬閾捐矾銆?
 ### Delivered
 
-* `GET /api/v1/today` 改为从 `PRD10Task` / `prd10_tasks` 读取任务与 pending 计数，排序按 `due_at ASC NULLS LAST, created_at DESC`。
-* `scripts/seed_prd10.py` 的 5 条 demo task 改为写真实 `PRD10Task`，并在 seed reset 中清理 `prd10_tasks` seed rows。
-* AI `ai_message_to_tasks` worker 现在创建真实 `PRD10Task(source_type='ai')`，同时保留 `Prd10InboxItem(type=manual_task)` 兼容记录，旧视图/旧测试不会突然断。
-* PRD10 mini test harness 纳入 `prd10_tasks` 建表、挂载 `/api/v1/tasks` router，并补齐 `/api/v1/*` HTTPException / validation envelope 行为。
-* 新增 `tests/integration/api/prd10/test_prd10_tasks_api.py` 覆盖 CRUD、complete、soft-delete、多用户隔离、filter、validation envelope。
-* 同步 `docs/agent-2-spa-binding-guide.md` 与 `docs/agent-2-seed-field-audit.md`：前端可直接接 `/api/v1/tasks`，不再使用 manual_task 替代方案。
-
+* `GET /api/v1/today` 鏀逛负浠?`PRD10Task` / `prd10_tasks` 璇诲彇浠诲姟涓?pending 璁℃暟锛屾帓搴忔寜 `due_at ASC NULLS LAST, created_at DESC`銆?* `scripts/seed_prd10.py` 鐨?5 鏉?demo task 鏀逛负鍐欑湡瀹?`PRD10Task`锛屽苟鍦?seed reset 涓竻鐞?`prd10_tasks` seed rows銆?* AI `ai_message_to_tasks` worker 鐜板湪鍒涘缓鐪熷疄 `PRD10Task(source_type='ai')`锛屽悓鏃朵繚鐣?`Prd10InboxItem(type=manual_task)` 鍏煎璁板綍锛屾棫瑙嗗浘/鏃ф祴璇曚笉浼氱獊鐒舵柇銆?* PRD10 mini test harness 绾冲叆 `prd10_tasks` 寤鸿〃銆佹寕杞?`/api/v1/tasks` router锛屽苟琛ラ綈 `/api/v1/*` HTTPException / validation envelope 琛屼负銆?* 鏂板 `tests/integration/api/prd10/test_prd10_tasks_api.py` 瑕嗙洊 CRUD銆乧omplete銆乻oft-delete銆佸鐢ㄦ埛闅旂銆乫ilter銆乿alidation envelope銆?* 鍚屾 `docs/agent-2-spa-binding-guide.md` 涓?`docs/agent-2-seed-field-audit.md`锛氬墠绔彲鐩存帴鎺?`/api/v1/tasks`锛屼笉鍐嶄娇鐢?manual_task 鏇夸唬鏂规銆?
 ### Test Evidence
 
-* Targeted: `python -m pytest tests/integration/api/prd10/test_prd10_tasks_api.py tests/integration/api/prd10/test_prd10_today_api.py tests/integration/api/prd10/test_prd10_seed_script.py tests/integration/api/prd10/test_prd10_jobs_notifications_api.py -q -p no:cacheprovider --tb=short` → **26 passed**.
-* PRD10 matrix: `python -m pytest tests/integration/api/test_prd10_v1_acceptance.py tests/integration/api/test_prd10_frontend_binding.py tests/integration/api/test_prd10_ai_api.py tests/integration/api/test_prd10_ai_llm.py tests/integration/api/test_prd10_search_api.py tests/integration/api/test_prd10_skills_api.py tests/integration/api/test_prd10_garden_api.py tests/integration/api/test_prd10_observability.py tests/integration/api/test_prd10_app_wiring.py tests/integration/api/test_prd10_models_intelligence.py tests/integration/api/test_prd10_e2e_flow.py tests/integration/api/test_prd10_product_data_api.py tests/integration/api/test_prd10_insights_api.py tests/integration/api/prd10/ -q -p no:cacheprovider --tb=no --no-header` → **270 passed / 77.53s**.
+* Targeted: `python -m pytest tests/integration/api/prd10/test_prd10_tasks_api.py tests/integration/api/prd10/test_prd10_today_api.py tests/integration/api/prd10/test_prd10_seed_script.py tests/integration/api/prd10/test_prd10_jobs_notifications_api.py -q -p no:cacheprovider --tb=short` 鈫?**26 passed**.
+* PRD10 matrix: `python -m pytest tests/integration/api/test_prd10_v1_acceptance.py tests/integration/api/test_prd10_frontend_binding.py tests/integration/api/test_prd10_ai_api.py tests/integration/api/test_prd10_ai_llm.py tests/integration/api/test_prd10_search_api.py tests/integration/api/test_prd10_skills_api.py tests/integration/api/test_prd10_garden_api.py tests/integration/api/test_prd10_observability.py tests/integration/api/test_prd10_app_wiring.py tests/integration/api/test_prd10_models_intelligence.py tests/integration/api/test_prd10_e2e_flow.py tests/integration/api/test_prd10_product_data_api.py tests/integration/api/test_prd10_insights_api.py tests/integration/api/prd10/ -q -p no:cacheprovider --tb=no --no-header` 鈫?**270 passed / 77.53s**.
 
 ### Files Touched
 
@@ -1701,168 +1543,129 @@ $ pytest tests/integration/api/test_prd10_*.py \
 
 ---
 
-## Milestone 32 · §15.6.1 doc-row drawer wiring + §11.7 备份与恢复 SOP — DELIVERED
+## Milestone 32 路 搂15.6.1 doc-row drawer wiring + 搂11.7 澶囦唤涓庢仮澶?SOP 鈥?DELIVERED
 
-**When**: 2026-05-06 10:25–11:05 UTC+8（本会话，by Agent / my-mcp-26）
-
-**Why**: 用户指令「不必停下来汇报，一直领任务做；如果一个任务一直在 doing 可能是工程师执行失败了你可以接着做完；做到 PRD10 完全实现 + 符合业务前端 + 所有按钮生效 + 数据链路全打通才能停」。本里程碑两件事：(a) 接手 my-mcp-18 在 §15.6.1 留下的半成品（11 个 helper 实现完整但**未 wire 到 boot()/未 export 到 MydowBridge**，浏览器侧实际零生效）；(b) 趁热打铁认领并完成投资人会问的 §11.7 备份恢复 SOP（无人 doing，纯部署运维，无冲突风险）。
-
+**When**: 2026-05-06 10:25鈥?1:05 UTC+8锛堟湰浼氳瘽锛宐y Agent / my-mcp-26锛?
+**Why**: 鐢ㄦ埛鎸囦护銆屼笉蹇呭仠涓嬫潵姹囨姤锛屼竴鐩撮浠诲姟鍋氾紱濡傛灉涓€涓换鍔′竴鐩村湪 doing 鍙兘鏄伐绋嬪笀鎵ц澶辫触浜嗕綘鍙互鎺ョ潃鍋氬畬锛涘仛鍒?PRD10 瀹屽叏瀹炵幇 + 绗﹀悎涓氬姟鍓嶇 + 鎵€鏈夋寜閽敓鏁?+ 鏁版嵁閾捐矾鍏ㄦ墦閫氭墠鑳藉仠銆嶃€傛湰閲岀▼纰戜袱浠朵簨锛?a) 鎺ユ墜 my-mcp-18 鍦?搂15.6.1 鐣欎笅鐨勫崐鎴愬搧锛?1 涓?helper 瀹炵幇瀹屾暣浣?*鏈?wire 鍒?boot()/鏈?export 鍒?MydowBridge**锛屾祻瑙堝櫒渚у疄闄呴浂鐢熸晥锛夛紱(b) 瓒佺儹鎵撻搧璁ら骞跺畬鎴愭姇璧勪汉浼氶棶鐨?搂11.7 澶囦唤鎭㈠ SOP锛堟棤浜?doing锛岀函閮ㄧ讲杩愮淮锛屾棤鍐茬獊椋庨櫓锛夈€?
 ### Delivered
 
-#### 1. §15.6.1 文档抽屉行点击 + 移动 + 删除真接通（接手补完 my-mcp-18 stale）
+#### 1. 搂15.6.1 鏂囨。鎶藉眽琛岀偣鍑?+ 绉诲姩 + 鍒犻櫎鐪熸帴閫氾紙鎺ユ墜琛ュ畬 my-mcp-18 stale锛?
+**鎺ユ墜鍓嶇姸鎬侊紙broken锛?*锛歚bridge.js` 宸插惈 11 helper锛坄_injectDocInfoButton` / `_injectAllDocInfoButtons` / `_formatDocDrawerMeta` / `_hydrateItemDetailDrawerForDocument` / `_openItemDetailDrawer` / `loadDocumentForDrawer` / `bindDocRowInfoButton` / `bindItemDetailDrawerActions` / `patchDocumentById` / `deleteDocumentById` / `moveDocumentById`锛夛紝浣?`boot()` 鍐呭搴斾綅缃彧鍓?`// 鍗犱綅 helper 鐣欏緟 Engineer 2 瀹炵幇` 娉ㄩ噴銆乣window.MydowBridge` 涔熸病 export锛屾祻瑙堝櫒鍔犺浇瀹屽叏鏃犳劅鐭ャ€?
+**my-mcp-26 wiring 淇**锛坄static/mydow/biz/bridge.js` 浠?5 琛屽彉鏇?+ 鍒?2 琛岄噸澶?export锛夛細
 
-**接手前状态（broken）**：`bridge.js` 已含 11 helper（`_injectDocInfoButton` / `_injectAllDocInfoButtons` / `_formatDocDrawerMeta` / `_hydrateItemDetailDrawerForDocument` / `_openItemDetailDrawer` / `loadDocumentForDrawer` / `bindDocRowInfoButton` / `bindItemDetailDrawerActions` / `patchDocumentById` / `deleteDocumentById` / `moveDocumentById`），但 `boot()` 内对应位置只剩 `// 占位 helper 留待 Engineer 2 实现` 注释、`window.MydowBridge` 也没 export，浏览器加载完全无感知。
-
-**my-mcp-26 wiring 修复**（`static/mydow/biz/bridge.js` 仅 5 行变更 + 删 2 行重复 export）：
-
-* `boot()` 在 `attachDailyInsightLink()` 后追加：
+* `boot()` 鍦?`attachDailyInsightLink()` 鍚庤拷鍔狅細
   ```js
-  // §15.6.1 doc-row 内 ⓘ 详情 → /kb/documents/{id} → itemDetail drawer
-  // + drawer 内「移动到知识库」「删除」按钮 capture-phase 接 PRD10 真 API
-  // (覆盖 §15.10 P1：DELETE 按钮 + move 文档)
+  // 搂15.6.1 doc-row 鍐?鈸?璇︽儏 鈫?/kb/documents/{id} 鈫?itemDetail drawer
+  // + drawer 鍐呫€岀Щ鍔ㄥ埌鐭ヨ瘑搴撱€嶃€屽垹闄ゃ€嶆寜閽?capture-phase 鎺?PRD10 鐪?API
+  // (瑕嗙洊 搂15.10 P1锛欴ELETE 鎸夐挳 + move 鏂囨。)
   bindDocRowInfoButton();
   bindItemDetailDrawerActions();
   ```
-* `window.MydowBridge` 字典追加 6 个 named exports：`loadDocumentForDrawer / bindDocRowInfoButton / bindItemDetailDrawerActions / patchDocumentById / deleteDocumentById / moveDocumentById`
-* 删除字典末尾两个误重复的 token（`refreshFullInsightDrawer` / `attachDailyInsightLink` 在更上面已 export）
+* `window.MydowBridge` 瀛楀吀杩藉姞 6 涓?named exports锛歚loadDocumentForDrawer / bindDocRowInfoButton / bindItemDetailDrawerActions / patchDocumentById / deleteDocumentById / moveDocumentById`
+* 鍒犻櫎瀛楀吀鏈熬涓や釜璇噸澶嶇殑 token锛坄refreshFullInsightDrawer` / `attachDailyInsightLink` 鍦ㄦ洿涓婇潰宸?export锛?
+**Playwright 鐪熸祻瑙堝櫒楠屾敹** `.tmp/smoke_15_6_1.py 8771`锛?/5 sections PASS锛夛細
 
-**Playwright 真浏览器验收** `.tmp/smoke_15_6_1.py 8771`（5/5 sections PASS）：
-
-| Section | 验证 |
+| Section | 楠岃瘉 |
 |---|---|
-| `boot` | `window.MydowBridge` 可达，6 个 helper 全部 `typeof === "function"` |
-| `folder_open` | 点 `.library-card[data-folder-id]` → 4 doc-rows 渲染 + 4 个 `.bridge-doc-info-btn` 全部 MutationObserver 注入到位 |
-| `drawer_open` | 点 ⓘ 详情按钮 → `GET /api/v1/kb/documents/{id}?include_content=false` **200** + `[data-drawer="itemDetail"]` 不再 hidden + `dataset.bridgeBound="true"` + drawer h2/subtitle 替换为真 title「联调对接清单与状态码 ...」/「8 小时前更新 · 类型 markdown · 3597 字」 |
-| `drawer_move` | 点 drawer 内「移动到知识库」按钮 → 自动从 `/kb/folders` 拿候选 + `POST /api/v1/kb/documents/{id}/move` **200** + drawer 关闭 + 文件夹列表 reload |
-| `drawer_delete` | 点 drawer 内「删除」按钮 → `window.confirm` accept → `DELETE /api/v1/kb/documents/{id}` **200** + drawer 关闭 + 文件夹列表 reload |
+| `boot` | `window.MydowBridge` 鍙揪锛? 涓?helper 鍏ㄩ儴 `typeof === "function"` |
+| `folder_open` | 鐐?`.library-card[data-folder-id]` 鈫?4 doc-rows 娓叉煋 + 4 涓?`.bridge-doc-info-btn` 鍏ㄩ儴 MutationObserver 娉ㄥ叆鍒颁綅 |
+| `drawer_open` | 鐐?鈸?璇︽儏鎸夐挳 鈫?`GET /api/v1/kb/documents/{id}?include_content=false` **200** + `[data-drawer="itemDetail"]` 涓嶅啀 hidden + `dataset.bridgeBound="true"` + drawer h2/subtitle 鏇挎崲涓虹湡 title銆岃仈璋冨鎺ユ竻鍗曚笌鐘舵€佺爜 ...銆?銆? 灏忔椂鍓嶆洿鏂?路 绫诲瀷 markdown 路 3597 瀛椼€?|
+| `drawer_move` | 鐐?drawer 鍐呫€岀Щ鍔ㄥ埌鐭ヨ瘑搴撱€嶆寜閽?鈫?鑷姩浠?`/kb/folders` 鎷垮€欓€?+ `POST /api/v1/kb/documents/{id}/move` **200** + drawer 鍏抽棴 + 鏂囦欢澶瑰垪琛?reload |
+| `drawer_delete` | 鐐?drawer 鍐呫€屽垹闄ゃ€嶆寜閽?鈫?`window.confirm` accept 鈫?`DELETE /api/v1/kb/documents/{id}` **200** + drawer 鍏抽棴 + 鏂囦欢澶瑰垪琛?reload |
 
-**0 console error / 0 page error / 0 failed request**。截图 `.tmp/screenshots/biz_walk/15_6_1_{00_boot,01_folder,02_drawer_hydrate,03_after_move,04_after_delete}.png`。**同时覆盖 §15.10 P1**（DELETE 按钮 + move 文档真接通）。
+**0 console error / 0 page error / 0 failed request**銆傛埅鍥?`.tmp/screenshots/biz_walk/15_6_1_{00_boot,01_folder,02_drawer_hydrate,03_after_move,04_after_delete}.png`銆?*鍚屾椂瑕嗙洊 搂15.10 P1**锛圖ELETE 鎸夐挳 + move 鏂囨。鐪熸帴閫氾級銆?
+#### 2. 搂11.7 Postgres 姣忔棩澶囦唤 + 鏂囦欢瀛樺偍鐗堟湰鍖栵紙鎶曡祫浜虹骇 SOP锛屽叏鏂拌惤鍦帮級
 
-#### 2. §11.7 Postgres 每日备份 + 文件存储版本化（投资人级 SOP，全新落地）
+**6 涓柊鑴氭湰**锛圠inux + Windows 鍙屽伐浣滄祦锛岄浂渚濊禆锛氬熀鏈彧鐢?`pg_dump` / `pg_restore` / `tar` / `sha256sum` / `aws s3 cp`锛夛細
 
-**6 个新脚本**（Linux + Windows 双工作流，零依赖：基本只用 `pg_dump` / `pg_restore` / `tar` / `sha256sum` / `aws s3 cp`）：
-
-| 脚本 | 用途 |
+| 鑴氭湰 | 鐢ㄩ€?|
 |---|---|
-| `scripts/backup/backup_postgres.sh` & `.ps1` | `pg_dump -Fc -Z9 --quote-all-identifiers --no-acl --no-owner` + SHA-256 + 14d 保留 + 可选 S3 上传，识别 SQLite 时 graceful skip |
-| `scripts/backup/restore_postgres.sh` & `.ps1` | `pg_restore --clean --if-exists` + `latest` 别名 + SHA-256 校验 + **production-fence**（host 含 `prod/production` 时强制 `--force/-Force` 才允许） |
-| `scripts/backup/snapshot_uploads.sh` & `.ps1` | `tar -czf` 打包 `PRD10_UPLOADS_BASE` + SHA-256 + 同保留 + 可选 S3 |
+| `scripts/backup/backup_postgres.sh` & `.ps1` | `pg_dump -Fc -Z9 --quote-all-identifiers --no-acl --no-owner` + SHA-256 + 14d 淇濈暀 + 鍙€?S3 涓婁紶锛岃瘑鍒?SQLite 鏃?graceful skip |
+| `scripts/backup/restore_postgres.sh` & `.ps1` | `pg_restore --clean --if-exists` + `latest` 鍒悕 + SHA-256 鏍￠獙 + **production-fence**锛坔ost 鍚?`prod/production` 鏃跺己鍒?`--force/-Force` 鎵嶅厑璁革級 |
+| `scripts/backup/snapshot_uploads.sh` & `.ps1` | `tar -czf` 鎵撳寘 `PRD10_UPLOADS_BASE` + SHA-256 + 鍚屼繚鐣?+ 鍙€?S3 |
 
-**SOP 文档** `docs/11-deployment/backup.md`（8 章 / 200+ 行）：
-
-1. RPO/RTO 目标表（24h / 30min / 14 天本地 + 90 天 S3 / 月度演练）
-2. 一键脚本矩阵（Linux / Windows）
-3. 环境变量表（`BACKUP_DIR / AGENTOS_BACKUP_RETENTION_DAYS / AGENTOS_BACKUP_S3_BUCKET / AGENTOS_BACKUP_S3_PREFIX / AGENTOS_BACKUP_GPG_RECIPIENT(P1)`）
-4. 部署矩阵 5 种：cron / systemd timer / docker compose `--profile backup` / k8s CronJob / Windows 任务计划，每种都带可复制片段
-5. 月度恢复演练 SOP（3 步 createdb → restore → 健康验证）
-6. 安全合规底线（不写 URL 进文件名 / 保留期 / SSE-S3 / 审计 / 演练失败告警 / production fence）
-7. 故障速查 4 条
-8. V2 follow-ups：WAL/PITR、客户端 GPG、跨区域、应用级表导出
-
-**docker-compose 集成**（`docker-compose.prd10.yml::backup` profile）：postgres:16-alpine 内 oneshot 服务，挂 `./scripts/backup:/scripts:ro` + named volume `mydow-backups:/var/backups/mydow` + read-only `app-uploads:/data/uploads`，自动 apk add bash/gzip/tar/aws-cli，**仅在 `--profile backup` 显式启用**避免影响默认栈。
-
-**`.env.example` §7 末尾新增**「PRD10 §11.7 备份与恢复」节，文档化 4 个 `AGENTOS_BACKUP_*` env 变量 + 默认值。
-
-**Smoke 验证**：
-* `backup_postgres.ps1` against `sqlite+aiosqlite:///./test_backup.db` → exit 0 + log「INFO: DATABASE_URL is sqlite, skipping pg_dump」✓
-* `snapshot_uploads.ps1` against 真 `data/uploads` → 产出 `.tmp/backups/uploads/20260506T030614Z_uploads.tar.gz` (885 bytes) + `.sha256` ✓
-* `docker compose -f docker-compose.prd10.yml config --quiet` → EXITCODE=0（yml 语法验证通过）
-
+**SOP 鏂囨。** `docs/11-deployment/backup.md`锛? 绔?/ 200+ 琛岋級锛?
+1. RPO/RTO 鐩爣琛紙24h / 30min / 14 澶╂湰鍦?+ 90 澶?S3 / 鏈堝害婕旂粌锛?2. 涓€閿剼鏈煩闃碉紙Linux / Windows锛?3. 鐜鍙橀噺琛紙`BACKUP_DIR / AGENTOS_BACKUP_RETENTION_DAYS / AGENTOS_BACKUP_S3_BUCKET / AGENTOS_BACKUP_S3_PREFIX / AGENTOS_BACKUP_GPG_RECIPIENT(P1)`锛?4. 閮ㄧ讲鐭╅樀 5 绉嶏細cron / systemd timer / docker compose `--profile backup` / k8s CronJob / Windows 浠诲姟璁″垝锛屾瘡绉嶉兘甯﹀彲澶嶅埗鐗囨
+5. 鏈堝害鎭㈠婕旂粌 SOP锛? 姝?createdb 鈫?restore 鈫?鍋ュ悍楠岃瘉锛?6. 瀹夊叏鍚堣搴曠嚎锛堜笉鍐?URL 杩涙枃浠跺悕 / 淇濈暀鏈?/ SSE-S3 / 瀹¤ / 婕旂粌澶辫触鍛婅 / production fence锛?7. 鏁呴殰閫熸煡 4 鏉?8. V2 follow-ups锛歐AL/PITR銆佸鎴风 GPG銆佽法鍖哄煙銆佸簲鐢ㄧ骇琛ㄥ鍑?
+**docker-compose 闆嗘垚**锛坄docker-compose.prd10.yml::backup` profile锛夛細postgres:16-alpine 鍐?oneshot 鏈嶅姟锛屾寕 `./scripts/backup:/scripts:ro` + named volume `mydow-backups:/var/backups/mydow` + read-only `app-uploads:/data/uploads`锛岃嚜鍔?apk add bash/gzip/tar/aws-cli锛?*浠呭湪 `--profile backup` 鏄惧紡鍚敤**閬垮厤褰卞搷榛樿鏍堛€?
+**`.env.example` 搂7 鏈熬鏂板**銆孭RD10 搂11.7 澶囦唤涓庢仮澶嶃€嶈妭锛屾枃妗ｅ寲 4 涓?`AGENTOS_BACKUP_*` env 鍙橀噺 + 榛樿鍊笺€?
+**Smoke 楠岃瘉**锛?* `backup_postgres.ps1` against `sqlite+aiosqlite:///./test_backup.db` 鈫?exit 0 + log銆孖NFO: DATABASE_URL is sqlite, skipping pg_dump銆嶁湏
+* `snapshot_uploads.ps1` against 鐪?`data/uploads` 鈫?浜у嚭 `.tmp/backups/uploads/20260506T030614Z_uploads.tar.gz` (885 bytes) + `.sha256` 鉁?* `docker compose -f docker-compose.prd10.yml config --quiet` 鈫?EXITCODE=0锛坹ml 璇硶楠岃瘉閫氳繃锛?
 ### Tests
 
-PRD10 全 14 套件矩阵：
-
+PRD10 鍏?14 濂椾欢鐭╅樀锛?
 ```
 ====================== 249 passed, 41 warnings in 56.68s ======================
 ```
 
-* 比 §0 baseline 225 提升 **+24**
-* §15.6.1 修复后 + §11.7 落地后双轮均 249 passed，证明本里程碑双 deliverable 互不影响、对源代码零回归
+* 姣?搂0 baseline 225 鎻愬崌 **+24**
+* 搂15.6.1 淇鍚?+ 搂11.7 钀藉湴鍚庡弻杞潎 249 passed锛岃瘉鏄庢湰閲岀▼纰戝弻 deliverable 浜掍笉褰卞搷銆佸婧愪唬鐮侀浂鍥炲綊
 
 ### Files Touched
 
-新增：
-* `scripts/backup/backup_postgres.sh`（136 行）
-* `scripts/backup/backup_postgres.ps1`（135 行）
-* `scripts/backup/restore_postgres.sh`（98 行）
-* `scripts/backup/restore_postgres.ps1`（80 行）
-* `scripts/backup/snapshot_uploads.sh`（76 行）
-* `scripts/backup/snapshot_uploads.ps1`（96 行）
-* `docs/11-deployment/backup.md`（203 行）
-* `.tmp/smoke_15_6_1.py`（247 行 Playwright 验收脚本）
-
-修改：
-* `static/mydow/biz/bridge.js`（boot() +5 行 / MydowBridge +6 行 export / -2 行去重）
-* `docker-compose.prd10.yml`（+38 行 backup profile）
-* `.env.example`（+15 行 §7 末尾备份节）
-* `todo-tasks.md`（§15.6.1 / §11.7 / 待补 §15.24 mark with note 加 Joint description）
-
+鏂板锛?* `scripts/backup/backup_postgres.sh`锛?36 琛岋級
+* `scripts/backup/backup_postgres.ps1`锛?35 琛岋級
+* `scripts/backup/restore_postgres.sh`锛?8 琛岋級
+* `scripts/backup/restore_postgres.ps1`锛?0 琛岋級
+* `scripts/backup/snapshot_uploads.sh`锛?6 琛岋級
+* `scripts/backup/snapshot_uploads.ps1`锛?6 琛岋級
+* `docs/11-deployment/backup.md`锛?03 琛岋級
+* `.tmp/smoke_15_6_1.py`锛?47 琛?Playwright 楠屾敹鑴氭湰锛?
+淇敼锛?* `static/mydow/biz/bridge.js`锛坆oot() +5 琛?/ MydowBridge +6 琛?export / -2 琛屽幓閲嶏級
+* `docker-compose.prd10.yml`锛?38 琛?backup profile锛?* `.env.example`锛?15 琛?搂7 鏈熬澶囦唤鑺傦級
+* `todo-tasks.md`锛埪?5.6.1 / 搂11.7 / 寰呰ˉ 搂15.24 mark with note 鍔?Joint description锛?
 ### Follow-ups
 
-* **§15.24 confirmDelete modal**：my-mcp-25 已 doing（10:50），等他/她落地，my-mcp-26 不重复占用
-* **§11.7 V2 enhancements**：WAL 流复制 + GPG 客户端加密 + 跨区域 + 应用级 CSV 导出（已写到 SOP 第 8 章 V2 follow-ups）
-* **`docker-compose.prd10.yml` 真 docker 跑 backup profile**：当前仅 `compose config` 验证语法；下一次 docker 环境 ready 时跑 `--profile backup run --rm backup` 真生成一份 dump，验证 sha256/upload 完整链路
+* **搂15.24 confirmDelete modal**锛歮y-mcp-25 宸?doing锛?0:50锛夛紝绛変粬/濂硅惤鍦帮紝my-mcp-26 涓嶉噸澶嶅崰鐢?* **搂11.7 V2 enhancements**锛歐AL 娴佸鍒?+ GPG 瀹㈡埛绔姞瀵?+ 璺ㄥ尯鍩?+ 搴旂敤绾?CSV 瀵煎嚭锛堝凡鍐欏埌 SOP 绗?8 绔?V2 follow-ups锛?* **`docker-compose.prd10.yml` 鐪?docker 璺?backup profile**锛氬綋鍓嶄粎 `compose config` 楠岃瘉璇硶锛涗笅涓€娆?docker 鐜 ready 鏃惰窇 `--profile backup run --rm backup` 鐪熺敓鎴愪竴浠?dump锛岄獙璇?sha256/upload 瀹屾暣閾捐矾
 
 ---
 
-## Milestone 31 · §15.22 newDocument modal + §15.24 confirmDelete account-menu logout 补丁 — DELIVERED
+## Milestone 31 路 搂15.22 newDocument modal + 搂15.24 confirmDelete account-menu logout 琛ヤ竵 鈥?DELIVERED
 
-**When**: 2026-05-06 11:00（本会话，by Cursor Agent / my-mcp-25）
-
-**Why**: 用户明确指令「不必停下来汇报，一直去领任务做……一直做下去直到 PRD10 完全实现 / 符合业务的前端要求 / 所有按钮生效，数据全打通 / 前后端联调无任何问题才能停下来」。本会话 my-mcp-25 接到任务后扫描 biz 业务原型 5 个仍走 `data-toast="..."` 占位的 modal（newDocument / skillRun / notificationSettings / editProfile / confirmDelete），新增 `todo-tasks.md` §15.22-§15.26 5 行任务声明意图，认领并推进。期间发现 §15.23 / §15.25 / §15.26 已被 my-mcp-15/my-mcp-21/my-mcp-23 并行实现完成；§15.24 logout/clear_cache 由 my-mcp-21 落地，cards/docs/folders 删除由 claude-opus（§15.22 lane）落地——本里程碑收口：(1) §15.22 newDocument modal **全栈接通**；(2) §15.24 account-menu logout 路径补丁（IIFE 8055 走 JS-only `openModal('confirmDelete')`，没 `[data-open-modal]` 属性 → 之前的 `bindConfirmDeleteContextTracking` 探测不到 → 「确认删除」按钮无效）。
-
-按 §3 领地协调：`kb/router.py` 已存在 `POST /documents` endpoint（line 493 `create_document` + `_DOCUMENT_TEMPLATES` 3 模板，由其他 agent 之前预先布点），本里程碑只在 `kb/router.py` **不动一行**，仅在 `bridge.js` append 前端实现 + 在 `tests/integration/api/prd10/test_prd10_kb_api.py` append 7 个集成测试用例。
-
+**When**: 2026-05-06 11:00锛堟湰浼氳瘽锛宐y Cursor Agent / my-mcp-25锛?
+**Why**: 鐢ㄦ埛鏄庣‘鎸囦护銆屼笉蹇呭仠涓嬫潵姹囨姤锛屼竴鐩村幓棰嗕换鍔″仛鈥︹€︿竴鐩村仛涓嬪幓鐩村埌 PRD10 瀹屽叏瀹炵幇 / 绗﹀悎涓氬姟鐨勫墠绔姹?/ 鎵€鏈夋寜閽敓鏁堬紝鏁版嵁鍏ㄦ墦閫?/ 鍓嶅悗绔仈璋冩棤浠讳綍闂鎵嶈兘鍋滀笅鏉ャ€嶃€傛湰浼氳瘽 my-mcp-25 鎺ュ埌浠诲姟鍚庢壂鎻?biz 涓氬姟鍘熷瀷 5 涓粛璧?`data-toast="..."` 鍗犱綅鐨?modal锛坣ewDocument / skillRun / notificationSettings / editProfile / confirmDelete锛夛紝鏂板 `todo-tasks.md` 搂15.22-搂15.26 5 琛屼换鍔″０鏄庢剰鍥撅紝璁ら骞舵帹杩涖€傛湡闂村彂鐜?搂15.23 / 搂15.25 / 搂15.26 宸茶 my-mcp-15/my-mcp-21/my-mcp-23 骞惰瀹炵幇瀹屾垚锛浡?5.24 logout/clear_cache 鐢?my-mcp-21 钀藉湴锛宑ards/docs/folders 鍒犻櫎鐢?claude-opus锛埪?5.22 lane锛夎惤鍦扳€斺€旀湰閲岀▼纰戞敹鍙ｏ細(1) 搂15.22 newDocument modal **鍏ㄦ爤鎺ラ€?*锛?2) 搂15.24 account-menu logout 璺緞琛ヤ竵锛圛IFE 8055 璧?JS-only `openModal('confirmDelete')`锛屾病 `[data-open-modal]` 灞炴€?鈫?涔嬪墠鐨?`bindConfirmDeleteContextTracking` 鎺㈡祴涓嶅埌 鈫?銆岀‘璁ゅ垹闄ゃ€嶆寜閽棤鏁堬級銆?
+鎸?搂3 棰嗗湴鍗忚皟锛歚kb/router.py` 宸插瓨鍦?`POST /documents` endpoint锛坙ine 493 `create_document` + `_DOCUMENT_TEMPLATES` 3 妯℃澘锛岀敱鍏朵粬 agent 涔嬪墠棰勫厛甯冪偣锛夛紝鏈噷绋嬬鍙湪 `kb/router.py` **涓嶅姩涓€琛?*锛屼粎鍦?`bridge.js` append 鍓嶇瀹炵幇 + 鍦?`tests/integration/api/prd10/test_prd10_kb_api.py` append 7 涓泦鎴愭祴璇曠敤渚嬨€?
 ### Delivered
 
-#### 1. §15.22 biz `newDocument` modal 真实化（全栈接通）
+#### 1. 搂15.22 biz `newDocument` modal 鐪熷疄鍖栵紙鍏ㄦ爤鎺ラ€氾級
 
-**前端** `static/mydow/biz/bridge.js`（在 `// ─── §15.22 newDocument modal ───` 段落，约 +130 行）：
+**鍓嶇** `static/mydow/biz/bridge.js`锛堝湪 `// 鈹€鈹€鈹€ 搂15.22 newDocument modal 鈹€鈹€鈹€` 娈佃惤锛岀害 +130 琛岋級锛?
+* `_DOC_TEMPLATE_LABEL_TO_KEY` 鈥?biz modal `<select>` 鏄剧ず鏂囨 `绌虹櫧鏂囨。/鐮旂┒鎶ュ憡/鏂规妗嗘灦` 鈫?鍚庣 enum `blank/research_report/solution_outline`
+* `_resolveCurrentFolderId()` 鈥?浠?`.folder-main[data-folder-id]` 鎺ㄦ柇褰撳墠鏂囦欢澶瑰綊灞烇紝鏃犳枃浠跺す鏃惰繑鍥?null锛堣惤鍒版牴鐩綍锛?* `createDocumentFromModal({ title, templateKey, folderId })` 鈥?灏佽 `POST /api/v1/kb/documents` 璋冪敤
+* `_applyDocPageMode()` 鈥?闂寘澶栫殑 page-shell class flip锛屽洜涓?IIFE `setPageMode` 鍦ㄩ棴鍖呭唴涓嶆毚闇?window锛屽鍒?9 涓ā寮?class 鍒囨崲涓恒€宍doc-open` + `insights-open`銆?* `handleNewDocumentSubmit(button)` 鈥?涓绘祦绋嬶細disable 鎸夐挳 + label銆屽垱寤轰腑鈥︺€嶁啋 POST 鈫?鎴愬姛鍚?`closeAllModals()` + `toast` + `_applyDocPageMode()` + `loadDocumentForEditor(doc.id)` 鎶婂唴瀹?hydrate 鍒?`.doc-editor-main` + 褰撳墠鍦ㄦ枃浠跺す鏃?refresh `loadFolderDetail(folderId)` + dispatch `mydow:document-created` 鑷畾涔変簨浠?+ restore 鎸夐挳
+* `bindKbNewDocumentSubmit()` 鈥?capture-phase document listener 鎷︽埅 `[data-create-doc]` button 鍦?`[data-modal=newDocument]` 鍐?鈫?`event.stopImmediatePropagation()` 闃绘 IIFE 榛樿 `simulateAction("鏂囨。宸插垱寤?, { closeLayer:true, after: setPageMode("doc") })`
 
-* `_DOC_TEMPLATE_LABEL_TO_KEY` — biz modal `<select>` 显示文案 `空白文档/研究报告/方案框架` → 后端 enum `blank/research_report/solution_outline`
-* `_resolveCurrentFolderId()` — 从 `.folder-main[data-folder-id]` 推断当前文件夹归属，无文件夹时返回 null（落到根目录）
-* `createDocumentFromModal({ title, templateKey, folderId })` — 封装 `POST /api/v1/kb/documents` 调用
-* `_applyDocPageMode()` — 闭包外的 page-shell class flip，因为 IIFE `setPageMode` 在闭包内不暴露 window，复制 9 个模式 class 切换为「`doc-open` + `insights-open`」
-* `handleNewDocumentSubmit(button)` — 主流程：disable 按钮 + label「创建中…」→ POST → 成功后 `closeAllModals()` + `toast` + `_applyDocPageMode()` + `loadDocumentForEditor(doc.id)` 把内容 hydrate 到 `.doc-editor-main` + 当前在文件夹时 refresh `loadFolderDetail(folderId)` + dispatch `mydow:document-created` 自定义事件 + restore 按钮
-* `bindKbNewDocumentSubmit()` — capture-phase document listener 拦截 `[data-create-doc]` button 在 `[data-modal=newDocument]` 内 → `event.stopImmediatePropagation()` 阻止 IIFE 默认 `simulateAction("文档已创建", { closeLayer:true, after: setPageMode("doc") })`
+娉ㄥ唽鍒?boot锛歚bindKbNewDocumentSubmit()` 鍦?`bindItemDetailDrawerActions()` 涔嬪悗璋冪敤銆傚鍑哄埌 `window.MydowBridge.{ createDocumentFromModal, handleNewDocumentSubmit, bindKbNewDocumentSubmit }`銆?
+**鍚庣** `src/agent_os/kb/router.py` 鈥?`POST /api/v1/kb/documents`锛坙ine 493 `create_document`锛夌敱鍏朵粬 agent 涔嬪墠棰勫厛甯冪偣锛屾湰閲岀▼纰?*鏈敼涓€琛屽悗绔唬鐮?*锛屼粎澶嶇敤锛?- `CreateDocumentRequest` schema锛歚title (1..500) + summary? + content? + folder_id? + document_type=note + tags=[] + template? in {blank, research_report, solution_outline}`
+- `_DOCUMENT_TEMPLATES`锛? 涓?markdown scaffold 妯℃澘
+- 鏍￠獙 `folder_id` 鏄惁褰掑睘褰撳墠 user
+- 榛樿 `status=ready`銆乣document_type=note`銆佽绠?`word_count = len(content.split())`
+- 杩斿洖 `Document.to_prd10_dict(include_content=True)` + `{folder: {id, name}}`
 
-注册到 boot：`bindKbNewDocumentSubmit()` 在 `bindItemDetailDrawerActions()` 之后调用。导出到 `window.MydowBridge.{ createDocumentFromModal, handleNewDocumentSubmit, bindKbNewDocumentSubmit }`。
+#### 2. 搂15.24 confirmDelete modal account-menu logout 琛ヤ竵
 
-**后端** `src/agent_os/kb/router.py` — `POST /api/v1/kb/documents`（line 493 `create_document`）由其他 agent 之前预先布点，本里程碑**未改一行后端代码**，仅复用：
-- `CreateDocumentRequest` schema：`title (1..500) + summary? + content? + folder_id? + document_type=note + tags=[] + template? in {blank, research_report, solution_outline}`
-- `_DOCUMENT_TEMPLATES`：3 个 markdown scaffold 模板
-- 校验 `folder_id` 是否归属当前 user
-- 默认 `status=ready`、`document_type=note`、计算 `word_count = len(content.split())`
-- 返回 `Document.to_prd10_dict(include_content=True)` + `{folder: {id, name}}`
+`bridge.js::bindConfirmDeleteContextTracking`锛坙ine 4699 鍖哄煙锛夋墿灞曚负鍙岃矾寰勭洃鍚細
 
-#### 2. §15.24 confirmDelete modal account-menu logout 补丁
+* (1) **鐩存帴 opener buttons** 鈥?`[data-open-modal=confirmDelete]`锛堣鐩?security tab `閫€鍑虹櫥褰昤/`娓呴櫎鏈湴缂撳瓨`銆乮tem-detail drawer 鍒犻櫎銆乨oc-meta 鏇村銆乫older-card 鍒犻櫎锛?* (2) **account-menu fallback** 鈥?`[data-account-action="logout"]`锛坆iz/index.html line 7160锛夛紝IIFE 8055 閫氳繃 JS `openModal("confirmDelete")` 瑙﹀彂 modal锛屾病 `[data-open-modal]` 灞炴€?鈫?鐜板湪 capture-phase 鍡呮帰杩欎釜 menu action 鈫?stash `_CONFIRM_DELETE_CTX.kind="logout"` + `label="閫€鍑虹櫥褰?`
 
-`bridge.js::bindConfirmDeleteContextTracking`（line 4699 区域）扩展为双路径监听：
-
-* (1) **直接 opener buttons** — `[data-open-modal=confirmDelete]`（覆盖 security tab `退出登录`/`清除本地缓存`、item-detail drawer 删除、doc-meta 更多、folder-card 删除）
-* (2) **account-menu fallback** — `[data-account-action="logout"]`（biz/index.html line 7160），IIFE 8055 通过 JS `openModal("confirmDelete")` 触发 modal，没 `[data-open-modal]` 属性 → 现在 capture-phase 嗅探这个 menu action → stash `_CONFIRM_DELETE_CTX.kind="logout"` + `label="退出登录"`
-
-之前 my-mcp-21 已经落 `_performLogout` / `_performClearCache` / `bindConfirmDeleteSubmit`（line 4711-4737）；本补丁让 account-menu 的退出登录 path 也能走到这套已存在的处理器，不再 fall-through 到 IIFE simulateAction「已删除」假成功。
-
+涔嬪墠 my-mcp-21 宸茬粡钀?`_performLogout` / `_performClearCache` / `bindConfirmDeleteSubmit`锛坙ine 4711-4737锛夛紱鏈ˉ涓佽 account-menu 鐨勯€€鍑虹櫥褰?path 涔熻兘璧板埌杩欏宸插瓨鍦ㄧ殑澶勭悊鍣紝涓嶅啀 fall-through 鍒?IIFE simulateAction銆屽凡鍒犻櫎銆嶅亣鎴愬姛銆?
 ### Test evidence
 
-#### Backend integration tests — 7 new cases for `POST /kb/documents`
+#### Backend integration tests 鈥?7 new cases for `POST /kb/documents`
 
-`tests/integration/api/prd10/test_prd10_kb_api.py` 新增 7 个 §15.22 用例：
-
-| 测试 | 覆盖 |
+`tests/integration/api/prd10/test_prd10_kb_api.py` 鏂板 7 涓?搂15.22 鐢ㄤ緥锛?
+| 娴嬭瘯 | 瑕嗙洊 |
 |---|---|
-| `test_create_document_blank_in_folder` | folder + blank template → 201 + content="" + word_count=0 + listing 含新 doc id |
-| `test_create_document_research_template_seeds_content` | research_report → content 含「研究目标」「关键发现」 markdown scaffold |
-| `test_create_document_solution_outline_template` | solution_outline → content 含「方案概述」「关键里程碑」 |
-| `test_create_document_without_folder_lands_at_root` | 不传 folder_id → folder_id=None / folder=None |
-| `test_create_document_explicit_content_wins` | 同时传 template + 显式 content → 显式 content 覆盖 template；word_count=5 |
-| `test_create_document_validates_folder_ownership` | 跨用户传他人 folder_id → 404 |
-| `test_create_document_rejects_blank_title` | 空 title → 422 |
+| `test_create_document_blank_in_folder` | folder + blank template 鈫?201 + content="" + word_count=0 + listing 鍚柊 doc id |
+| `test_create_document_research_template_seeds_content` | research_report 鈫?content 鍚€岀爺绌剁洰鏍囥€嶃€屽叧閿彂鐜般€?markdown scaffold |
+| `test_create_document_solution_outline_template` | solution_outline 鈫?content 鍚€屾柟妗堟杩般€嶃€屽叧閿噷绋嬬銆?|
+| `test_create_document_without_folder_lands_at_root` | 涓嶄紶 folder_id 鈫?folder_id=None / folder=None |
+| `test_create_document_explicit_content_wins` | 鍚屾椂浼?template + 鏄惧紡 content 鈫?鏄惧紡 content 瑕嗙洊 template锛泈ord_count=5 |
+| `test_create_document_validates_folder_ownership` | 璺ㄧ敤鎴蜂紶浠栦汉 folder_id 鈫?404 |
+| `test_create_document_rejects_blank_title` | 绌?title 鈫?422 |
 
-KB 套件总计 **25/25 passed @ 3.93s**。
-
-#### PRD10 全 14 套件矩阵基线
+KB 濂椾欢鎬昏 **25/25 passed @ 3.93s**銆?
+#### PRD10 鍏?14 濂椾欢鐭╅樀鍩虹嚎
 
 ```
 python -m pytest \
@@ -1881,142 +1684,96 @@ python -m pytest \
   tests/integration/api/test_prd10_insights_api.py \
   tests/integration/api/prd10/ \
   -p no:cacheprovider --tb=line --no-header --timeout=90
-# → 249 passed @ 58.66s
+# 鈫?249 passed @ 58.66s
 ```
 
-比 Milestone 27 基线 225 +24（含本里程碑 7 个 §15.22 新加 + 11 个 my-mcp-15/Engineer 1 加的 §10.5 hero landing + acceptance 调整 + 6 个其他增量），无任何回归。
-
-#### 测试基线对照修复（§10.5 landing 替换 §15.20 redirect）
-
-旧基线测试 `test_root_redirect` 与 `test_root_redirects_to_biz_default` 期望 `/` 返回 307 redirect 到 `/mydow/biz/`，但 §10.5 hero landing page 上线后 `/` 改成返回 200 HTML（landing），`?go=demo` 才 redirect。本里程碑同步修复 2 个测试以接受双形态（200 HTML + landing wordmark / 307 + redirect-target），保持 backwards-compat。
-
+姣?Milestone 27 鍩虹嚎 225 +24锛堝惈鏈噷绋嬬 7 涓?搂15.22 鏂板姞 + 11 涓?my-mcp-15/Engineer 1 鍔犵殑 搂10.5 hero landing + acceptance 璋冩暣 + 6 涓叾浠栧閲忥級锛屾棤浠讳綍鍥炲綊銆?
+#### 娴嬭瘯鍩虹嚎瀵圭収淇锛埪?0.5 landing 鏇挎崲 搂15.20 redirect锛?
+鏃у熀绾挎祴璇?`test_root_redirect` 涓?`test_root_redirects_to_biz_default` 鏈熸湜 `/` 杩斿洖 307 redirect 鍒?`/mydow/biz/`锛屼絾 搂10.5 hero landing page 涓婄嚎鍚?`/` 鏀规垚杩斿洖 200 HTML锛坙anding锛夛紝`?go=demo` 鎵?redirect銆傛湰閲岀▼纰戝悓姝ヤ慨澶?2 涓祴璇曚互鎺ュ彈鍙屽舰鎬侊紙200 HTML + landing wordmark / 307 + redirect-target锛夛紝淇濇寔 backwards-compat銆?
 ### Files touched
 
-* `src/agent_os/kb/router.py` — **未改一行**（POST /documents endpoint 已由其他 agent 预先布点）
-* `static/mydow/biz/bridge.js` — `+130` 行（§15.22 newDocument modal）+ `+15` 行（§15.24 account-menu logout 补丁）
-* `tests/integration/api/prd10/test_prd10_kb_api.py` — `+95` 行（7 个新 §15.22 集成测试用例）
-* `tests/integration/api/test_prd10_v1_acceptance.py` — landing-page accept 双形态
-* `tests/integration/api/test_prd10_frontend_binding.py` — landing-page accept 双形态
-* `todo-tasks.md` — §15.22-§15.26 5 行任务登记 + §15.22 done + §15.23 / §15.25 / §15.26 done（验收别人实现）+ §15.24 done（与 my-mcp-18 验收行同列）
-* `agent-progress-report.md` — 本 milestone
+* `src/agent_os/kb/router.py` 鈥?**鏈敼涓€琛?*锛圥OST /documents endpoint 宸茬敱鍏朵粬 agent 棰勫厛甯冪偣锛?* `static/mydow/biz/bridge.js` 鈥?`+130` 琛岋紙搂15.22 newDocument modal锛? `+15` 琛岋紙搂15.24 account-menu logout 琛ヤ竵锛?* `tests/integration/api/prd10/test_prd10_kb_api.py` 鈥?`+95` 琛岋紙7 涓柊 搂15.22 闆嗘垚娴嬭瘯鐢ㄤ緥锛?* `tests/integration/api/test_prd10_v1_acceptance.py` 鈥?landing-page accept 鍙屽舰鎬?* `tests/integration/api/test_prd10_frontend_binding.py` 鈥?landing-page accept 鍙屽舰鎬?* `todo-tasks.md` 鈥?搂15.22-搂15.26 5 琛屼换鍔＄櫥璁?+ 搂15.22 done + 搂15.23 / 搂15.25 / 搂15.26 done锛堥獙鏀跺埆浜哄疄鐜帮級+ 搂15.24 done锛堜笌 my-mcp-18 楠屾敹琛屽悓鍒楋級
+* `agent-progress-report.md` 鈥?鏈?milestone
 
-**未动**：
-- `static/mydow/biz/index.html` 业务方原型 HTML（按 §15 设计原则不改业务方设计，只通过 bridge.js 注入真实数据）
-- `static/mydow/{index.html,app.js,style.css,mydow-api.js}` SPA 文件（工程师 2 持有）
-- 任何 `auth/` `kb/` `feed/` `notifications/` 现有 endpoint
-- 任何 agent 仍 doing 中的实现文件区域
+**鏈姩**锛?- `static/mydow/biz/index.html` 涓氬姟鏂瑰師鍨?HTML锛堟寜 搂15 璁捐鍘熷垯涓嶆敼涓氬姟鏂硅璁★紝鍙€氳繃 bridge.js 娉ㄥ叆鐪熷疄鏁版嵁锛?- `static/mydow/{index.html,app.js,style.css,mydow-api.js}` SPA 鏂囦欢锛堝伐绋嬪笀 2 鎸佹湁锛?- 浠讳綍 `auth/` `kb/` `feed/` `notifications/` 鐜版湁 endpoint
+- 浠讳綍 agent 浠?doing 涓殑瀹炵幇鏂囦欢鍖哄煙
 
-### 协作冲突避免
+### 鍗忎綔鍐茬獊閬垮厤
 
-本会话过程中观察到 `todo-tasks.md` §15.x 编号被多个 agent 重复使用（§15.22 / §15.23 / §15.24 各有 2-4 个不同含义的行）。my-mcp-25 选择**不再新增编号**，而是把自己实现的工作写入语义最匹配的现有 `done` 行说明列里——避免进一步增加协作摩擦。后续遇到类似情况建议在 `agent-collaboration.md` 或本规则集里加「编号锁定」机制，先认领编号再写描述。
-
+鏈細璇濊繃绋嬩腑瑙傚療鍒?`todo-tasks.md` 搂15.x 缂栧彿琚涓?agent 閲嶅浣跨敤锛埪?5.22 / 搂15.23 / 搂15.24 鍚勬湁 2-4 涓笉鍚屽惈涔夌殑琛岋級銆俶y-mcp-25 閫夋嫨**涓嶅啀鏂板缂栧彿**锛岃€屾槸鎶婅嚜宸卞疄鐜扮殑宸ヤ綔鍐欏叆璇箟鏈€鍖归厤鐨勭幇鏈?`done` 琛岃鏄庡垪閲屸€斺€旈伩鍏嶈繘涓€姝ュ鍔犲崗浣滄懇鎿︺€傚悗缁亣鍒扮被浼兼儏鍐靛缓璁湪 `agent-collaboration.md` 鎴栨湰瑙勫垯闆嗛噷鍔犮€岀紪鍙烽攣瀹氥€嶆満鍒讹紝鍏堣棰嗙紪鍙峰啀鍐欐弿杩般€?
 ### Follow-ups
 
-1. **§15.4 Feed 查询性能** — capture/text 大量后 `/feed?page_size=8` 每次扫全表，可加 `created_at DESC` 复合索引；下一会话考虑认领
-2. **§9.6 键盘快捷键**（Cmd/Ctrl+K 全局搜索 / Esc 关闭 / `/` 聚焦输入框）— 投资人演示价值高，biz/bridge.js 全局监听即可，不动 IIFE
-3. **§14.3 全 nav 走查 acceptance** — 当前已 §15 主体全 done，可由 Agent 4 跑 `chrome-mcp-smoke.ps1` 出全闭环报告
-4. **biz 原型 5 个 modal 真实化收口验证** — 跑一份 Playwright e2e 把 newDocument / skillRun / confirmDelete (logout/cache/delete) / editProfile / notificationSettings 5 个 modal 走一遍，把截图写入 `.tmp/screenshots/biz_walk/15_22_modals/`
+1. **搂15.4 Feed 鏌ヨ鎬ц兘** 鈥?capture/text 澶ч噺鍚?`/feed?page_size=8` 姣忔鎵叏琛紝鍙姞 `created_at DESC` 澶嶅悎绱㈠紩锛涗笅涓€浼氳瘽鑰冭檻璁ら
+2. **搂9.6 閿洏蹇嵎閿?*锛圕md/Ctrl+K 鍏ㄥ眬鎼滅储 / Esc 鍏抽棴 / `/` 鑱氱劍杈撳叆妗嗭級鈥?鎶曡祫浜烘紨绀轰环鍊奸珮锛宐iz/bridge.js 鍏ㄥ眬鐩戝惉鍗冲彲锛屼笉鍔?IIFE
+3. **搂14.3 鍏?nav 璧版煡 acceptance** 鈥?褰撳墠宸?搂15 涓讳綋鍏?done锛屽彲鐢?Agent 4 璺?`chrome-mcp-smoke.ps1` 鍑哄叏闂幆鎶ュ憡
+4. **biz 鍘熷瀷 5 涓?modal 鐪熷疄鍖栨敹鍙ｉ獙璇?* 鈥?璺戜竴浠?Playwright e2e 鎶?newDocument / skillRun / confirmDelete (logout/cache/delete) / editProfile / notificationSettings 5 涓?modal 璧颁竴閬嶏紝鎶婃埅鍥惧啓鍏?`.tmp/screenshots/biz_walk/15_22_modals/`
 
 ---
 
-## Milestone 30 · §8.16 后端 `GET /me/preferences` + `POST /me/password` 补齐（PRD10 §5.2 + §15.18 修改密码） — DELIVERED
+## Milestone 30 路 搂8.16 鍚庣 `GET /me/preferences` + `POST /me/password` 琛ラ綈锛圥RD10 搂5.2 + 搂15.18 淇敼瀵嗙爜锛?鈥?DELIVERED
 
-**When**: 2026-05-06 10:40（本会话，by Agent / my-mcp-22）
+**When**: 2026-05-06 10:40锛堟湰浼氳瘽锛宐y Agent / my-mcp-22锛?
+**Why**: `todo-tasks.md` 搂15.17 / 搂15.18 閮藉垪銆屽緟缁?P1銆嶈鍚庣 `PATCH /me` + `PATCH /me/preferences` + 淇敼瀵嗙爜绔偣銆傛湰浼氳瘽 搂15.22锛坢y-mcp-23锛? 搂15.23锛坢y-mcp-21锛夊凡缁忔妸 `PATCH /me` + `PATCH /me/preferences` 钀藉湴锛坄Prd10MeUpdateRequest` + `_filter_prd10_settings_patch` 鐧藉悕鍗?+ deep-merge `notification_channels`锛夈€傚墿涓嬩袱涓悗绔己鍙ｆ湰閲岀▼纰戞敹鎺夛細
 
-**Why**: `todo-tasks.md` §15.17 / §15.18 都列「待续 P1」要后端 `PATCH /me` + `PATCH /me/preferences` + 修改密码端点。本会话 §15.22（my-mcp-23）/ §15.23（my-mcp-21）已经把 `PATCH /me` + `PATCH /me/preferences` 落地（`Prd10MeUpdateRequest` + `_filter_prd10_settings_patch` 白名单 + deep-merge `notification_channels`）。剩下两个后端缺口本里程碑收掉：
-
-1. **`GET /api/v1/me/preferences`** — biz 设置页 / SPA 渲染时需要一份**干净 PRD10 §5.2 `UserPreference` shape** 来 hydrate toggle。原 `User.settings` JSON 是任意 key（含 `role` / `plan` / `_internal_billing_override` 等），直接吐前端会暴露隐私键。本端点 project 出 13 个 §5.2 字段（含 `notification_channels` 默认 7 通道），缺省值按 PRD10 §5.2 规范、用户已写则覆盖。
-2. **`POST /api/v1/me/password`** — biz 安全 tab「修改密码」按钮当前是 `data-toast="修改密码入口已打开"` 占位，不真生效。本端点接 `current_password` + `new_password`（≥6），验证当前密码 → 拒绝同密码 no-op → 旋转 hash → 旧 token 仍有效（refresh-token 失效是 §12.2 限流域）。
-
-按 §3 领地协调：`auth/router.py` 是 Engineer 1 / Agent 1 territory，但因为 §15.22 / §15.23 / §11.10 等多家正在动同一文件，本里程碑只在该文件**末尾 append** 两个端点 + 一个 `_project_prd10_preferences` helper，不修改其他 agent 已写的 endpoint 函数。
-
+1. **`GET /api/v1/me/preferences`** 鈥?biz 璁剧疆椤?/ SPA 娓叉煋鏃堕渶瑕佷竴浠?*骞插噣 PRD10 搂5.2 `UserPreference` shape** 鏉?hydrate toggle銆傚師 `User.settings` JSON 鏄换鎰?key锛堝惈 `role` / `plan` / `_internal_billing_override` 绛夛級锛岀洿鎺ュ悙鍓嶇浼氭毚闇查殣绉侀敭銆傛湰绔偣 project 鍑?13 涓?搂5.2 瀛楁锛堝惈 `notification_channels` 榛樿 7 閫氶亾锛夛紝缂虹渷鍊兼寜 PRD10 搂5.2 瑙勮寖銆佺敤鎴峰凡鍐欏垯瑕嗙洊銆?2. **`POST /api/v1/me/password`** 鈥?biz 瀹夊叏 tab銆屼慨鏀瑰瘑鐮併€嶆寜閽綋鍓嶆槸 `data-toast="淇敼瀵嗙爜鍏ュ彛宸叉墦寮€"` 鍗犱綅锛屼笉鐪熺敓鏁堛€傛湰绔偣鎺?`current_password` + `new_password`锛堚墺6锛夛紝楠岃瘉褰撳墠瀵嗙爜 鈫?鎷掔粷鍚屽瘑鐮?no-op 鈫?鏃嬭浆 hash 鈫?鏃?token 浠嶆湁鏁堬紙refresh-token 澶辨晥鏄?搂12.2 闄愭祦鍩燂級銆?
+鎸?搂3 棰嗗湴鍗忚皟锛歚auth/router.py` 鏄?Engineer 1 / Agent 1 territory锛屼絾鍥犱负 搂15.22 / 搂15.23 / 搂11.10 绛夊瀹舵鍦ㄥ姩鍚屼竴鏂囦欢锛屾湰閲岀▼纰戝彧鍦ㄨ鏂囦欢**鏈熬 append** 涓や釜绔偣 + 涓€涓?`_project_prd10_preferences` helper锛屼笉淇敼鍏朵粬 agent 宸插啓鐨?endpoint 鍑芥暟銆?
 ### Delivered
 
-* **`auth/schema.py`** 加 3 个 schema：
-  * `Prd10PreferencesView` — PRD10 §5.2 13 字段 shape，`extra="allow"` 转发未来扩展，默认 channels 包含 7 个 PRD10 通道（`ai_done` / `system_alert` / `knowledge_link` / `job_completed` / `job_failed` / `daily_insight` / `weekly_insight=False`）。
-  * `Prd10PasswordUpdate` — `current_password`(min=1) + `new_password`(min=6)，`extra="forbid"` 拦截 side-channel 注入。
-  * `Prd10PasswordUpdateResponse` — `{id, updated_at, rotated=True}`，clients 用 `updated_at` 判定真旋转时间。
-* **`auth/crud.py::update_user_password`** — `verify_password(current)` 失败抛 `ValueError("current_password_invalid")`；`verify_password(new) == True` 抛 `ValueError("same_password")`；其他情况 rotate `password_hash` + commit + refresh，返回 `User`。Router 把 ValueError 翻成 PRD10 envelope 400。
-* **`auth/router.py`** 加 2 个端点 + 1 个 helper（在 `patch_prd10_me_preferences` 之后、`@router.put("/settings", ...)` 之前 append）：
-  * `GET /api/v1/me/preferences` → `Prd10PreferencesView`，调 `_project_prd10_preferences(current_user.settings)`。
-  * `POST /api/v1/me/password` → `Prd10PasswordUpdateResponse`；ValueError → 400 envelope；user None → 404；成功返回 `{id, updated_at, rotated:true}`。
-  * `_project_prd10_preferences(settings)` — 投影 + 默认值 + `notification_channels` 用白名单 sub-filter（同 `PRD10_NOTIFICATION_CHANNEL_KEYS`）+ shallow merge default channel set。
-
+* **`auth/schema.py`** 鍔?3 涓?schema锛?  * `Prd10PreferencesView` 鈥?PRD10 搂5.2 13 瀛楁 shape锛宍extra="allow"` 杞彂鏈潵鎵╁睍锛岄粯璁?channels 鍖呭惈 7 涓?PRD10 閫氶亾锛坄ai_done` / `system_alert` / `knowledge_link` / `job_completed` / `job_failed` / `daily_insight` / `weekly_insight=False`锛夈€?  * `Prd10PasswordUpdate` 鈥?`current_password`(min=1) + `new_password`(min=6)锛宍extra="forbid"` 鎷︽埅 side-channel 娉ㄥ叆銆?  * `Prd10PasswordUpdateResponse` 鈥?`{id, updated_at, rotated=True}`锛宑lients 鐢?`updated_at` 鍒ゅ畾鐪熸棆杞椂闂淬€?* **`auth/crud.py::update_user_password`** 鈥?`verify_password(current)` 澶辫触鎶?`ValueError("current_password_invalid")`锛沗verify_password(new) == True` 鎶?`ValueError("same_password")`锛涘叾浠栨儏鍐?rotate `password_hash` + commit + refresh锛岃繑鍥?`User`銆俁outer 鎶?ValueError 缈绘垚 PRD10 envelope 400銆?* **`auth/router.py`** 鍔?2 涓鐐?+ 1 涓?helper锛堝湪 `patch_prd10_me_preferences` 涔嬪悗銆乣@router.put("/settings", ...)` 涔嬪墠 append锛夛細
+  * `GET /api/v1/me/preferences` 鈫?`Prd10PreferencesView`锛岃皟 `_project_prd10_preferences(current_user.settings)`銆?  * `POST /api/v1/me/password` 鈫?`Prd10PasswordUpdateResponse`锛沄alueError 鈫?400 envelope锛泆ser None 鈫?404锛涙垚鍔熻繑鍥?`{id, updated_at, rotated:true}`銆?  * `_project_prd10_preferences(settings)` 鈥?鎶曞奖 + 榛樿鍊?+ `notification_channels` 鐢ㄧ櫧鍚嶅崟 sub-filter锛堝悓 `PRD10_NOTIFICATION_CHANNEL_KEYS`锛? shallow merge default channel set銆?
 ### Test evidence
 
-新加 `tests/integration/api/test_prd10_me_password_and_preferences_get.py` **13/13 passed @ 4.71s**：
-
-| 测试 | 覆盖 |
+鏂板姞 `tests/integration/api/test_prd10_me_password_and_preferences_get.py` **13/13 passed @ 4.71s**锛?
+| 娴嬭瘯 | 瑕嗙洊 |
 |---|---|
 | `test_get_me_preferences_unauthenticated_returns_401` | 401 |
-| `test_get_me_preferences_fresh_account_returns_full_default_shape` | 空 settings → 13 字段全有 + 默认值匹配 PRD10 §5.2 + 7 channel 全有 |
-| `test_get_me_preferences_merges_partial_settings_with_defaults` | 用户写 theme/auto_save/default_ai_model → 覆盖默认；其他字段回退默认 |
-| `test_get_me_preferences_notification_channels_deep_merge` | 用户写 `ai_done=False, knowledge_link=True` → 其他 5 通道仍按默认呈现 |
-| `test_get_me_preferences_does_not_leak_privileged_or_unknown_keys` | `role/plan/_internal_billing_override/is_superuser` 全部不出现在响应中 |
-| `test_get_me_preferences_round_trip_after_patch` | PATCH /me/preferences → GET /me/preferences 同步生效 |
+| `test_get_me_preferences_fresh_account_returns_full_default_shape` | 绌?settings 鈫?13 瀛楁鍏ㄦ湁 + 榛樿鍊煎尮閰?PRD10 搂5.2 + 7 channel 鍏ㄦ湁 |
+| `test_get_me_preferences_merges_partial_settings_with_defaults` | 鐢ㄦ埛鍐?theme/auto_save/default_ai_model 鈫?瑕嗙洊榛樿锛涘叾浠栧瓧娈靛洖閫€榛樿 |
+| `test_get_me_preferences_notification_channels_deep_merge` | 鐢ㄦ埛鍐?`ai_done=False, knowledge_link=True` 鈫?鍏朵粬 5 閫氶亾浠嶆寜榛樿鍛堢幇 |
+| `test_get_me_preferences_does_not_leak_privileged_or_unknown_keys` | `role/plan/_internal_billing_override/is_superuser` 鍏ㄩ儴涓嶅嚭鐜板湪鍝嶅簲涓?|
+| `test_get_me_preferences_round_trip_after_patch` | PATCH /me/preferences 鈫?GET /me/preferences 鍚屾鐢熸晥 |
 | `test_post_me_password_unauthenticated_returns_401` | 401 |
-| `test_post_me_password_wrong_current_returns_400` | 错误密码 400 + envelope `{error.message}` 含 "current/incorrect"；密码未改（旧密码仍能登录）|
-| `test_post_me_password_same_as_current_returns_400` | 同密码 400 + envelope message 含 "differ/same/different" |
-| `test_post_me_password_success_rotates_and_login_with_new_password` | 200 + `{rotated:true, id, updated_at}` + DB hash 验证 + 新密码登录成功 + 旧密码登录 401 |
+| `test_post_me_password_wrong_current_returns_400` | 閿欒瀵嗙爜 400 + envelope `{error.message}` 鍚?"current/incorrect"锛涘瘑鐮佹湭鏀癸紙鏃у瘑鐮佷粛鑳界櫥褰曪級|
+| `test_post_me_password_same_as_current_returns_400` | 鍚屽瘑鐮?400 + envelope message 鍚?"differ/same/different" |
+| `test_post_me_password_success_rotates_and_login_with_new_password` | 200 + `{rotated:true, id, updated_at}` + DB hash 楠岃瘉 + 鏂板瘑鐮佺櫥褰曟垚鍔?+ 鏃у瘑鐮佺櫥褰?401 |
 | `test_post_me_password_short_new_password_returns_422` | new_password<6 422 |
-| `test_post_me_password_missing_field_returns_422` | 任一字段缺失 422 |
-| `test_post_me_password_rejects_extra_fields` | 含 `username/is_superuser/settings` 等 side-channel 422 |
+| `test_post_me_password_missing_field_returns_422` | 浠讳竴瀛楁缂哄け 422 |
+| `test_post_me_password_rejects_extra_fields` | 鍚?`username/is_superuser/settings` 绛?side-channel 422 |
 
-**联合 PRD10 全 14 套件 + me_patch + me_password 矩阵 = 282 passed @ 64.71s**（基线 §0 表 225 → 282，+57：含 §15.22 my-mcp-21 13 个 + 本任务 13 个 + 其它代理新增）。零回归。
-
+**鑱斿悎 PRD10 鍏?14 濂椾欢 + me_patch + me_password 鐭╅樀 = 282 passed @ 64.71s**锛堝熀绾?搂0 琛?225 鈫?282锛?57锛氬惈 搂15.22 my-mcp-21 13 涓?+ 鏈换鍔?13 涓?+ 鍏跺畠浠ｇ悊鏂板锛夈€傞浂鍥炲綊銆?
 ### Files touched
 
-* `src/agent_os/auth/schema.py`（+3 schema：`Prd10PreferencesView` / `Prd10PasswordUpdate` / `Prd10PasswordUpdateResponse`）
-* `src/agent_os/auth/router.py`（+2 endpoint：`get_prd10_me_preferences` / `change_prd10_me_password` + `_project_prd10_preferences` helper + `_DEFAULT_NOTIFICATION_CHANNELS` 常量；+3 import line）
-* `src/agent_os/auth/crud.py`（+1 helper：`update_user_password`）
-* `tests/integration/api/test_prd10_me_password_and_preferences_get.py`（**新建**，552 行，13 用例）
-* `todo-tasks.md` §8.16 `doing` → `done` + 证据
-* 本 milestone 写入 `agent-progress-report.md`
+* `src/agent_os/auth/schema.py`锛?3 schema锛歚Prd10PreferencesView` / `Prd10PasswordUpdate` / `Prd10PasswordUpdateResponse`锛?* `src/agent_os/auth/router.py`锛?2 endpoint锛歚get_prd10_me_preferences` / `change_prd10_me_password` + `_project_prd10_preferences` helper + `_DEFAULT_NOTIFICATION_CHANNELS` 甯搁噺锛?3 import line锛?* `src/agent_os/auth/crud.py`锛?1 helper锛歚update_user_password`锛?* `tests/integration/api/test_prd10_me_password_and_preferences_get.py`锛?*鏂板缓**锛?52 琛岋紝13 鐢ㄤ緥锛?* `todo-tasks.md` 搂8.16 `doing` 鈫?`done` + 璇佹嵁
+* 鏈?milestone 鍐欏叆 `agent-progress-report.md`
 
-**未动**：`static/mydow/*`、`bridge.js`、其他 agent 在 `auth/router.py` / `auth/schema.py` / `auth/crud.py` 已写的函数体。
-
+**鏈姩**锛歚static/mydow/*`銆乣bridge.js`銆佸叾浠?agent 鍦?`auth/router.py` / `auth/schema.py` / `auth/crud.py` 宸插啓鐨勫嚱鏁颁綋銆?
 ### Coordination notes
 
-* **避免冲突**：发现读 `auth/router.py` 时其他 agent（推测 my-mcp-21 / my-mcp-23）正在 append `Prd10MeUpdateRequest` / `PATCH /me` / `PATCH /me/preferences`，立即收敛 §8.16 范围到「他们没覆盖的两块」（GET /me/preferences + POST /me/password），删除我已加但与他们重名的 schema（`Prd10MeUpdate` / `Prd10NotificationPreferences` / `Prd10PreferencesResponse` / `Prd10PreferencesUpdate`），保留 `Prd10PreferencesView`（命名 `View` 避免与他们的 `Prd10MeUpdateRequest.settings` 字段交叉）+ `Prd10PasswordUpdate` / `Prd10PasswordUpdateResponse`（无人占用）。
-* **测试隔离**：新建独立 `test_prd10_me_password_and_preferences_get.py` 而非追加 `test_prd10_me_patch.py`（后者由 my-mcp-21 维护 §15.22 测试），避免 file-level merge race。
-* **`/me` envelope**：`/api/v1/me/*` 全部走 `_PRD10_ENVELOPE_PREFIXES`（app.py L160-L179），HTTPException 自动翻译为 `{success:false, error:{code,message,details}, request_id}`，所以测试断言用 `body["error"]["message"]` 而非 `body["detail"]`。
-
+* **閬垮厤鍐茬獊**锛氬彂鐜拌 `auth/router.py` 鏃跺叾浠?agent锛堟帹娴?my-mcp-21 / my-mcp-23锛夋鍦?append `Prd10MeUpdateRequest` / `PATCH /me` / `PATCH /me/preferences`锛岀珛鍗虫敹鏁?搂8.16 鑼冨洿鍒般€屼粬浠病瑕嗙洊鐨勪袱鍧椼€嶏紙GET /me/preferences + POST /me/password锛夛紝鍒犻櫎鎴戝凡鍔犱絾涓庝粬浠噸鍚嶇殑 schema锛坄Prd10MeUpdate` / `Prd10NotificationPreferences` / `Prd10PreferencesResponse` / `Prd10PreferencesUpdate`锛夛紝淇濈暀 `Prd10PreferencesView`锛堝懡鍚?`View` 閬垮厤涓庝粬浠殑 `Prd10MeUpdateRequest.settings` 瀛楁浜ゅ弶锛? `Prd10PasswordUpdate` / `Prd10PasswordUpdateResponse`锛堟棤浜哄崰鐢級銆?* **娴嬭瘯闅旂**锛氭柊寤虹嫭绔?`test_prd10_me_password_and_preferences_get.py` 鑰岄潪杩藉姞 `test_prd10_me_patch.py`锛堝悗鑰呯敱 my-mcp-21 缁存姢 搂15.22 娴嬭瘯锛夛紝閬垮厤 file-level merge race銆?* **`/me` envelope**锛歚/api/v1/me/*` 鍏ㄩ儴璧?`_PRD10_ENVELOPE_PREFIXES`锛坅pp.py L160-L179锛夛紝HTTPException 鑷姩缈昏瘧涓?`{success:false, error:{code,message,details}, request_id}`锛屾墍浠ユ祴璇曟柇瑷€鐢?`body["error"]["message"]` 鑰岄潪 `body["detail"]`銆?
 ### Follow-ups
 
-1. 前端 wiring：`bridge.js` 把 biz 安全 tab 的「修改密码」`<button data-toast=修改密码入口已打开>` 接到 `POST /api/v1/me/password`（弹 modal 收 current_password / new_password），并把偏好页 hydrate 改为先调 `GET /me/preferences`（而非 `/me`）以读到完整 13 字段。属 §15.22 / §15.18 后续，由 Engineer 1 / my-mcp-21 / my-mcp-23 一并接入。
-2. 安全增强（P1）：旋转密码后立即 invalidate 该用户所有 active session（清 `Session` 表行 + 让 refresh token 失效），需要与 §12.2 rate-limit / session 治理协同。
-3. P2：`POST /me/password` 前增加最近 N 次密码哈希黑名单（防止 cycling 同一组密码），需要新表 `password_history`。
-
+1. 鍓嶇 wiring锛歚bridge.js` 鎶?biz 瀹夊叏 tab 鐨勩€屼慨鏀瑰瘑鐮併€峘<button data-toast=淇敼瀵嗙爜鍏ュ彛宸叉墦寮€>` 鎺ュ埌 `POST /api/v1/me/password`锛堝脊 modal 鏀?current_password / new_password锛夛紝骞舵妸鍋忓ソ椤?hydrate 鏀逛负鍏堣皟 `GET /me/preferences`锛堣€岄潪 `/me`锛変互璇诲埌瀹屾暣 13 瀛楁銆傚睘 搂15.22 / 搂15.18 鍚庣画锛岀敱 Engineer 1 / my-mcp-21 / my-mcp-23 涓€骞舵帴鍏ャ€?2. 瀹夊叏澧炲己锛圥1锛夛細鏃嬭浆瀵嗙爜鍚庣珛鍗?invalidate 璇ョ敤鎴锋墍鏈?active session锛堟竻 `Session` 琛ㄨ + 璁?refresh token 澶辨晥锛夛紝闇€瑕佷笌 搂12.2 rate-limit / session 娌荤悊鍗忓悓銆?3. P2锛歚POST /me/password` 鍓嶅鍔犳渶杩?N 娆″瘑鐮佸搱甯岄粦鍚嶅崟锛堥槻姝?cycling 鍚屼竴缁勫瘑鐮侊級锛岄渶瑕佹柊琛?`password_history`銆?
 ---
 
-## Milestone 29 · §10.5 Investor-Friendly Hero Landing Page — DELIVERED
+## Milestone 29 路 搂10.5 Investor-Friendly Hero Landing Page 鈥?DELIVERED
 
-**When**: 2026-05-06 10:35（本会话，by Agent / my-mcp-13）
-
-**Why**: `todo-tasks.md` §10.5 标 `open`、无 Owner，是 PRD10 §10 投资人 demo 路径的入口空缺。在此之前 `/` 直接 307 → `/mydow/biz/`（§15.20 已 done），意味着投资人 / 客户 / 媒体首次访问看到的是「灵感采集 demo 工作台」，缺一块「这个产品是什么 / 为什么值得点进去 / 凭什么相信它真能跑」的价值主张承接。本里程碑用一张独立的 hero landing 页填补这块空白，并保持原 §15.20 的快进路径作为 `?go=demo` opt-in。
-
-按多人协作规则（领地 §3）：landing 页属"任何工程师都可认领"的演示路径 lane，认领前 read 了最新 `todo-tasks.md` 确认无人 `doing`、无 Owner（中途发现 §12.2 被 my-mcp-24 同时 10:20 抢先认领，立即让出后改选 §10.5）；所动文件（`static/landing/index.html` 新建 / `server/app.py` 改 `/` handler + 加 `_LANDING_DIR` mount / 改 2 个旧 acceptance test 的 `test_root_*` 断言 + 新增 `test_landing_hero.py`）不撞任何 `doing`：未动 SPA / 未动 biz/index.html / 未动 bridge.js / 与 §11.10 my-mcp-15 已落的 `static/legal/*` 协同（footer 引用其 privacy/terms 链接）/ 与 §15.20 兼容（`?go=demo` 仍走原 redirect）。
-
+**When**: 2026-05-06 10:35锛堟湰浼氳瘽锛宐y Agent / my-mcp-13锛?
+**Why**: `todo-tasks.md` 搂10.5 鏍?`open`銆佹棤 Owner锛屾槸 PRD10 搂10 鎶曡祫浜?demo 璺緞鐨勫叆鍙ｇ┖缂恒€傚湪姝や箣鍓?`/` 鐩存帴 307 鈫?`/mydow/biz/`锛埪?5.20 宸?done锛夛紝鎰忓懗鐫€鎶曡祫浜?/ 瀹㈡埛 / 濯掍綋棣栨璁块棶鐪嬪埌鐨勬槸銆岀伒鎰熼噰闆?demo 宸ヤ綔鍙般€嶏紝缂轰竴鍧椼€岃繖涓骇鍝佹槸浠€涔?/ 涓轰粈涔堝€煎緱鐐硅繘鍘?/ 鍑粈涔堢浉淇″畠鐪熻兘璺戙€嶇殑浠峰€间富寮犳壙鎺ャ€傛湰閲岀▼纰戠敤涓€寮犵嫭绔嬬殑 hero landing 椤靛～琛ヨ繖鍧楃┖鐧斤紝骞朵繚鎸佸師 搂15.20 鐨勫揩杩涜矾寰勪綔涓?`?go=demo` opt-in銆?
+鎸夊浜哄崗浣滆鍒欙紙棰嗗湴 搂3锛夛細landing 椤靛睘"浠讳綍宸ョ▼甯堥兘鍙棰?鐨勬紨绀鸿矾寰?lane锛岃棰嗗墠 read 浜嗘渶鏂?`todo-tasks.md` 纭鏃犱汉 `doing`銆佹棤 Owner锛堜腑閫斿彂鐜?搂12.2 琚?my-mcp-24 鍚屾椂 10:20 鎶㈠厛璁ら锛岀珛鍗宠鍑哄悗鏀归€?搂10.5锛夛紱鎵€鍔ㄦ枃浠讹紙`static/landing/index.html` 鏂板缓 / `server/app.py` 鏀?`/` handler + 鍔?`_LANDING_DIR` mount / 鏀?2 涓棫 acceptance test 鐨?`test_root_*` 鏂█ + 鏂板 `test_landing_hero.py`锛変笉鎾炰换浣?`doing`锛氭湭鍔?SPA / 鏈姩 biz/index.html / 鏈姩 bridge.js / 涓?搂11.10 my-mcp-15 宸茶惤鐨?`static/legal/*` 鍗忓悓锛坒ooter 寮曠敤鍏?privacy/terms 閾炬帴锛? 涓?搂15.20 鍏煎锛坄?go=demo` 浠嶈蛋鍘?redirect锛夈€?
 ### Delivered
 
-#### 1. `static/landing/index.html`（新增，~660 行单文件）
+#### 1. `static/landing/index.html`锛堟柊澧烇紝~660 琛屽崟鏂囦欢锛?
+PRD10 搂10.5 鎶曡祫浜虹骇鍒?hero landing锛?*绾潤鎬佽嚜鍖呭惈**锛坕nline CSS + 鍐呭祵 SVG icon + 0 澶栭儴 CDN锛宱ffline-friendly锛夛紝璋冭壊鏉垮榻?biz 鍘熷瀷锛坅ccent `#9fb1ff/#758cff`銆乵int `#77cabd`銆乬old `#f0bd6c`銆乺ose `#d7a9a5`锛岃儗鏅?`#f7f9fd` + 澶氬眰 radial gradient + linear gradient锛夛細
 
-PRD10 §10.5 投资人级别 hero landing，**纯静态自包含**（inline CSS + 内嵌 SVG icon + 0 外部 CDN，offline-friendly），调色板对齐 biz 原型（accent `#9fb1ff/#758cff`、mint `#77cabd`、gold `#f0bd6c`、rose `#d7a9a5`，背景 `#f7f9fd` + 多层 radial gradient + linear gradient）：
+- **Top nav**锛坰ticky + backdrop-blur锛夛細鍝佺墝瀛楁爣 + 4 涓尯娈甸敋鐐癸紙浜у搧/鎬庝箞鐢?鏁版嵁/璁㈤槄锛? "API 鏂囨。" secondary + "寮€濮嬩綋楠? primary CTA 鈫?`/mydow/biz/`
+- **Hero**锛氬弻鏍忓竷灞€锛屽乏渚ф笎鍙樻爣棰樸€屾妸鐏垫劅鍙樻垚浣撶郴鍖栫殑鐭ヨ瘑銆? 鍓爣棰?+ 鍙?CTA + 4 涓壒寰?tags锛堢湡瀹炴暟鎹?/ 姣忎釜鎸夐挳閮界敓鏁?/ 绔埌绔墦閫?/ 鐪熷疄娴佸紡 AI锛夛紱鍙充晶 460px 鐜荤拑闈㈡澘 + 4 寮?floating card锛堢伒鎰熼噰闆?Mydow AI/鏁板瓧鑺卞洯/閫氱煡锛? pulse / float CSS 鍔ㄧ敾锛坮educe-motion 鍏煎锛?- **Trust row**锛? 涓暟瀛楋紙200+ 娴嬭瘯 / 0 鍋囨寜閽?/ 14 涓氬姟鍘熷瀷椤?/ SSE 鐪熷疄娴佸紡锛?- **Modules grid**锛? 寮?PRD10 搂2.1 妯″潡鍗★紙鐏垫劅閲囬泦 / 鐭ヨ瘑搴?/ Mydow AI / 鏁板瓧鑺卞洯 / 鍏ㄥ眬鎼滅储 / Skills 骞垮満 / 娲炲療涓績 / 閫氱煡涓績锛夛紝姣忓紶鍚?SVG icon + 鎻忚堪 + glow 娓愬彉鍏夋檿 + hover transform
+- **How it works**锛? 姝ラ棴鐜紙杈撳叆 鈫?鏁寸悊 鈫?瀵硅瘽锛夛紝姣忔甯﹀叿浣?PRD10 绔偣鍒楄〃锛圥OST /capture/text銆丳OST /uploads/presign銆丼SE meta/token/keepalive銆丳OST /save-to-kb 绛夛級
+- **Stats**锛? 涓牳蹇冩寚鏍囷紙30s 闂幆 / 225+ 娴嬭瘯 / 14 涓氬姟鍘熷瀷 / UUID 鐢ㄦ埛闅旂锛?- **Pricing tease**锛? 寮犺闃呭崱锛堜釜浜?Pro 楼39/鏈?+ 鍥㈤槦 License 楼199/甯綅/鏈堬紝鍚庤€呫€屾渶鍙楁杩庛€峟eatured + 閭欢鍜ㄨ mailto锛夛紝涓?README 搂13.6 鍟嗕笟妯″紡琛ㄥ榻?- **Final CTA**锛氳繘鍏?Demo 宸ヤ綔鍙?primary 鎸夐挳
+- **Footer**锛? 鍒楋紙鍝佺墝 / 浜у搧 / 寮€鍙戣€?/ 鍚堣锛夛紝寮€鍙戣€呭垪鍚?`/docs` `/redoc` `/openapi.json` `/health`锛涘悎瑙勫垪鍚?`/legal/privacy.html` `/legal/terms.html`锛堜笌 搂11.10 my-mcp-15 lane 鑱斿姩锛? `/mydow/spa/` fallback锛涘簳閮ㄧ増鏉冧笌 v1 鏍囪瘑
+- **Inline `<script>`**锛歴mooth scroll for in-page anchors + 涓€涓?`data-cta` 鐐瑰嚮鍩嬬偣 hook 鍐?`sessionStorage["mydow_landing_last_cta"]`锛屾湭鏉ュ彲鎺?analytics
 
-- **Top nav**（sticky + backdrop-blur）：品牌字标 + 4 个区段锚点（产品/怎么用/数据/订阅）+ "API 文档" secondary + "开始体验" primary CTA → `/mydow/biz/`
-- **Hero**：双栏布局，左侧渐变标题「把灵感变成体系化的知识」+ 副标题 + 双 CTA + 4 个特征 tags（真实数据 / 每个按钮都生效 / 端到端打通 / 真实流式 AI）；右侧 460px 玻璃面板 + 4 张 floating card（灵感采集/Mydow AI/数字花园/通知）+ pulse / float CSS 动画（reduce-motion 兼容）
-- **Trust row**：4 个数字（200+ 测试 / 0 假按钮 / 14 业务原型页 / SSE 真实流式）
-- **Modules grid**：8 张 PRD10 §2.1 模块卡（灵感采集 / 知识库 / Mydow AI / 数字花园 / 全局搜索 / Skills 广场 / 洞察中心 / 通知中心），每张含 SVG icon + 描述 + glow 渐变光晕 + hover transform
-- **How it works**：3 步闭环（输入 → 整理 → 对话），每步带具体 PRD10 端点列表（POST /capture/text、POST /uploads/presign、SSE meta/token/keepalive、POST /save-to-kb 等）
-- **Stats**：4 个核心指标（30s 闭环 / 225+ 测试 / 14 业务原型 / UUID 用户隔离）
-- **Pricing tease**：2 张订阅卡（个人 Pro ¥39/月 + 团队 License ¥199/席位/月，后者「最受欢迎」featured + 邮件咨询 mailto），与 README §13.6 商业模式表对齐
-- **Final CTA**：进入 Demo 工作台 primary 按钮
-- **Footer**：4 列（品牌 / 产品 / 开发者 / 合规），开发者列含 `/docs` `/redoc` `/openapi.json` `/health`；合规列含 `/legal/privacy.html` `/legal/terms.html`（与 §11.10 my-mcp-15 lane 联动）+ `/mydow/spa/` fallback；底部版权与 v1 标识
-- **Inline `<script>`**：smooth scroll for in-page anchors + 一个 `data-cta` 点击埋点 hook 写 `sessionStorage["mydow_landing_last_cta"]`，未来可接 analytics
-
-完全响应式（≥980 → ≥800 → ≥640 → ≥560 四档断点），动画 `prefers-reduced-motion` 友好。
-
-#### 2. `src/agent_os/server/app.py` 改 `/` handler + 加 `/landing` mount
+瀹屽叏鍝嶅簲寮忥紙鈮?80 鈫?鈮?00 鈫?鈮?40 鈫?鈮?60 鍥涙。鏂偣锛夛紝鍔ㄧ敾 `prefers-reduced-motion` 鍙嬪ソ銆?
+#### 2. `src/agent_os/server/app.py` 鏀?`/` handler + 鍔?`/landing` mount
 
 ```python
 @app.get("/")
@@ -2036,109 +1793,87 @@ async def get_index(go: str | None = None):
     return await get_legacy_index()
 ```
 
-行为优先级：
-1. `?go=demo` opt-in → 307 → `/mydow/biz/`（保留 §15.20 投资人 / press / docker healthcheck 快进路径）
-2. landing bundle 存在 → 200 + HTMLResponse（默认 §10.5 行为）
-3. landing 缺失 → 走旧 §15.20 fallback 链（biz → spa → legacy）
-
-附加 `_LANDING_DIR` 模块级常量 + `app.mount("/landing", StaticFiles(directory, html=True))`，让 `/landing/`（直接访问）和未来分包资源（独立 favicon / og-image / split css）都可达。形态对齐 `_LEGAL_DIR`（§11.10 my-mcp-15 已落的同形态 mount）。
-
-#### 3. `tests/integration/api/test_landing_hero.py`（新增，7 用例）
-
-| Test | 断言 |
+琛屼负浼樺厛绾э細
+1. `?go=demo` opt-in 鈫?307 鈫?`/mydow/biz/`锛堜繚鐣?搂15.20 鎶曡祫浜?/ press / docker healthcheck 蹇繘璺緞锛?2. landing bundle 瀛樺湪 鈫?200 + HTMLResponse锛堥粯璁?搂10.5 琛屼负锛?3. landing 缂哄け 鈫?璧版棫 搂15.20 fallback 閾撅紙biz 鈫?spa 鈫?legacy锛?
+闄勫姞 `_LANDING_DIR` 妯″潡绾у父閲?+ `app.mount("/landing", StaticFiles(directory, html=True))`锛岃 `/landing/`锛堢洿鎺ヨ闂級鍜屾湭鏉ュ垎鍖呰祫婧愶紙鐙珛 favicon / og-image / split css锛夐兘鍙揪銆傚舰鎬佸榻?`_LEGAL_DIR`锛埪?1.10 my-mcp-15 宸茶惤鐨勫悓褰㈡€?mount锛夈€?
+#### 3. `tests/integration/api/test_landing_hero.py`锛堟柊澧烇紝7 鐢ㄤ緥锛?
+| Test | 鏂█ |
 |---|---|
-| `test_root_serves_landing_hero_html` | `GET /` → 200 + content-type `text/html` + 含 Mydow 字标 + 含 PRD10 §2.1 全 7 个模块名（灵感采集/知识库/Mydow AI/数字花园/Skills/全局搜索/通知）|
-| `test_root_with_go_demo_query_short_circuits_to_biz` | `GET /?go=demo` → 307 + `Location: /mydow/biz/` |
-| `test_root_without_query_param_does_not_redirect` | `GET /` 200 且无 `Location` 头 |
-| `test_landing_mount_serves_index_directly` | `GET /landing/` → 200 + 含同样 hero 标记 |
-| `test_landing_footer_links_to_legal_and_docs` | 含 `/legal/privacy.html` `/legal/terms.html` `/docs` `/openapi.json` `/mydow/spa/` 5 条链接 |
-| `test_landing_pricing_card_anchors_match_business_model` | 含「个人 Pro」「团队 License」「¥39」「¥199」「最受欢迎」5 个商业模式 token，与 README §13.6 对齐 |
-| `test_landing_meta_and_brand_tokens_present` | `<title>Mydow` + `name="description"` + `name="theme-color"` + 不含外链 `<script src="http..."` `<link href="http..."`（offline-first 自包含 guard）|
+| `test_root_serves_landing_hero_html` | `GET /` 鈫?200 + content-type `text/html` + 鍚?Mydow 瀛楁爣 + 鍚?PRD10 搂2.1 鍏?7 涓ā鍧楀悕锛堢伒鎰熼噰闆?鐭ヨ瘑搴?Mydow AI/鏁板瓧鑺卞洯/Skills/鍏ㄥ眬鎼滅储/閫氱煡锛墊
+| `test_root_with_go_demo_query_short_circuits_to_biz` | `GET /?go=demo` 鈫?307 + `Location: /mydow/biz/` |
+| `test_root_without_query_param_does_not_redirect` | `GET /` 200 涓旀棤 `Location` 澶?|
+| `test_landing_mount_serves_index_directly` | `GET /landing/` 鈫?200 + 鍚悓鏍?hero 鏍囪 |
+| `test_landing_footer_links_to_legal_and_docs` | 鍚?`/legal/privacy.html` `/legal/terms.html` `/docs` `/openapi.json` `/mydow/spa/` 5 鏉￠摼鎺?|
+| `test_landing_pricing_card_anchors_match_business_model` | 鍚€屼釜浜?Pro銆嶃€屽洟闃?License銆嶃€屄?9銆嶃€屄?99銆嶃€屾渶鍙楁杩庛€? 涓晢涓氭ā寮?token锛屼笌 README 搂13.6 瀵归綈 |
+| `test_landing_meta_and_brand_tokens_present` | `<title>Mydow` + `name="description"` + `name="theme-color"` + 涓嶅惈澶栭摼 `<script src="http..."` `<link href="http..."`锛坥ffline-first 鑷寘鍚?guard锛墊
 
-#### 4. 同步两个旧 acceptance 测试断言到 §10.5 新合约
-
-- `tests/integration/api/test_prd10_v1_acceptance.py::test_root_redirect` → 改名 `test_root_serves_landing_or_redirects_to_biz`，断言 `/` 200 含 `<title>Mydow` 与 `/mydow/biz/` 链接 + `?go=demo` 307 → `/mydow/biz/`
-- `tests/integration/api/test_prd10_frontend_binding.py::test_root_redirects_to_biz_default` → 已被另一个 agent（同一时间窗）以 `test_root_serves_landing_or_redirects_to_biz` 形式更新为接受 200/307 双形态（landing 部署 vs 未部署），完全兼容本里程碑
-
+#### 4. 鍚屾涓や釜鏃?acceptance 娴嬭瘯鏂█鍒?搂10.5 鏂板悎绾?
+- `tests/integration/api/test_prd10_v1_acceptance.py::test_root_redirect` 鈫?鏀瑰悕 `test_root_serves_landing_or_redirects_to_biz`锛屾柇瑷€ `/` 200 鍚?`<title>Mydow` 涓?`/mydow/biz/` 閾炬帴 + `?go=demo` 307 鈫?`/mydow/biz/`
+- `tests/integration/api/test_prd10_frontend_binding.py::test_root_redirects_to_biz_default` 鈫?宸茶鍙︿竴涓?agent锛堝悓涓€鏃堕棿绐楋級浠?`test_root_serves_landing_or_redirects_to_biz` 褰㈠紡鏇存柊涓烘帴鍙?200/307 鍙屽舰鎬侊紙landing 閮ㄧ讲 vs 鏈儴缃诧級锛屽畬鍏ㄥ吋瀹规湰閲岀▼纰?
 ### Test evidence
 
 ```
 $ python -m pytest tests/integration/api/test_landing_hero.py -q
 7 passed in 0.84s
 
-$ python -m pytest <PRD10 全 14 套件矩阵 + tests/integration/api/prd10/ + tests/integration/api/test_landing_hero.py> -q
+$ python -m pytest <PRD10 鍏?14 濂椾欢鐭╅樀 + tests/integration/api/prd10/ + tests/integration/api/test_landing_hero.py> -q
 256 passed, 45 warnings in 52.82s
 ```
 
-完整日志 `.tmp/landing_baseline.log`。比 §12.3 done 后基线 229 提升 **+27**（其中 7 条来自本里程碑 landing_hero，其余 +20 来自其他 agent 同窗口提交：§11.10 my-mcp-15 的合规测试、§12.2 my-mcp-24 的 rate limit 测试等）。无回归。
-
+瀹屾暣鏃ュ織 `.tmp/landing_baseline.log`銆傛瘮 搂12.3 done 鍚庡熀绾?229 鎻愬崌 **+27**锛堝叾涓?7 鏉℃潵鑷湰閲岀▼纰?landing_hero锛屽叾浣?+20 鏉ヨ嚜鍏朵粬 agent 鍚岀獥鍙ｆ彁浜わ細搂11.10 my-mcp-15 鐨勫悎瑙勬祴璇曘€伮?2.2 my-mcp-24 鐨?rate limit 娴嬭瘯绛夛級銆傛棤鍥炲綊銆?
 ### Files touched
 
-新增：
-- `static/landing/index.html`（660 行）
-- `tests/integration/api/test_landing_hero.py`（7 用例）
-
-修改：
-- `src/agent_os/server/app.py`（`/` handler 重写 + `_LANDING_DIR` mount，+38 行 / -8 行）
-- `tests/integration/api/test_prd10_v1_acceptance.py`（`test_root_redirect` → `test_root_serves_landing_or_redirects_to_biz` 改 +13 行 / -8 行）
-- `todo-tasks.md`（§10.5 → done with evidence）
-- `agent-progress-report.md`（本里程碑）
+鏂板锛?- `static/landing/index.html`锛?60 琛岋級
+- `tests/integration/api/test_landing_hero.py`锛? 鐢ㄤ緥锛?
+淇敼锛?- `src/agent_os/server/app.py`锛坄/` handler 閲嶅啓 + `_LANDING_DIR` mount锛?38 琛?/ -8 琛岋級
+- `tests/integration/api/test_prd10_v1_acceptance.py`锛坄test_root_redirect` 鈫?`test_root_serves_landing_or_redirects_to_biz` 鏀?+13 琛?/ -8 琛岋級
+- `todo-tasks.md`锛埪?0.5 鈫?done with evidence锛?- `agent-progress-report.md`锛堟湰閲岀▼纰戯級
 
 ### Follow-ups
 
-- §10.6 截图 / 90 秒视频素材（仍 `open`）：可在本 landing 上录屏；4 个 hero floating card 已经能传达产品形态，后续可加 PNG 截图块替换占位玻璃面板
-- §10.3 引导式 onboarding（仍 `open`）：landing 上点 "开始体验" → demo 后第一次进 `/mydow/biz/` 时弹 4 步引导；与 SPA / biz lane 配合
-- 国际化（§9.12）：landing 当前纯中文；后续可基于 `User.locale` 或 `Accept-Language` 服中/英两版
-- A11y axe 跑一遍（§14.7）：landing 已用 aria-label / aria-hidden，hover 状态都有 focus-visible，但需要正式 axe 报告才能算 done
+- 搂10.6 鎴浘 / 90 绉掕棰戠礌鏉愶紙浠?`open`锛夛細鍙湪鏈?landing 涓婂綍灞忥紱4 涓?hero floating card 宸茬粡鑳戒紶杈句骇鍝佸舰鎬侊紝鍚庣画鍙姞 PNG 鎴浘鍧楁浛鎹㈠崰浣嶇幓鐠冮潰鏉?- 搂10.3 寮曞寮?onboarding锛堜粛 `open`锛夛細landing 涓婄偣 "寮€濮嬩綋楠? 鈫?demo 鍚庣涓€娆¤繘 `/mydow/biz/` 鏃跺脊 4 姝ュ紩瀵硷紱涓?SPA / biz lane 閰嶅悎
+- 鍥介檯鍖栵紙搂9.12锛夛細landing 褰撳墠绾腑鏂囷紱鍚庣画鍙熀浜?`User.locale` 鎴?`Accept-Language` 鏈嶄腑/鑻变袱鐗?- A11y axe 璺戜竴閬嶏紙搂14.7锛夛細landing 宸茬敤 aria-label / aria-hidden锛宧over 鐘舵€侀兘鏈?focus-visible锛屼絾闇€瑕佹寮?axe 鎶ュ憡鎵嶈兘绠?done
 
 ---
 
-## Milestone 28 · §12.2 PRD10 §29 Rate Limiting (token-bucket, env-gated) — DELIVERED
+## Milestone 28 路 搂12.2 PRD10 搂29 Rate Limiting (token-bucket, env-gated) 鈥?DELIVERED
 
-**When**: 2026-05-06 10:35（本会话，by Agent / my-mcp-24）
-
-**Why**: `todo-tasks.md` §12.2 标 `open`，是 PRD10 §29 风险表 + Acceptance Gate 14.x 上线前必备的 hardening 之一。在此之前 backend 没有任何全局限流，任何客户端都能不受控地 hammer `/auth/login`、`/ai/conversations/.../messages`、`/search`，把单租户成本和登录暴破都暴露在外面。`agent_os/auth/router.py` 内部对 register/login 有自己的 verification rate limit，但只在邮件验证码相关路径上生效，未覆盖一般请求。
-
-按多人协作规则（领地 §3）：本任务属"任何工程师都可认领"的后端 hardening lane（不属任何已声明的 owner）。认领前 read 了最新 `todo-tasks.md` 确认无人 `doing`；所动文件（`common/rate_limit.py` 新建 / `common/middleware.py` 追加 class / `common/__init__.py` 追加 export / `server/app.py` 加 1 行 import + 3 行 add_middleware 注释 / 新测试文件）都不在任何 `doing` 中任务的实现领地，未撞 SPA / 不动 `static/mydow/*` / 不撞 Milestone 27 §11.3 nginx 工作（不同文件不同方向）。
-
+**When**: 2026-05-06 10:35锛堟湰浼氳瘽锛宐y Agent / my-mcp-24锛?
+**Why**: `todo-tasks.md` 搂12.2 鏍?`open`锛屾槸 PRD10 搂29 椋庨櫓琛?+ Acceptance Gate 14.x 涓婄嚎鍓嶅繀澶囩殑 hardening 涔嬩竴銆傚湪姝や箣鍓?backend 娌℃湁浠讳綍鍏ㄥ眬闄愭祦锛屼换浣曞鎴风閮借兘涓嶅彈鎺у湴 hammer `/auth/login`銆乣/ai/conversations/.../messages`銆乣/search`锛屾妸鍗曠鎴锋垚鏈拰鐧诲綍鏆寸牬閮芥毚闇插湪澶栭潰銆俙agent_os/auth/router.py` 鍐呴儴瀵?register/login 鏈夎嚜宸辩殑 verification rate limit锛屼絾鍙湪閭欢楠岃瘉鐮佺浉鍏宠矾寰勪笂鐢熸晥锛屾湭瑕嗙洊涓€鑸姹傘€?
+鎸夊浜哄崗浣滆鍒欙紙棰嗗湴 搂3锛夛細鏈换鍔″睘"浠讳綍宸ョ▼甯堥兘鍙棰?鐨勫悗绔?hardening lane锛堜笉灞炰换浣曞凡澹版槑鐨?owner锛夈€傝棰嗗墠 read 浜嗘渶鏂?`todo-tasks.md` 纭鏃犱汉 `doing`锛涙墍鍔ㄦ枃浠讹紙`common/rate_limit.py` 鏂板缓 / `common/middleware.py` 杩藉姞 class / `common/__init__.py` 杩藉姞 export / `server/app.py` 鍔?1 琛?import + 3 琛?add_middleware 娉ㄩ噴 / 鏂版祴璇曟枃浠讹級閮戒笉鍦ㄤ换浣?`doing` 涓换鍔＄殑瀹炵幇棰嗗湴锛屾湭鎾?SPA / 涓嶅姩 `static/mydow/*` / 涓嶆挒 Milestone 27 搂11.3 nginx 宸ヤ綔锛堜笉鍚屾枃浠朵笉鍚屾柟鍚戯級銆?
 ### Delivered
 
-#### 1. `src/agent_os/common/rate_limit.py`（新增，~280 行）
+#### 1. `src/agent_os/common/rate_limit.py`锛堟柊澧烇紝~280 琛岋級
 
-PRD10 §29 token-bucket 限流核心：
-
-- **`is_rate_limit_enabled(env_name="AGENTOS_RATE_LIMIT")`**：env-driven，默认 OFF；接受 `1/on/true/yes/enabled` 等价开关
-- **`RateLimitPolicy` dataclass**：`name / path_prefixes / methods / capacity / refill_per_second / scope`，`matches(path, method)` 做 prefix + method 匹配（`methods=()` 表示匹配所有方法）
-- **7 条 `DEFAULT_POLICIES`**（first-match 排序，特定路径优先于 `global` 兜底）：
+PRD10 搂29 token-bucket 闄愭祦鏍稿績锛?
+- **`is_rate_limit_enabled(env_name="AGENTOS_RATE_LIMIT")`**锛歟nv-driven锛岄粯璁?OFF锛涙帴鍙?`1/on/true/yes/enabled` 绛変环寮€鍏?- **`RateLimitPolicy` dataclass**锛歚name / path_prefixes / methods / capacity / refill_per_second / scope`锛宍matches(path, method)` 鍋?prefix + method 鍖归厤锛坄methods=()` 琛ㄧず鍖归厤鎵€鏈夋柟娉曪級
+- **7 鏉?`DEFAULT_POLICIES`**锛坒irst-match 鎺掑簭锛岀壒瀹氳矾寰勪紭鍏堜簬 `global` 鍏滃簳锛夛細
 
   | Policy | Path | Capacity | Refill | Scope |
   |---|---|---:|---:|---|
   | `auth_login` | `POST /api/v1/auth/login` | 10 | 10/60s | ip |
   | `auth_register` | `POST /api/v1/auth/register` | 5 | 5/60s | ip |
   | `auth_send_code` | `POST /api/v1/auth/{send-code,forgot-password,resend-verification}` | 5 | 5/60s | ip |
-  | `ai_messages` | `POST /api/v1/ai/conversations/...` 或 `/messages/...` | 30 | 30/60s | user_or_ip |
+  | `ai_messages` | `POST /api/v1/ai/conversations/...` 鎴?`/messages/...` | 30 | 30/60s | user_or_ip |
   | `search` | `ANY /api/v1/search...` | 120 | 120/60s | user_or_ip |
-  | `capture` | `POST/PUT /api/v1/capture` 或 `/api/v1/uploads` | 120 | 120/60s | user_or_ip |
-  | `global` | `ANY /api/v1/...`（兜底） | 600 | 600/60s | ip |
+  | `capture` | `POST/PUT /api/v1/capture` 鎴?`/api/v1/uploads` | 120 | 120/60s | user_or_ip |
+  | `global` | `ANY /api/v1/...`锛堝厹搴曪級 | 600 | 600/60s | ip |
 
-- **`InMemoryRateLimitStore`**：asyncio.Lock 保护的 dict[str, _Bucket]；`consume(key, capacity, refill_per_second, cost)` → `(allowed, remaining, retry_after_seconds)`；`time.monotonic()` + 线性 refill；`capacity=0` 时 fail-open（防止运维误配把全站锁死）
-- **`select_policy(path, method, policies=None)`**：first-match by declaration order
-- **`derive_key(request, policy)`**：scope-aware bucket key
-  - `global` → 单 bucket
-  - `ip` → `ip:{client.host}:{name}`
-  - `user` / `user_or_ip` → 优先读 `Authorization: Bearer <token>`（截 48 字符做 key，不解 JWT 也能区分用户），缺 token 退化按 IP
+- **`InMemoryRateLimitStore`**锛歛syncio.Lock 淇濇姢鐨?dict[str, _Bucket]锛沗consume(key, capacity, refill_per_second, cost)` 鈫?`(allowed, remaining, retry_after_seconds)`锛沗time.monotonic()` + 绾挎€?refill锛沗capacity=0` 鏃?fail-open锛堥槻姝㈣繍缁磋閰嶆妸鍏ㄧ珯閿佹锛?- **`select_policy(path, method, policies=None)`**锛歠irst-match by declaration order
+- **`derive_key(request, policy)`**锛歴cope-aware bucket key
+  - `global` 鈫?鍗?bucket
+  - `ip` 鈫?`ip:{client.host}:{name}`
+  - `user` / `user_or_ip` 鈫?浼樺厛璇?`Authorization: Bearer <token>`锛堟埅 48 瀛楃鍋?key锛屼笉瑙?JWT 涔熻兘鍖哄垎鐢ㄦ埛锛夛紝缂?token 閫€鍖栨寜 IP
 
 #### 2. `src/agent_os/common/middleware.py::RateLimitMiddleware`
 
-继承 `BaseHTTPMiddleware`。`is_active()` 根据构造参数 `enabled` 或 env 决定是否启用；inactive 时直接 `await call_next(request)` 返回，零额外开销。Active 流程：
-
+缁ф壙 `BaseHTTPMiddleware`銆俙is_active()` 鏍规嵁鏋勯€犲弬鏁?`enabled` 鎴?env 鍐冲畾鏄惁鍚敤锛沬nactive 鏃剁洿鎺?`await call_next(request)` 杩斿洖锛岄浂棰濆寮€閿€銆侫ctive 娴佺▼锛?
 1. `select_policy(path, method, policies=self._policies)`
-2. 命中后 `derive_key(request, policy)` 得到 bucket key
-3. `await self._store.consume(...)` 拿 `(allowed, remaining, retry_after)`
-4. allowed → 透传响应 + 加 `X-RateLimit-{Policy,Limit,Remaining}` 头（用 try/except 包裹防止 header 注入失败破坏成功路径）
-5. blocked → 返 PRD10 envelope 429 + `Retry-After` + `X-RateLimit-{Policy,Limit,Remaining}` 头 + 复用上游 RequestIdMiddleware 的 `request_id`（缺失时兜底生成）+ `logger.warning("prd10_rate_limited", extra={...})` 写结构化日志
+2. 鍛戒腑鍚?`derive_key(request, policy)` 寰楀埌 bucket key
+3. `await self._store.consume(...)` 鎷?`(allowed, remaining, retry_after)`
+4. allowed 鈫?閫忎紶鍝嶅簲 + 鍔?`X-RateLimit-{Policy,Limit,Remaining}` 澶达紙鐢?try/except 鍖呰９闃叉 header 娉ㄥ叆澶辫触鐮村潖鎴愬姛璺緞锛?5. blocked 鈫?杩?PRD10 envelope 429 + `Retry-After` + `X-RateLimit-{Policy,Limit,Remaining}` 澶?+ 澶嶇敤涓婃父 RequestIdMiddleware 鐨?`request_id`锛堢己澶辨椂鍏滃簳鐢熸垚锛? `logger.warning("prd10_rate_limited", extra={...})` 鍐欑粨鏋勫寲鏃ュ織
 
-429 body 形态：
+429 body 褰㈡€侊細
 
 ```json
 {
@@ -2152,41 +1887,31 @@ PRD10 §29 token-bucket 限流核心：
 }
 ```
 
-#### 3. `src/agent_os/server/app.py` — middleware 注册
+#### 3. `src/agent_os/server/app.py` 鈥?middleware 娉ㄥ唽
 
-注册顺序（`add` 顺序倒序为 call stack）：
+娉ㄥ唽椤哄簭锛坄add` 椤哄簭鍊掑簭涓?call stack锛夛細
 
 ```python
-app.add_middleware(Prd10AccessLogMiddleware)  # 最内（call stack 末端，记录 ms）
-app.add_middleware(RateLimitMiddleware)        # 中间（429 也带 request_id）
-app.add_middleware(RequestIdMiddleware)        # 最外（最先 stamp request_id）
-```
+app.add_middleware(Prd10AccessLogMiddleware)  # 鏈€鍐咃紙call stack 鏈锛岃褰?ms锛?app.add_middleware(RateLimitMiddleware)        # 涓棿锛?29 涔熷甫 request_id锛?app.add_middleware(RequestIdMiddleware)        # 鏈€澶栵紙鏈€鍏?stamp request_id锛?```
 
 #### 4. `src/agent_os/common/__init__.py`
 
-公共面 export：`RateLimitMiddleware / RateLimitPolicy / InMemoryRateLimitStore / DEFAULT_POLICIES / derive_key / select_policy / is_rate_limit_enabled / get_default_store / reset_default_store_for_test`。
-
-#### 5. 测试
+鍏叡闈?export锛歚RateLimitMiddleware / RateLimitPolicy / InMemoryRateLimitStore / DEFAULT_POLICIES / derive_key / select_policy / is_rate_limit_enabled / get_default_store / reset_default_store_for_test`銆?
+#### 5. 娴嬭瘯
 
 - **`tests/unit/common/test_rate_limit.py` (33 tests, 0.26s)**:
-  - `is_rate_limit_enabled` truthy 解析 11 cases（含默认 OFF + 自定义 env 名）
-  - `RateLimitPolicy.matches` 3 cases（path prefix / method 大小写不敏感 / methods=() 匹配所有）
-  - `select_policy` first-match + 默认表 10 个真路径正确路由（auth/ai/search/capture/global）
-  - `derive_key` 6 cases（ip / global 单桶 / user_or_ip 优先 token / 缺 token 退 IP / Basic auth 不识别 / client=None）
-  - `InMemoryRateLimitStore` 8 cases（容量内 / 过载 / 时间 refill / 不同 key 独立 / retry-after ∝ deficit / 0 容量 fail-open / reset / size）
-  - 默认策略表 sanity（specific 在 global 之前 / scope ∈ {ip,user,user_or_ip,global}）
-
+  - `is_rate_limit_enabled` truthy 瑙ｆ瀽 11 cases锛堝惈榛樿 OFF + 鑷畾涔?env 鍚嶏級
+  - `RateLimitPolicy.matches` 3 cases锛坧ath prefix / method 澶у皬鍐欎笉鏁忔劅 / methods=() 鍖归厤鎵€鏈夛級
+  - `select_policy` first-match + 榛樿琛?10 涓湡璺緞姝ｇ‘璺敱锛坅uth/ai/search/capture/global锛?  - `derive_key` 6 cases锛坕p / global 鍗曟《 / user_or_ip 浼樺厛 token / 缂?token 閫€ IP / Basic auth 涓嶈瘑鍒?/ client=None锛?  - `InMemoryRateLimitStore` 8 cases锛堝閲忓唴 / 杩囪浇 / 鏃堕棿 refill / 涓嶅悓 key 鐙珛 / retry-after 鈭?deficit / 0 瀹归噺 fail-open / reset / size锛?  - 榛樿绛栫暐琛?sanity锛坰pecific 鍦?global 涔嬪墠 / scope 鈭?{ip,user,user_or_ip,global}锛?
 - **`tests/integration/api/test_prd10_rate_limit.py` (9 tests, 0.42s)**:
-  - 默认 OFF：20 req 全过 + 不加 X-RateLimit 头
-  - 429 envelope shape：第三次过载 → 429 PRD10 envelope + scope/policy/limit/retry_after_seconds 字段
-  - 429 headers：Retry-After + X-RateLimit-Limit/Remaining/Policy + 仍带 X-Request-ID
-  - 多 token 独立 bucket：alice 用完不影响 bob
-  - 时间 refill：sleep 150ms 后桶恢复
-  - method-scoped policy 不影响其他 method
-  - 路径外 bypass：`/legacy/*` 始终通行
-  - 默认 policy 真实串行 hammer login：10 个 200，第 11 个 429
-  - env override：unset env + enabled=None 时全量放行
-
+  - 榛樿 OFF锛?0 req 鍏ㄨ繃 + 涓嶅姞 X-RateLimit 澶?  - 429 envelope shape锛氱涓夋杩囪浇 鈫?429 PRD10 envelope + scope/policy/limit/retry_after_seconds 瀛楁
+  - 429 headers锛歊etry-After + X-RateLimit-Limit/Remaining/Policy + 浠嶅甫 X-Request-ID
+  - 澶?token 鐙珛 bucket锛歛lice 鐢ㄥ畬涓嶅奖鍝?bob
+  - 鏃堕棿 refill锛歴leep 150ms 鍚庢《鎭㈠
+  - method-scoped policy 涓嶅奖鍝嶅叾浠?method
+  - 璺緞澶?bypass锛歚/legacy/*` 濮嬬粓閫氳
+  - 榛樿 policy 鐪熷疄涓茶 hammer login锛?0 涓?200锛岀 11 涓?429
+  - env override锛歶nset env + enabled=None 鏃跺叏閲忔斁琛?
 ### Test evidence
 
 ```
@@ -2215,352 +1940,225 @@ $ python -m pytest \
   250 passed in 53.55s
 ```
 
-**Baseline 回归**：上一轮（Milestone 27 by my-mcp-20）240 passed / 1 fail（`test_failed_job_requeues_with_backoff_until_max_retries` Agent 3 §12.7 留的契约冲突，my-mcp-20 已修） → 本轮 250 passed / 0 fail，**+10**（其中 9 来自本任务，+1 是 §12.7 修齐后的回归收益）。
-
+**Baseline 鍥炲綊**锛氫笂涓€杞紙Milestone 27 by my-mcp-20锛?40 passed / 1 fail锛坄test_failed_job_requeues_with_backoff_until_max_retries` Agent 3 搂12.7 鐣欑殑濂戠害鍐茬獊锛宮y-mcp-20 宸蹭慨锛?鈫?鏈疆 250 passed / 0 fail锛?*+10**锛堝叾涓?9 鏉ヨ嚜鏈换鍔★紝+1 鏄?搂12.7 淇綈鍚庣殑鍥炲綊鏀剁泭锛夈€?
 ### Files touched
 
-新增：
-- `src/agent_os/common/rate_limit.py`（~280 行，policy + store + helpers）
-- `tests/unit/common/test_rate_limit.py`（287 行，33 tests）
-- `tests/integration/api/test_prd10_rate_limit.py`（255 行，9 tests）
-
-修改：
-- `src/agent_os/common/middleware.py`：模块 docstring 更新 + 加 `RateLimitMiddleware` class（~80 行）
-- `src/agent_os/common/__init__.py`：export 新公共面
-- `src/agent_os/server/app.py`：1 行 import + 3 行 add_middleware 注释（不动 router include 顺序）
-- `.env.example`：§5 加 `AGENTOS_RATE_LIMIT=off` + 完整策略表注释
-- `docs/11-deployment/env-vars.md`：§5 加 `AGENTOS_RATE_LIMIT` 行 + 默认策略子表 + 响应头表 + 429 envelope 示例
-- `docs/11-deployment/api-reference.md`：§14 由「计划中」改为「已实装」+ 14.1/14.2/14.3/14.4 + 修订记录加 v1.1
-- `todo-tasks.md` §12.2 `open` → `done` + 完整证据
-- `agent-progress-report.md`（本 milestone）
-
-**未动**：`static/mydow/*` / 任何 SPA 实现 / 任何 router / 其他 middleware / `docker-compose.prd10.yml`（与 Milestone 27 §11.3 nginx 工作不撞）/ `agent_os/auth/router.py` 内部限流（与本中间件互不依赖，可叠加生效）；不撞任何 `doing` 中的实现领地。
-
+鏂板锛?- `src/agent_os/common/rate_limit.py`锛垀280 琛岋紝policy + store + helpers锛?- `tests/unit/common/test_rate_limit.py`锛?87 琛岋紝33 tests锛?- `tests/integration/api/test_prd10_rate_limit.py`锛?55 琛岋紝9 tests锛?
+淇敼锛?- `src/agent_os/common/middleware.py`锛氭ā鍧?docstring 鏇存柊 + 鍔?`RateLimitMiddleware` class锛垀80 琛岋級
+- `src/agent_os/common/__init__.py`锛歟xport 鏂板叕鍏遍潰
+- `src/agent_os/server/app.py`锛? 琛?import + 3 琛?add_middleware 娉ㄩ噴锛堜笉鍔?router include 椤哄簭锛?- `.env.example`锛毬? 鍔?`AGENTOS_RATE_LIMIT=off` + 瀹屾暣绛栫暐琛ㄦ敞閲?- `docs/11-deployment/env-vars.md`锛毬? 鍔?`AGENTOS_RATE_LIMIT` 琛?+ 榛樿绛栫暐瀛愯〃 + 鍝嶅簲澶磋〃 + 429 envelope 绀轰緥
+- `docs/11-deployment/api-reference.md`锛毬?4 鐢便€岃鍒掍腑銆嶆敼涓恒€屽凡瀹炶銆? 14.1/14.2/14.3/14.4 + 淇璁板綍鍔?v1.1
+- `todo-tasks.md` 搂12.2 `open` 鈫?`done` + 瀹屾暣璇佹嵁
+- `agent-progress-report.md`锛堟湰 milestone锛?
+**鏈姩**锛歚static/mydow/*` / 浠讳綍 SPA 瀹炵幇 / 浠讳綍 router / 鍏朵粬 middleware / `docker-compose.prd10.yml`锛堜笌 Milestone 27 搂11.3 nginx 宸ヤ綔涓嶆挒锛? `agent_os/auth/router.py` 鍐呴儴闄愭祦锛堜笌鏈腑闂翠欢浜掍笉渚濊禆锛屽彲鍙犲姞鐢熸晥锛夛紱涓嶆挒浠讳綍 `doing` 涓殑瀹炵幇棰嗗湴銆?
 ### Follow-ups
 
-1. **Redis backed store**（PRD10 §29 多实例 follow-up）：当前 `InMemoryRateLimitStore` 单进程内 asyncio-safe，但多实例 / 多 zone 部署计数不共享。下一步抽 `RateLimitStore` 接口，加 `RedisRateLimitStore` 用 Lua 脚本做原子化 token-bucket（参考 redis-cell 或 redis-py-rate-limiter）。env：`AGENTOS_RATE_LIMIT_BACKEND=redis` + 既有 `REDIS_URL` 存在时自动切。
-2. **Per-user quota table**：超出默认值的 enterprise 客户可在 `User.settings` 里覆盖 quota；需要在 `derive_key` 后多读一次 user 的 plan 决定 capacity（与 `User.plan: free/pro/team` 联动）。
-3. **限流 metric**：把 `prd10_rate_limited` 日志计数发到 Prometheus（与 §12.1 联动），命中率 > 5% 应告警。
-4. **生产开启清单**（与 §11.5 / §11.7 / §14.9 部署 acceptance gate 联动）：上线前在 `docker-compose.prd10.yml` 的 app 服务加 `AGENTOS_RATE_LIMIT=on`，并接 Redis 后端。
-5. **README 投资材料更新**：在「💰 投资材料」表里加 §12.2 限流为「已交付的安全/稳定性能力」。
-
+1. **Redis backed store**锛圥RD10 搂29 澶氬疄渚?follow-up锛夛細褰撳墠 `InMemoryRateLimitStore` 鍗曡繘绋嬪唴 asyncio-safe锛屼絾澶氬疄渚?/ 澶?zone 閮ㄧ讲璁℃暟涓嶅叡浜€備笅涓€姝ユ娊 `RateLimitStore` 鎺ュ彛锛屽姞 `RedisRateLimitStore` 鐢?Lua 鑴氭湰鍋氬師瀛愬寲 token-bucket锛堝弬鑰?redis-cell 鎴?redis-py-rate-limiter锛夈€俥nv锛歚AGENTOS_RATE_LIMIT_BACKEND=redis` + 鏃㈡湁 `REDIS_URL` 瀛樺湪鏃惰嚜鍔ㄥ垏銆?2. **Per-user quota table**锛氳秴鍑洪粯璁ゅ€肩殑 enterprise 瀹㈡埛鍙湪 `User.settings` 閲岃鐩?quota锛涢渶瑕佸湪 `derive_key` 鍚庡璇讳竴娆?user 鐨?plan 鍐冲畾 capacity锛堜笌 `User.plan: free/pro/team` 鑱斿姩锛夈€?3. **闄愭祦 metric**锛氭妸 `prd10_rate_limited` 鏃ュ織璁℃暟鍙戝埌 Prometheus锛堜笌 搂12.1 鑱斿姩锛夛紝鍛戒腑鐜?> 5% 搴斿憡璀︺€?4. **鐢熶骇寮€鍚竻鍗?*锛堜笌 搂11.5 / 搂11.7 / 搂14.9 閮ㄧ讲 acceptance gate 鑱斿姩锛夛細涓婄嚎鍓嶅湪 `docker-compose.prd10.yml` 鐨?app 鏈嶅姟鍔?`AGENTOS_RATE_LIMIT=on`锛屽苟鎺?Redis 鍚庣銆?5. **README 鎶曡祫鏉愭枡鏇存柊**锛氬湪銆岎煉?鎶曡祫鏉愭枡銆嶈〃閲屽姞 搂12.2 闄愭祦涓恒€屽凡浜や粯鐨勫畨鍏?绋冲畾鎬ц兘鍔涖€嶃€?
 ---
 
-## Milestone 27 · §12.7 dead-letter 契约修复 + §11.3 反向代理/HTTPS — DELIVERED
+## Milestone 27 路 搂12.7 dead-letter 濂戠害淇 + 搂11.3 鍙嶅悜浠ｇ悊/HTTPS 鈥?DELIVERED
 
-**When**: 2026-05-06 10:40（by Agent / my-mcp-20，接手 Agent 3 stale）
-
+**When**: 2026-05-06 10:40锛坆y Agent / my-mcp-20锛屾帴鎵?Agent 3 stale锛?
 **Why**:
-- 用户指令：「一直做下去直到 PRD10 完全实现 / 所有按钮生效 / 数据全打通 / 前后端联调无问题才能停下来」。Milestone 26 之后基线 240 passed / 1 failed —— 唯一失败 `test_failed_job_requeues_with_backoff_until_max_retries` 是 §12.7 doing 中 Agent 3 留下的契约冲突；本会话接手修齐。
-- 修齐后切到 §11 部署运维 lane（独立工作，完全不动 bridge.js / app.js / biz/index.html，避开当前 §15.22-15.26 区块 4 个 agent 并行竞争）。
-
+- 鐢ㄦ埛鎸囦护锛氥€屼竴鐩村仛涓嬪幓鐩村埌 PRD10 瀹屽叏瀹炵幇 / 鎵€鏈夋寜閽敓鏁?/ 鏁版嵁鍏ㄦ墦閫?/ 鍓嶅悗绔仈璋冩棤闂鎵嶈兘鍋滀笅鏉ャ€嶃€侻ilestone 26 涔嬪悗鍩虹嚎 240 passed / 1 failed 鈥斺€?鍞竴澶辫触 `test_failed_job_requeues_with_backoff_until_max_retries` 鏄?搂12.7 doing 涓?Agent 3 鐣欎笅鐨勫绾﹀啿绐侊紱鏈細璇濇帴鎵嬩慨榻愩€?- 淇綈鍚庡垏鍒?搂11 閮ㄧ讲杩愮淮 lane锛堢嫭绔嬪伐浣滐紝瀹屽叏涓嶅姩 bridge.js / app.js / biz/index.html锛岄伩寮€褰撳墠 搂15.22-15.26 鍖哄潡 4 涓?agent 骞惰绔炰簤锛夈€?
 ### Delivered
 
-1. **§12.7 dead-letter 契约统一**
-   - `src/agent_os/jobs/service.py::_materialize_ai_message_to_kb`：empty content 改为 `retryable=True`。原实现 `retryable=False` 把 VALIDATION_ERROR 即时死信，与 §12.7 测试期望「validation 进入重试预算」语义冲突。新逻辑允许 job 创建 vs AI streaming 完成的瞬时 race self-heal。
-   - `tests/integration/api/prd10/test_prd10_jobs_notifications_api.py::test_process_ai_message_to_kb_job_fails_empty_content`：加 `monkeypatch.setenv("AGENTOS_JOB_MAX_RETRIES", "0")` + 断言 outer code = `MAX_RETRIES_EXCEEDED` + `original_code = VALIDATION_ERROR`。两个测试现在和谐共存：默认 max_retries=3 让瞬时 race 重试，max_retries=0 让 validation 即时死信。
-   - **Verified**：`pytest tests/integration/api/prd10/test_prd10_jobs_notifications_api.py` → **16 passed in 3.21s**（之前 1 fail 现在绿）。
-
-2. **PRD10 全 14 套件矩阵基线刷新**
-   - `python -m pytest tests/integration/api/test_prd10_v1_acceptance.py tests/integration/api/test_prd10_frontend_binding.py tests/integration/api/test_prd10_ai_api.py tests/integration/api/test_prd10_ai_llm.py tests/integration/api/test_prd10_search_api.py tests/integration/api/test_prd10_skills_api.py tests/integration/api/test_prd10_garden_api.py tests/integration/api/test_prd10_observability.py tests/integration/api/test_prd10_app_wiring.py tests/integration/api/test_prd10_models_intelligence.py tests/integration/api/test_prd10_e2e_flow.py tests/integration/api/test_prd10_product_data_api.py tests/integration/api/test_prd10_insights_api.py tests/integration/api/prd10/ -q -p no:cacheprovider --tb=no --basetemp=.tmp/pytest-tmp` → **241 passed in 55.59s**
-   - 比 §0 baseline 225（Milestone 24）**+16**，比 Milestone 26 验收基线 **+1**（修了 §12.7 那条）。
-
+1. **搂12.7 dead-letter 濂戠害缁熶竴**
+   - `src/agent_os/jobs/service.py::_materialize_ai_message_to_kb`锛歟mpty content 鏀逛负 `retryable=True`銆傚師瀹炵幇 `retryable=False` 鎶?VALIDATION_ERROR 鍗虫椂姝讳俊锛屼笌 搂12.7 娴嬭瘯鏈熸湜銆寁alidation 杩涘叆閲嶈瘯棰勭畻銆嶈涔夊啿绐併€傛柊閫昏緫鍏佽 job 鍒涘缓 vs AI streaming 瀹屾垚鐨勭灛鏃?race self-heal銆?   - `tests/integration/api/prd10/test_prd10_jobs_notifications_api.py::test_process_ai_message_to_kb_job_fails_empty_content`锛氬姞 `monkeypatch.setenv("AGENTOS_JOB_MAX_RETRIES", "0")` + 鏂█ outer code = `MAX_RETRIES_EXCEEDED` + `original_code = VALIDATION_ERROR`銆備袱涓祴璇曠幇鍦ㄥ拰璋愬叡瀛橈細榛樿 max_retries=3 璁╃灛鏃?race 閲嶈瘯锛宮ax_retries=0 璁?validation 鍗虫椂姝讳俊銆?   - **Verified**锛歚pytest tests/integration/api/prd10/test_prd10_jobs_notifications_api.py` 鈫?**16 passed in 3.21s**锛堜箣鍓?1 fail 鐜板湪缁匡級銆?
+2. **PRD10 鍏?14 濂椾欢鐭╅樀鍩虹嚎鍒锋柊**
+   - `python -m pytest tests/integration/api/test_prd10_v1_acceptance.py tests/integration/api/test_prd10_frontend_binding.py tests/integration/api/test_prd10_ai_api.py tests/integration/api/test_prd10_ai_llm.py tests/integration/api/test_prd10_search_api.py tests/integration/api/test_prd10_skills_api.py tests/integration/api/test_prd10_garden_api.py tests/integration/api/test_prd10_observability.py tests/integration/api/test_prd10_app_wiring.py tests/integration/api/test_prd10_models_intelligence.py tests/integration/api/test_prd10_e2e_flow.py tests/integration/api/test_prd10_product_data_api.py tests/integration/api/test_prd10_insights_api.py tests/integration/api/prd10/ -q -p no:cacheprovider --tb=no --basetemp=.tmp/pytest-tmp` 鈫?**241 passed in 55.59s**
+   - 姣?搂0 baseline 225锛圡ilestone 24锛?*+16**锛屾瘮 Milestone 26 楠屾敹鍩虹嚎 **+1**锛堜慨浜?搂12.7 閭ｆ潯锛夈€?
 ### Files touched
 
-- `src/agent_os/jobs/service.py`（1 处：empty content materializer 的 retryable 标）
-- `tests/integration/api/prd10/test_prd10_jobs_notifications_api.py`（1 处：把 empty-content 测试加 monkeypatch + 改 dead-letter 断言）
-- `todo-tasks.md`（标 §12.7 done）
-
+- `src/agent_os/jobs/service.py`锛? 澶勶細empty content materializer 鐨?retryable 鏍囷級
+- `tests/integration/api/prd10/test_prd10_jobs_notifications_api.py`锛? 澶勶細鎶?empty-content 娴嬭瘯鍔?monkeypatch + 鏀?dead-letter 鏂█锛?- `todo-tasks.md`锛堟爣 搂12.7 done锛?
 ### Follow-ups
 
-- 接 §11.3「反向代理 / HTTPS / 静态资源 cache 策略」（独立 lane，`docker/nginx/mydow.conf` 已有，扩 HTTPS + cache headers + SSE/WebSocket upgrade + 安全头 + docs/11-deployment/https.md）
-- 不动 `static/mydow/biz/{index.html, bridge.js}` —— 当前 4 agent 在那条 lane 竞争（my-mcp-14 / my-mcp-21 / my-mcp-25 / Composer 1）
-
+- 鎺?搂11.3銆屽弽鍚戜唬鐞?/ HTTPS / 闈欐€佽祫婧?cache 绛栫暐銆嶏紙鐙珛 lane锛宍docker/nginx/mydow.conf` 宸叉湁锛屾墿 HTTPS + cache headers + SSE/WebSocket upgrade + 瀹夊叏澶?+ docs/11-deployment/https.md锛?- 涓嶅姩 `static/mydow/biz/{index.html, bridge.js}` 鈥斺€?褰撳墠 4 agent 鍦ㄩ偅鏉?lane 绔炰簤锛坢y-mcp-14 / my-mcp-21 / my-mcp-25 / Composer 1锛?
 ---
 
-## Milestone 26.1 · §15.25 + §15.26 + §15.24 验收 + §14.3.biz 全 11 模块走查 — DELIVERED
+## Milestone 26.1 路 搂15.25 + 搂15.26 + 搂15.24 楠屾敹 + 搂14.3.biz 鍏?11 妯″潡璧版煡 鈥?DELIVERED
 
-**When**: 2026-05-06 11:00（by Agent / my-mcp-18 接力 Engineer 1 / Agent 1 / my-mcp-25 stale）
-
-**Why**: 用户要求「一直做下去直到 PRD10 完全实现 / 业务前端要求 / 所有按钮生效 / 数据全打通 / 前后端联调无问题」。Milestone 26 完成 §15.5 + §15.6.1 后立刻认领 §15.25 + §15.26 + §15.24。
-
+**When**: 2026-05-06 11:00锛坆y Agent / my-mcp-18 鎺ュ姏 Engineer 1 / Agent 1 / my-mcp-25 stale锛?
+**Why**: 鐢ㄦ埛瑕佹眰銆屼竴鐩村仛涓嬪幓鐩村埌 PRD10 瀹屽叏瀹炵幇 / 涓氬姟鍓嶇瑕佹眰 / 鎵€鏈夋寜閽敓鏁?/ 鏁版嵁鍏ㄦ墦閫?/ 鍓嶅悗绔仈璋冩棤闂銆嶃€侻ilestone 26 瀹屾垚 搂15.5 + 搂15.6.1 鍚庣珛鍒昏棰?搂15.25 + 搂15.26 + 搂15.24銆?
 ### Delivered
 
-1. **§15.25 / §15.26 验收** — Agent 1/Engineer 1 实做齐全（后端 `PATCH /api/v1/me` + `PATCH /api/v1/me/preferences` + `display_role` 白名单已经实现）；前端 `_handleModalSubmit` dispatch table + `handleNotificationSettingsModal` + `handleEditProfileModal` + `_prefillEditProfileFromMe` 已实做。**Playwright 验收 14/14 PASS** (`.tmp/smoke_15_25_15_26.py`)：me_cache_present / edit_profile prefill / save → me_name + display_role 真更新 / notif_settings save → notification_channels 写入 me / 0 console / 0 page error / 0 failed request。截图 `.tmp/screenshots/biz_walk/15_26_after_save.png` + `15_25_after_save.png`。
-
-2. **§15.24 confirmDelete modal 验收** — 5 路 dispatch 已全部实现：bridge.js `_DRAWER_CTX` 上下文（line 3509）+ `bindDrawerOpenContextSync` 追踪 cardId/documentId/folderId/insightId/skillId + `bindConfirmDeleteContextTracking` (logout/clear_cache) + `_performLogout` (清 token + reload) + `_performClearCache` (preserve token + clear other localStorage) + `bindDrawerCrudButtons` (DELETE /cards/{id} / /kb/documents/{id} / /kb/folders/{id})。
-
-3. **修了 1 个 stale ReferenceError** — bridge.js export 表 line 4862 引用未定义的 `patchMePreference` 导致整个 bridge 加载 ReferenceError → cache=null / hasBridge=undefined → boot 不跑 → 整个 §15 hydrator 全瘫。Agent 1 在我 diagnose 期间补加 4 个 §15.23 boot alias 函数定义（line 4763-4803 含 `attachSettingsBindings` / `hydrateSettingsControlsFromMe` / `_watchProfileMainMutations` / `patchMePreference`）让 boot 重新可达。
-
-4. **Cache-bust 经验教训** — Playwright Chromium disk cache 会缓存 stale bridge.js，验收脚本必须 `goto?cb={timestamp}` 强制 fetch 最新版。已经把 cache-bust 加到 `smoke_15_25_15_26.py` + `agent3_14_3_acceptance.py`。
-
-5. **§14.3.biz 全 11 模块走查复测 PASS** — `agent3_14_3_acceptance.py 8771` 11/11 sections ok：boot / capture_text 真 POST / home_feed 6 cards / kb_folders 6 / notifications_badge unread / profile_chip Demo User Free Plan / garden_board 30 nodes 7 bound / ai_send 真 POST /messages/stream + bubble_count=8 + last_assistant_id 6068db50 / skills_grid 5 cards bridge_bound / insights_full 4 tiles + 3 core cards / global_search 5 rows for query 灵感。**console_errors_count=0 / page_errors_count=0 / real_failed_requests=[]**。
-
+1. **搂15.25 / 搂15.26 楠屾敹** 鈥?Agent 1/Engineer 1 瀹炲仛榻愬叏锛堝悗绔?`PATCH /api/v1/me` + `PATCH /api/v1/me/preferences` + `display_role` 鐧藉悕鍗曞凡缁忓疄鐜帮級锛涘墠绔?`_handleModalSubmit` dispatch table + `handleNotificationSettingsModal` + `handleEditProfileModal` + `_prefillEditProfileFromMe` 宸插疄鍋氥€?*Playwright 楠屾敹 14/14 PASS** (`.tmp/smoke_15_25_15_26.py`)锛歮e_cache_present / edit_profile prefill / save 鈫?me_name + display_role 鐪熸洿鏂?/ notif_settings save 鈫?notification_channels 鍐欏叆 me / 0 console / 0 page error / 0 failed request銆傛埅鍥?`.tmp/screenshots/biz_walk/15_26_after_save.png` + `15_25_after_save.png`銆?
+2. **搂15.24 confirmDelete modal 楠屾敹** 鈥?5 璺?dispatch 宸插叏閮ㄥ疄鐜帮細bridge.js `_DRAWER_CTX` 涓婁笅鏂囷紙line 3509锛? `bindDrawerOpenContextSync` 杩借釜 cardId/documentId/folderId/insightId/skillId + `bindConfirmDeleteContextTracking` (logout/clear_cache) + `_performLogout` (娓?token + reload) + `_performClearCache` (preserve token + clear other localStorage) + `bindDrawerCrudButtons` (DELETE /cards/{id} / /kb/documents/{id} / /kb/folders/{id})銆?
+3. **淇簡 1 涓?stale ReferenceError** 鈥?bridge.js export 琛?line 4862 寮曠敤鏈畾涔夌殑 `patchMePreference` 瀵艰嚧鏁翠釜 bridge 鍔犺浇 ReferenceError 鈫?cache=null / hasBridge=undefined 鈫?boot 涓嶈窇 鈫?鏁翠釜 搂15 hydrator 鍏ㄧ槴銆侫gent 1 鍦ㄦ垜 diagnose 鏈熼棿琛ュ姞 4 涓?搂15.23 boot alias 鍑芥暟瀹氫箟锛坙ine 4763-4803 鍚?`attachSettingsBindings` / `hydrateSettingsControlsFromMe` / `_watchProfileMainMutations` / `patchMePreference`锛夎 boot 閲嶆柊鍙揪銆?
+4. **Cache-bust 缁忛獙鏁欒** 鈥?Playwright Chromium disk cache 浼氱紦瀛?stale bridge.js锛岄獙鏀惰剼鏈繀椤?`goto?cb={timestamp}` 寮哄埗 fetch 鏈€鏂扮増銆傚凡缁忔妸 cache-bust 鍔犲埌 `smoke_15_25_15_26.py` + `agent3_14_3_acceptance.py`銆?
+5. **搂14.3.biz 鍏?11 妯″潡璧版煡澶嶆祴 PASS** 鈥?`agent3_14_3_acceptance.py 8771` 11/11 sections ok锛歜oot / capture_text 鐪?POST / home_feed 6 cards / kb_folders 6 / notifications_badge unread / profile_chip Demo User Free Plan / garden_board 30 nodes 7 bound / ai_send 鐪?POST /messages/stream + bubble_count=8 + last_assistant_id 6068db50 / skills_grid 5 cards bridge_bound / insights_full 4 tiles + 3 core cards / global_search 5 rows for query 鐏垫劅銆?*console_errors_count=0 / page_errors_count=0 / real_failed_requests=[]**銆?
 ### Test evidence
 
-- **PRD10 全 14 套件矩阵 + prd10/**：`249 passed / 0 failed in 56.77s`（比 Milestone 26 baseline 241 净增 **+8**；从初始 225 累计净增 **+24**）
-- Playwright 双 smoke：`smoke_15_25_15_26.py 14/14 PASS` + `agent3_14_3_acceptance.py 11/11 ok`
-- 0 console / 0 page error / 0 failed API request 全部满足
+- **PRD10 鍏?14 濂椾欢鐭╅樀 + prd10/**锛歚249 passed / 0 failed in 56.77s`锛堟瘮 Milestone 26 baseline 241 鍑€澧?**+8**锛涗粠鍒濆 225 绱鍑€澧?**+24**锛?- Playwright 鍙?smoke锛歚smoke_15_25_15_26.py 14/14 PASS` + `agent3_14_3_acceptance.py 11/11 ok`
+- 0 console / 0 page error / 0 failed API request 鍏ㄩ儴婊¤冻
 
 ### Files touched
 
-- `static/mydow/biz/bridge.js`（删 1 行 stale `patchMePreference` export，Agent 1 后续补加 4 个 boot alias 函数定义；当前 5151 行）
-- `.tmp/smoke_diag.py`（新建，58 lines，bridge.js 加载诊断）
-- `.tmp/smoke_15_25_15_26.py`（新建 12391 bytes，14 项 Playwright 断言）
-- `.tmp/agent3_14_3_acceptance.py`（仅加 cache-bust query string）
-- `todo-tasks.md`（§15.20 / §15.5 / §15.6.1 / §15.24 / §15.25 / §15.26 全部 done；多个重复编号合并）
-- `agent-progress-report.md`（本 milestone）
-
+- `static/mydow/biz/bridge.js`锛堝垹 1 琛?stale `patchMePreference` export锛孉gent 1 鍚庣画琛ュ姞 4 涓?boot alias 鍑芥暟瀹氫箟锛涘綋鍓?5151 琛岋級
+- `.tmp/smoke_diag.py`锛堟柊寤猴紝58 lines锛宐ridge.js 鍔犺浇璇婃柇锛?- `.tmp/smoke_15_25_15_26.py`锛堟柊寤?12391 bytes锛?4 椤?Playwright 鏂█锛?- `.tmp/agent3_14_3_acceptance.py`锛堜粎鍔?cache-bust query string锛?- `todo-tasks.md`锛埪?5.20 / 搂15.5 / 搂15.6.1 / 搂15.24 / 搂15.25 / 搂15.26 鍏ㄩ儴 done锛涘涓噸澶嶇紪鍙峰悎骞讹級
+- `agent-progress-report.md`锛堟湰 milestone锛?
 ### Follow-ups
 
-- 立刻认领 §15.23 (line 336 my-mcp-21 doing) 的 settings 4 tab 完整接通（theme / auto_save / twoFactor / default_ai_model 等多 tab toggle PATCH /me/preferences），或 §10.5 Hero 落地页投资人入口。
-- `Stop-Process` 关后端时实际 PowerShell parent shell 的 PID 不是 uvicorn child；后端可能在 atexit cleanup 阶段被 OS reaper 关。下次用 `Get-Process python | Stop-Process` 更稳。
-
+- 绔嬪埢璁ら 搂15.23 (line 336 my-mcp-21 doing) 鐨?settings 4 tab 瀹屾暣鎺ラ€氾紙theme / auto_save / twoFactor / default_ai_model 绛夊 tab toggle PATCH /me/preferences锛夛紝鎴?搂10.5 Hero 钀藉湴椤垫姇璧勪汉鍏ュ彛銆?- `Stop-Process` 鍏冲悗绔椂瀹為檯 PowerShell parent shell 鐨?PID 涓嶆槸 uvicorn child锛涘悗绔彲鑳藉湪 atexit cleanup 闃舵琚?OS reaper 鍏炽€備笅娆＄敤 `Get-Process python | Stop-Process` 鏇寸ǔ銆?
 ---
 
-## Milestone 26 · §15.5 验收 + §15.6.1 doc-row → drawer 实做 + 清理重复代码 — DELIVERED
+## Milestone 26 路 搂15.5 楠屾敹 + 搂15.6.1 doc-row 鈫?drawer 瀹炲仛 + 娓呯悊閲嶅浠ｇ爜 鈥?DELIVERED
 
-**When**: 2026-05-06 10:30（by Agent / my-mcp-18，接手 Engineer 1 / Agent 1 stale）
-
+**When**: 2026-05-06 10:30锛坆y Agent / my-mcp-18锛屾帴鎵?Engineer 1 / Agent 1 stale锛?
 **Why**:
-- §15.5「右侧洞察中心面板」前一会话标过 doing 但未交付完整代码；用户要求「一直做下去直到所有按钮生效 / 数据打通 / 前后端联调无问题」。本会话验证了 Agent 1 / claude-opus 在 10:15 已实做的 5 hydrator + attachDailyInsightLink，并跑了完整 Playwright 验收。
-- §15.6.1「文档行点击 → itemDetail drawer」的 `bindDocRowInfoButton` 与 `bindItemDetailDrawerActions` 在 boot() 调但未定义 → ReferenceError 链式 break 所有右侧 hydrator。本会话补完。
-- 清理：上一次 StrReplace 中断时 587 行重复 §15.5 实现已落进 bridge.js，`function attachDailyInsightLink` 重复 declaration 在 ESM strict-mode 会导致 SyntaxError 让整个 bridge.js 不加载——立刻删除。
-
+- 搂15.5銆屽彸渚ф礊瀵熶腑蹇冮潰鏉裤€嶅墠涓€浼氳瘽鏍囪繃 doing 浣嗘湭浜や粯瀹屾暣浠ｇ爜锛涚敤鎴疯姹傘€屼竴鐩村仛涓嬪幓鐩村埌鎵€鏈夋寜閽敓鏁?/ 鏁版嵁鎵撻€?/ 鍓嶅悗绔仈璋冩棤闂銆嶃€傛湰浼氳瘽楠岃瘉浜?Agent 1 / claude-opus 鍦?10:15 宸插疄鍋氱殑 5 hydrator + attachDailyInsightLink锛屽苟璺戜簡瀹屾暣 Playwright 楠屾敹銆?- 搂15.6.1銆屾枃妗ｈ鐐瑰嚮 鈫?itemDetail drawer銆嶇殑 `bindDocRowInfoButton` 涓?`bindItemDetailDrawerActions` 鍦?boot() 璋冧絾鏈畾涔?鈫?ReferenceError 閾惧紡 break 鎵€鏈夊彸渚?hydrator銆傛湰浼氳瘽琛ュ畬銆?- 娓呯悊锛氫笂涓€娆?StrReplace 涓柇鏃?587 琛岄噸澶?搂15.5 瀹炵幇宸茶惤杩?bridge.js锛宍function attachDailyInsightLink` 閲嶅 declaration 鍦?ESM strict-mode 浼氬鑷?SyntaxError 璁╂暣涓?bridge.js 涓嶅姞杞解€斺€旂珛鍒诲垹闄ゃ€?
 ### Delivered
 
-1. **bridge.js 清理 587 行重复代码**（`d:\Codes\whyme\static\mydow\biz\bridge.js`）
-   - Python script + Read 标记 sentinel 精确删除 line 3393-3979 之间的 `_hydrateContentDistribution / _hydrateAiActivityCard / _hydrateDailyInsightCard / _hydrateKbOverviewCard / refreshSidePanelInsights / attachDailyInsightLink (第 2 次定义) / bindDocRowInfoButton (旧版) / bindItemDetailDrawerActions (旧版) / loadDocumentForDrawer (旧版) / patchDocumentById / deleteDocumentById / moveDocumentById` 12 个函数 + `CONTENT_DISTRIBUTION_BUCKETS` 常量
-   - 保留 6 行 NOTE 说明为何删除以及 ESM strict-mode duplicate function declaration 的危险
+1. **bridge.js 娓呯悊 587 琛岄噸澶嶄唬鐮?*锛坄d:\Codes\whyme\static\mydow\biz\bridge.js`锛?   - Python script + Read 鏍囪 sentinel 绮剧‘鍒犻櫎 line 3393-3979 涔嬮棿鐨?`_hydrateContentDistribution / _hydrateAiActivityCard / _hydrateDailyInsightCard / _hydrateKbOverviewCard / refreshSidePanelInsights / attachDailyInsightLink (绗?2 娆″畾涔? / bindDocRowInfoButton (鏃х増) / bindItemDetailDrawerActions (鏃х増) / loadDocumentForDrawer (鏃х増) / patchDocumentById / deleteDocumentById / moveDocumentById` 12 涓嚱鏁?+ `CONTENT_DISTRIBUTION_BUCKETS` 甯搁噺
+   - 淇濈暀 6 琛?NOTE 璇存槑涓轰綍鍒犻櫎浠ュ強 ESM strict-mode duplicate function declaration 鐨勫嵄闄?
+2. **搂15.6.1 绱у噾瀹炲仛**锛坆ridge.js 鏂板 11 helper锛宭ine 3386-3733 鍖烘锛?   - `_injectDocInfoButton(row)` + `_injectAllDocInfoButtons(root)`锛氱粰姣忎釜 `.doc-row[data-document-id]` 娉ㄥ叆 `bridge-doc-info-btn` 鈸?璇︽儏鎸夐挳锛堢粷瀵瑰畾浣?+ 涓嶅姩 biz/index.html锛?   - MutationObserver in `bindDocRowInfoButton()` 鎹曡幏 搂15.9 `loadFolderDetail` 鍚庣画 re-render 娉ㄥ叆鏂拌鐨?鈸?鎸夐挳
+   - `loadDocumentForDrawer(id)` GET `/api/v1/kb/documents/{id}` 鈫?`_hydrateItemDetailDrawerForDocument(doc)` 鍐欏叆 drawer-head h2/subtitle + AI 鎽樿 p + tags + 鏉ユ簮/鏂囦欢澶?+ `_openItemDetailDrawer()` 鎵嬪姩妯℃嫙 IIFE openDrawer
+   - `bindItemDetailDrawerActions()` capture-phase 鐩戝惉 drawer 鍐呮寜閽細銆岀Щ鍔ㄥ埌鐭ヨ瘑搴撱€嶁啋 `GET /kb/folders` 鎷垮€欓€?+ `POST /kb/documents/{id}/move`锛涖€屽垹闄ゃ€嶁啋 window.confirm + `DELETE /kb/documents/{id}` + 鍒锋柊鏂囦欢澶瑰垪琛?   - patchDocumentById / deleteDocumentById / moveDocumentById 涓変釜 API helper锛圥RD10 搂10.7 / 搂10.8 / 搂10.10锛?   - boot() 娉ㄥ唽 `bindDocRowInfoButton(); bindItemDetailDrawerActions();`
 
-2. **§15.6.1 紧凑实做**（bridge.js 新增 11 helper，line 3386-3733 区段）
-   - `_injectDocInfoButton(row)` + `_injectAllDocInfoButtons(root)`：给每个 `.doc-row[data-document-id]` 注入 `bridge-doc-info-btn` ⓘ 详情按钮（绝对定位 + 不动 biz/index.html）
-   - MutationObserver in `bindDocRowInfoButton()` 捕获 §15.9 `loadFolderDetail` 后续 re-render 注入新行的 ⓘ 按钮
-   - `loadDocumentForDrawer(id)` GET `/api/v1/kb/documents/{id}` → `_hydrateItemDetailDrawerForDocument(doc)` 写入 drawer-head h2/subtitle + AI 摘要 p + tags + 来源/文件夹 + `_openItemDetailDrawer()` 手动模拟 IIFE openDrawer
-   - `bindItemDetailDrawerActions()` capture-phase 监听 drawer 内按钮：「移动到知识库」→ `GET /kb/folders` 拿候选 + `POST /kb/documents/{id}/move`；「删除」→ window.confirm + `DELETE /kb/documents/{id}` + 刷新文件夹列表
-   - patchDocumentById / deleteDocumentById / moveDocumentById 三个 API helper（PRD10 §10.7 / §10.8 / §10.10）
-   - boot() 注册 `bindDocRowInfoButton(); bindItemDetailDrawerActions();`
+3. **搂15.5 楠屾敹**锛堢敤 Agent 1 鐣欎笅鐨?`.tmp/smoke_15_5_sidebar.py`锛屼粎鏀?BASE port锛?   - 13/13 PASS锛歞istribution_card_bound / legend_count_ok / donut_conic_gradient / ai_activity_bound / 楂樹腑浣巁in_set / daily_insight_bound / has_text / recent_list_has_items / kb_overview_bound / kb_overview_stat_replaced / 0 console / 0 page error / 0 failed request
+   - 鎴浘锛歚.tmp/screenshots/biz_walk/15_5_home_right_rail.png` + `15_5_kb_right_rail.png`
 
-3. **§15.5 验收**（用 Agent 1 留下的 `.tmp/smoke_15_5_sidebar.py`，仅改 BASE port）
-   - 13/13 PASS：distribution_card_bound / legend_count_ok / donut_conic_gradient / ai_activity_bound / 高中低_in_set / daily_insight_bound / has_text / recent_list_has_items / kb_overview_bound / kb_overview_stat_replaced / 0 console / 0 page error / 0 failed request
-   - 截图：`.tmp/screenshots/biz_walk/15_5_home_right_rail.png` + `15_5_kb_right_rail.png`
-
-4. **§15.6.1 验收**（新增 `.tmp/smoke_15_6_1.py`）
-   - 13/13 PASS：folder_card_clicked / info_btn_injected_on_all_rows / info_btn_clicked / drawer_open_after_click / bridgeBound=true / drawer_documentId_matches / title/summary/tag 真实非空 / GET /kb/documents/{id} 网络请求 ✓ / POST /kb/documents/{id}/move 请求 ✓ / 0 console / 0 page error / 0 failed request
-   - 截图：`.tmp/screenshots/biz_walk/15_6_1_drawer_open.png`
+4. **搂15.6.1 楠屾敹**锛堟柊澧?`.tmp/smoke_15_6_1.py`锛?   - 13/13 PASS锛歠older_card_clicked / info_btn_injected_on_all_rows / info_btn_clicked / drawer_open_after_click / bridgeBound=true / drawer_documentId_matches / title/summary/tag 鐪熷疄闈炵┖ / GET /kb/documents/{id} 缃戠粶璇锋眰 鉁?/ POST /kb/documents/{id}/move 璇锋眰 鉁?/ 0 console / 0 page error / 0 failed request
+   - 鎴浘锛歚.tmp/screenshots/biz_walk/15_6_1_drawer_open.png`
 
 ### Test evidence
 
-- **PRD10 全 14 套件矩阵 + prd10/**：`241 passed / 0 failed in 49.55s`（比 Milestone 25 baseline 225 净增 **+16**）
-   - 命令：`pytest tests/integration/api/test_prd10_v1_acceptance.py + frontend_binding + ai_api + ai_llm + search + skills + garden + observability + app_wiring + models_intelligence + e2e_flow + product_data + insights + tests/integration/api/prd10/`
-   - DB：sqlite+aiosqlite:///`:memory:`
-- bridge.js Node `node -c` syntax check 通过；ReadLints 无 lint error
-- Playwright 双 smoke 各 13/13 通过
+- **PRD10 鍏?14 濂椾欢鐭╅樀 + prd10/**锛歚241 passed / 0 failed in 49.55s`锛堟瘮 Milestone 25 baseline 225 鍑€澧?**+16**锛?   - 鍛戒护锛歚pytest tests/integration/api/test_prd10_v1_acceptance.py + frontend_binding + ai_api + ai_llm + search + skills + garden + observability + app_wiring + models_intelligence + e2e_flow + product_data + insights + tests/integration/api/prd10/`
+   - DB锛歴qlite+aiosqlite:///`:memory:`
+- bridge.js Node `node -c` syntax check 閫氳繃锛汻eadLints 鏃?lint error
+- Playwright 鍙?smoke 鍚?13/13 閫氳繃
 
 ### Files touched
 
-- `static/mydow/biz/bridge.js`（删 587 行重复 + 加 348 行 §15.6.1，净 -239 行；当前 3544 行）
-- `.tmp/smoke_15_5_sidebar.py`（仅改 BASE port 8775→8771）
-- `.tmp/smoke_15_6_1.py`（新建 9390 bytes / 13 项断言）
-- `todo-tasks.md`（§15.5 / §15.6.1 / §15.20 由 doing/open → done；§15.6.1 owner my-mcp-18）
-- `agent-progress-report.md`（本 milestone）
-
+- `static/mydow/biz/bridge.js`锛堝垹 587 琛岄噸澶?+ 鍔?348 琛?搂15.6.1锛屽噣 -239 琛岋紱褰撳墠 3544 琛岋級
+- `.tmp/smoke_15_5_sidebar.py`锛堜粎鏀?BASE port 8775鈫?771锛?- `.tmp/smoke_15_6_1.py`锛堟柊寤?9390 bytes / 13 椤规柇瑷€锛?- `todo-tasks.md`锛埪?5.5 / 搂15.6.1 / 搂15.20 鐢?doing/open 鈫?done锛浡?5.6.1 owner my-mcp-18锛?- `agent-progress-report.md`锛堟湰 milestone锛?
 ### Follow-ups
 
-- 立刻认领 §15.25 + §15.26（业务方原型 4 个未接 modal 中的 `notificationSettings` + `editProfile` 真接 PATCH /api/v1/me），需要后端补 `PATCH /api/v1/me` PRD10 envelope 路由 + 前端两个 modal handler。
-- `PermissionError [WinError 5]` 在 atexit cleanup 阶段是 pytest-of-shers/pytest-current 临时目录访问拒绝，与测试结果无关。
-
+- 绔嬪埢璁ら 搂15.25 + 搂15.26锛堜笟鍔℃柟鍘熷瀷 4 涓湭鎺?modal 涓殑 `notificationSettings` + `editProfile` 鐪熸帴 PATCH /api/v1/me锛夛紝闇€瑕佸悗绔ˉ `PATCH /api/v1/me` PRD10 envelope 璺敱 + 鍓嶇涓や釜 modal handler銆?- `PermissionError [WinError 5]` 鍦?atexit cleanup 闃舵鏄?pytest-of-shers/pytest-current 涓存椂鐩綍璁块棶鎷掔粷锛屼笌娴嬭瘯缁撴灉鏃犲叧銆?
 ---
 
-## Milestone 25 · §13.6 README 投资人补强 4 段（商业模式 / 路线图 / 团队 / 联系方式）— DELIVERED
+## Milestone 25 路 搂13.6 README 鎶曡祫浜鸿ˉ寮?4 娈碉紙鍟嗕笟妯″紡 / 璺嚎鍥?/ 鍥㈤槦 / 鑱旂郴鏂瑰紡锛夆€?DELIVERED
 
-**When**: 2026-05-05 21:50（本会话续，by Agent 4）
-
-**Why**: §13.1 已经交付了投资人骨架（hero / 痛点对比 / 5 分钟体验 / 架构图 / 文档导航 / 测试 / 协作模式），但 todo-tasks `§13.6` 列出 4 个**投资人最关心却仍缺**的章节：商业模式（如何赚钱）、路线图（怎么发展）、团队（谁在做）、联系方式（怎么找到你）。本任务一次补完。
-
-按多人协作规则（领地 §3）：本任务属 Agent 4 lane（投资材料），不动任何 SPA 实现文件 / 后端代码 / 测试，只编辑 `README.md` + `todo-tasks.md` + 本 milestone。
-
+**When**: 2026-05-05 21:50锛堟湰浼氳瘽缁紝by Agent 4锛?
+**Why**: 搂13.1 宸茬粡浜や粯浜嗘姇璧勪汉楠ㄦ灦锛坔ero / 鐥涚偣瀵规瘮 / 5 鍒嗛挓浣撻獙 / 鏋舵瀯鍥?/ 鏂囨。瀵艰埅 / 娴嬭瘯 / 鍗忎綔妯″紡锛夛紝浣?todo-tasks `搂13.6` 鍒楀嚭 4 涓?*鎶曡祫浜烘渶鍏冲績鍗翠粛缂?*鐨勭珷鑺傦細鍟嗕笟妯″紡锛堝浣曡禋閽憋級銆佽矾绾垮浘锛堟€庝箞鍙戝睍锛夈€佸洟闃燂紙璋佸湪鍋氾級銆佽仈绯绘柟寮忥紙鎬庝箞鎵惧埌浣狅級銆傛湰浠诲姟涓€娆¤ˉ瀹屻€?
+鎸夊浜哄崗浣滆鍒欙紙棰嗗湴 搂3锛夛細鏈换鍔″睘 Agent 4 lane锛堟姇璧勬潗鏂欙級锛屼笉鍔ㄤ换浣?SPA 瀹炵幇鏂囦欢 / 鍚庣浠ｇ爜 / 娴嬭瘯锛屽彧缂栬緫 `README.md` + `todo-tasks.md` + 鏈?milestone銆?
 ### Delivered
 
-`README.md` 新增 4 个章节（夹在 `✅ 测试与质量` 与 `🤝 贡献` 之间），并升级了原有 `💰 投资材料` 表 + 顶部导航：
+`README.md` 鏂板 4 涓珷鑺傦紙澶瑰湪 `鉁?娴嬭瘯涓庤川閲廯 涓?`馃 璐＄尞` 涔嬮棿锛夛紝骞跺崌绾т簡鍘熸湁 `馃挵 鎶曡祫鏉愭枡` 琛?+ 椤堕儴瀵艰埅锛?
+1. **馃捈 鍟嗕笟妯″紡** 鈥?4 鏉″晢涓氬寲璺緞琛紙涓汉璁㈤槄 楼39/鏈?/ 鍥㈤槦 License 楼199/甯綅/鏈?/ API 鎸?token 璁¤垂 / Skills 甯傚満 70%-30% 鍒嗘垚锛夛紝鍚洰鏍囩敤鎴?/ 瀹氫环 / 鏍稿績浠峰€?/ 鏀跺叆鐗规€э紝澶栧姞棣栧勾锛?026锛? 涓搴︾殑鍙噺鍖栫洰鏍囷紙100 paying user 鈫?ARR 楼3M锛?2. **馃椇锔?璺嚎鍥?* 鈥?2026 Q2 V1 GA 鈫?2026 Q3 V1.2锛堝 workspace + 绉诲姩绔級鈫?2026 Q4 V2锛堣涔夋悳绱?+ Skills 甯傚満鍏紑锛夆啋 2027 Q1 V2.5锛堣璐?+ SSO + 琛屼笟鐗堬級鈫?2027 H2 V3锛圓gent 缂栨帓锛夛紝姣忓搴﹂兘闄勩€屼富棰?/ 鍏抽敭浜や粯 / 鍟嗕笟閲岀▼纰戙€嶄笁鏍忥紱骞剁嫭绔嬪垪鍑?*宸蹭氦浠樼殑浜у搧閲岀▼纰?*锛圥RD10 V1 P0 / SPA 閲嶅啓 / 鐪熷疄 LLM / 鍙屽紩鎿庣豢绔?/ Chrome MCP 鑷姩鍖栵級
+3. **馃懃 鍥㈤槦** 鈥?鍒涘浜哄崰浣?+ 4 璺?Agent 宸ョ▼鍥㈤槦锛堝惈 `agent-collaboration.md` 閾炬帴锛? 6 涓嫑鍕熷矖浣嶏紙鍏ㄦ爤 / AI / DevOps / 澧為暱 / 椤鹃棶 / 鎶曡祫浼欎即锛夛紝姣忎釜閮界粰鎷涜仒閭 + 鏈熸湜瑕佹眰锛涙湯灏俱€屽崗浣滄ā寮忋€嶆寮鸿皟 Chrome MCP 鐪熸祻瑙堝櫒璇佹嵁 + 鍙噸鐜版祴璇曞熀绾?4. **馃摤 鑱旂郴鎴戜滑** 鈥?8 绫昏仈绯绘柟寮忚〃锛堟姇璧?/ 閿€鍞?/ 寮€鍙戣€?/ 濯掍綋 / 姹傝亴 / Demo 棰勭害 / Bug 鍙嶉 / 绀句氦濯掍綋锛夛紝姣忔潯閮介檮鍥炲 SLA锛涙湯灏鹃殣绉佸０鏄庤鏄庨偖绠卞崰浣?
+鍚屾鍗囩骇锛?
+- 椤堕儴 nav 鍔?4 涓柊閿氱偣锛歚鍟嗕笟妯″紡 / 璺嚎鍥?/ 鍥㈤槦 / 鑱旂郴鎴戜滑`
+- `馃挵 鎶曡祫鏉愭枡` 琛ㄦ柊澧?4 琛屽紩鐢細`搂14.2 PRD10 搂26 楠屾敹娓呭崟`锛堟姇璧?review 蹇呰锛? `chrome-mcp-smoke.ps1` / `docs/11-deployment/api-reference.md` / `docs/11-deployment/docker.md`锛屽苟鎶娿€屽晢涓氭ā寮?/ 璺嚎鍥?/ 鍥㈤槦銆嶆暣鍚堣繘鍚屼竴琛?
+### Test evidence锛堟姇璧勬潗鏂欐棤鍗曞厓娴嬭瘯鍩虹嚎锛岄獙璇侀潬寮曠敤涓€鑷存€э級
 
-1. **💼 商业模式** — 4 条商业化路径表（个人订阅 ¥39/月 / 团队 License ¥199/席位/月 / API 按 token 计费 / Skills 市场 70%-30% 分成），含目标用户 / 定价 / 核心价值 / 收入特性，外加首年（2026）4 个季度的可量化目标（100 paying user → ARR ¥3M）
-2. **🗺️ 路线图** — 2026 Q2 V1 GA → 2026 Q3 V1.2（多 workspace + 移动端）→ 2026 Q4 V2（语义搜索 + Skills 市场公开）→ 2027 Q1 V2.5（计费 + SSO + 行业版）→ 2027 H2 V3（Agent 编排），每季度都附「主题 / 关键交付 / 商业里程碑」三栏；并独立列出**已交付的产品里程碑**（PRD10 V1 P0 / SPA 重写 / 真实 LLM / 双引擎绿章 / Chrome MCP 自动化）
-3. **👥 团队** — 创始人占位 + 4 路 Agent 工程团队（含 `agent-collaboration.md` 链接）+ 6 个招募岗位（全栈 / AI / DevOps / 增长 / 顾问 / 投资伙伴），每个都给招聘邮箱 + 期望要求；末尾「协作模式」段强调 Chrome MCP 真浏览器证据 + 可重现测试基线
-4. **📬 联系我们** — 8 类联系方式表（投资 / 销售 / 开发者 / 媒体 / 求职 / Demo 预约 / Bug 反馈 / 社交媒体），每条都附回复 SLA；末尾隐私声明说明邮箱占位
-
-同步升级：
-
-- 顶部 nav 加 4 个新锚点：`商业模式 / 路线图 / 团队 / 联系我们`
-- `💰 投资材料` 表新增 4 行引用：`§14.2 PRD10 §26 验收清单`（投资 review 必读）/ `chrome-mcp-smoke.ps1` / `docs/11-deployment/api-reference.md` / `docs/11-deployment/docker.md`，并把「商业模式 / 路线图 / 团队」整合进同一表
-
-### Test evidence（投资材料无单元测试基线，验证靠引用一致性）
-
-- `Glob` 验证 5 个引用文件全部存在：`scripts/chrome-mcp-smoke.ps1` / `docs/demo-script.md` / `docs/14.2-prd10-acceptance-checklist.md` / `docs/11-deployment/api-reference.md` / `docs/11-deployment/docker.md`
-- `Glob` 验证 `agent-collaboration.md` 存在 → §团队 中的链接有效
-- README markdown anchor 链接全部按 GitHub anchor 规则生成（小写 + emoji 前缀剥离 + 中文括号转 dash）
-
+- `Glob` 楠岃瘉 5 涓紩鐢ㄦ枃浠跺叏閮ㄥ瓨鍦細`scripts/chrome-mcp-smoke.ps1` / `docs/demo-script.md` / `docs/14.2-prd10-acceptance-checklist.md` / `docs/11-deployment/api-reference.md` / `docs/11-deployment/docker.md`
+- `Glob` 楠岃瘉 `agent-collaboration.md` 瀛樺湪 鈫?搂鍥㈤槦 涓殑閾炬帴鏈夋晥
+- README markdown anchor 閾炬帴鍏ㄩ儴鎸?GitHub anchor 瑙勫垯鐢熸垚锛堝皬鍐?+ emoji 鍓嶇紑鍓ョ + 涓枃鎷彿杞?dash锛?
 ### Files touched
 
-- `README.md`（顶部 nav + 4 个新章节 + `💰 投资材料` 表升级，整体 +130 行）
-- `todo-tasks.md` §13.6 `open` → `done` + 证据列填写
-- 本 milestone 写入 `agent-progress-report.md`
+- `README.md`锛堥《閮?nav + 4 涓柊绔犺妭 + `馃挵 鎶曡祫鏉愭枡` 琛ㄥ崌绾э紝鏁翠綋 +130 琛岋級
+- `todo-tasks.md` 搂13.6 `open` 鈫?`done` + 璇佹嵁鍒楀～鍐?- 鏈?milestone 鍐欏叆 `agent-progress-report.md`
 
-**未动**：`static/mydow/*`、任何后端实现、任何测试代码、任何 agent doing 中的领地。
-
+**鏈姩**锛歚static/mydow/*`銆佷换浣曞悗绔疄鐜般€佷换浣曟祴璇曚唬鐮併€佷换浣?agent doing 涓殑棰嗗湴銆?
 ### Follow-ups
 
-1. §13.4 Pitch deck 大纲（`docs/pitch.md`）— 与本任务天然续接，可由 Agent 4 接着做（团队 / 路线图段已写在 README，pitch.md 可直接引用）
-2. §10.6 8 张产品截图 + 90 秒视频 — 投资材料配套，依赖 Chrome MCP；当前 `chrome-mcp-smoke.ps1` 已有 12 步路径，可在其基础上补图
-3. 邮箱 `*.mydow.example` 占位需在域名上线 / 公司注册 / GitHub 公开后替换为真实地址（隐私声明已提示）
-4. 「100 paying user / ARR ¥3M」等数字是首年目标占位，建议在 PoC 早期客户上手后调整
-
+1. 搂13.4 Pitch deck 澶х翰锛坄docs/pitch.md`锛夆€?涓庢湰浠诲姟澶╃劧缁帴锛屽彲鐢?Agent 4 鎺ョ潃鍋氾紙鍥㈤槦 / 璺嚎鍥炬宸插啓鍦?README锛宲itch.md 鍙洿鎺ュ紩鐢級
+2. 搂10.6 8 寮犱骇鍝佹埅鍥?+ 90 绉掕棰?鈥?鎶曡祫鏉愭枡閰嶅锛屼緷璧?Chrome MCP锛涘綋鍓?`chrome-mcp-smoke.ps1` 宸叉湁 12 姝ヨ矾寰勶紝鍙湪鍏跺熀纭€涓婅ˉ鍥?3. 閭 `*.mydow.example` 鍗犱綅闇€鍦ㄥ煙鍚嶄笂绾?/ 鍏徃娉ㄥ唽 / GitHub 鍏紑鍚庢浛鎹负鐪熷疄鍦板潃锛堥殣绉佸０鏄庡凡鎻愮ず锛?4. 銆?00 paying user / ARR 楼3M銆嶇瓑鏁板瓧鏄骞寸洰鏍囧崰浣嶏紝寤鸿鍦?PoC 鏃╂湡瀹㈡埛涓婃墜鍚庤皟鏁?
 ---
 
-## Milestone 24 · §14.2 PRD10 §26 验收清单逐条勾选交付 — DELIVERED
+## Milestone 24 路 搂14.2 PRD10 搂26 楠屾敹娓呭崟閫愭潯鍕鹃€変氦浠?鈥?DELIVERED
 
-**When**: 2026-05-05 21:40（本会话，by Agent 4）
-
-**Why**: `todo-tasks.md` §14.2 是上线前 Acceptance Gate 的红线之一：「PRD10 §26 全部验收条目逐条勾选」。§14.11 已经把 §26 验收做成 20/20 测试（Agent 3 @ 2026-05-05 16:55），但还缺一份投资人 / 产品 / 上线 review 可阅读的「逐条勾选」交付件，把测试结果对照 PRD10 章节做成清单。
-
-按多人协作规则（领地 §3）：本任务属 Agent 4 lane（前端 E2E + 验收），不动任何 SPA 实现文件，只新增 `docs/` 文档 + 更新 `todo-tasks.md` + 本 milestone 报告。
-
+**When**: 2026-05-05 21:40锛堟湰浼氳瘽锛宐y Agent 4锛?
+**Why**: `todo-tasks.md` 搂14.2 鏄笂绾垮墠 Acceptance Gate 鐨勭孩绾夸箣涓€锛氥€孭RD10 搂26 鍏ㄩ儴楠屾敹鏉＄洰閫愭潯鍕鹃€夈€嶃€偮?4.11 宸茬粡鎶?搂26 楠屾敹鍋氭垚 20/20 娴嬭瘯锛圓gent 3 @ 2026-05-05 16:55锛夛紝浣嗚繕缂轰竴浠芥姇璧勪汉 / 浜у搧 / 涓婄嚎 review 鍙槄璇荤殑銆岄€愭潯鍕鹃€夈€嶄氦浠樹欢锛屾妸娴嬭瘯缁撴灉瀵圭収 PRD10 绔犺妭鍋氭垚娓呭崟銆?
+鎸夊浜哄崗浣滆鍒欙紙棰嗗湴 搂3锛夛細鏈换鍔″睘 Agent 4 lane锛堝墠绔?E2E + 楠屾敹锛夛紝涓嶅姩浠讳綍 SPA 瀹炵幇鏂囦欢锛屽彧鏂板 `docs/` 鏂囨。 + 鏇存柊 `todo-tasks.md` + 鏈?milestone 鎶ュ憡銆?
 ### Delivered
 
-`docs/14.2-prd10-acceptance-checklist.md`（462 行，10 章）：
-
-1. **§0 概览表**：6 大类 32 条验收点 / 后端 API 32/32 通过 / SPA UI 入口 32/32 落地 / Chrome MCP 实测覆盖率 / 7 项 SPA 缺口（§7.25-7.30 + §9.19）
-2. **§1-§6**：PRD10 §26.1-§26.6 每一条验收点的 6 维映射表 — 编号 / PRD10 验收点 / 后端 API（含 PRD10 章节引用） / SPA UI 入口（hash + 元素 + 渲染器名） / 测试覆盖（具体到 `class.method`） / 状态 / 证据
-3. **§7 缺口与下一步**：8 项 open 任务关联表（含 §9.19 是唯一同时影响协议级与 UX 级的缺口，必须在投资演示前由工程师 2 修完）
-4. **§8 复测路径**：4 步可复制 PowerShell 命令（acceptance test → 矩阵 → chrome-mcp-smoke → nav sweep）
-5. **§9 投资人演示口径**：30 秒话术 + 6 张截图引用
-6. **§10 历史**：交付时间 / 交付人 / 后续认领候选
-
+`docs/14.2-prd10-acceptance-checklist.md`锛?62 琛岋紝10 绔狅級锛?
+1. **搂0 姒傝琛?*锛? 澶х被 32 鏉￠獙鏀剁偣 / 鍚庣 API 32/32 閫氳繃 / SPA UI 鍏ュ彛 32/32 钀藉湴 / Chrome MCP 瀹炴祴瑕嗙洊鐜?/ 7 椤?SPA 缂哄彛锛埪?.25-7.30 + 搂9.19锛?2. **搂1-搂6**锛歅RD10 搂26.1-搂26.6 姣忎竴鏉￠獙鏀剁偣鐨?6 缁存槧灏勮〃 鈥?缂栧彿 / PRD10 楠屾敹鐐?/ 鍚庣 API锛堝惈 PRD10 绔犺妭寮曠敤锛?/ SPA UI 鍏ュ彛锛坔ash + 鍏冪礌 + 娓叉煋鍣ㄥ悕锛?/ 娴嬭瘯瑕嗙洊锛堝叿浣撳埌 `class.method`锛?/ 鐘舵€?/ 璇佹嵁
+3. **搂7 缂哄彛涓庝笅涓€姝?*锛? 椤?open 浠诲姟鍏宠仈琛紙鍚?搂9.19 鏄敮涓€鍚屾椂褰卞搷鍗忚绾т笌 UX 绾х殑缂哄彛锛屽繀椤诲湪鎶曡祫婕旂ず鍓嶇敱宸ョ▼甯?2 淇畬锛?4. **搂8 澶嶆祴璺緞**锛? 姝ュ彲澶嶅埗 PowerShell 鍛戒护锛坅cceptance test 鈫?鐭╅樀 鈫?chrome-mcp-smoke 鈫?nav sweep锛?5. **搂9 鎶曡祫浜烘紨绀哄彛寰?*锛?0 绉掕瘽鏈?+ 6 寮犳埅鍥惧紩鐢?6. **搂10 鍘嗗彶**锛氫氦浠樻椂闂?/ 浜や粯浜?/ 鍚庣画璁ら鍊欓€?
 ### Test evidence
 
-后端 acceptance test 复测：
-
+鍚庣 acceptance test 澶嶆祴锛?
 ```pwsh
 $env:PYTHONPATH = "d:\Codes\whyme\src"
 python -m pytest tests/integration/api/test_prd10_v1_acceptance.py -q -p no:cacheprovider --tb=short --no-header
 # -> 20 passed, 27 warnings in 10.75s, exit 0
 ```
 
-20 passed 拆解：
-
-| 测试类 | 用例数 | 覆盖章节 |
+20 passed 鎷嗚В锛?
+| 娴嬭瘯绫?| 鐢ㄤ緥鏁?| 瑕嗙洊绔犺妭 |
 |---|---:|---|
-| `TestPrd10RouteApiMatrix` | 6 | §25.1 首屏 API 矩阵 |
-| `TestPrd10HomeAcceptance` | 1 | §26.1 主链路 |
-| `TestPrd10KnowledgeBaseAcceptance` | 1 | §26.2 主链路 |
-| `TestPrd10AiAcceptance` | 1 | §26.3 主链路 + worker materialize |
-| `TestMydowStaticBundle` | 3 | §24 P0 静态可达性 |
-| `TestPrd10SearchAcceptance` | 3 | §26.4 高亮/类型/空 query |
-| `TestPrd10NotificationAcceptance` | 2 | §26.5 unread + read |
-| `TestPrd10AsyncJobAcceptance` | 3 | §26.6 capture/查询/404 |
+| `TestPrd10RouteApiMatrix` | 6 | 搂25.1 棣栧睆 API 鐭╅樀 |
+| `TestPrd10HomeAcceptance` | 1 | 搂26.1 涓婚摼璺?|
+| `TestPrd10KnowledgeBaseAcceptance` | 1 | 搂26.2 涓婚摼璺?|
+| `TestPrd10AiAcceptance` | 1 | 搂26.3 涓婚摼璺?+ worker materialize |
+| `TestMydowStaticBundle` | 3 | 搂24 P0 闈欐€佸彲杈炬€?|
+| `TestPrd10SearchAcceptance` | 3 | 搂26.4 楂樹寒/绫诲瀷/绌?query |
+| `TestPrd10NotificationAcceptance` | 2 | 搂26.5 unread + read |
+| `TestPrd10AsyncJobAcceptance` | 3 | 搂26.6 capture/鏌ヨ/404 |
 
 ### Files touched
 
-- `docs/14.2-prd10-acceptance-checklist.md`（**新建**，462 行）
-- `todo-tasks.md` §14.2 `open` → `done` + 证据列指向 14.2 文档
-- 本 milestone 写入 `agent-progress-report.md`
+- `docs/14.2-prd10-acceptance-checklist.md`锛?*鏂板缓**锛?62 琛岋級
+- `todo-tasks.md` 搂14.2 `open` 鈫?`done` + 璇佹嵁鍒楁寚鍚?14.2 鏂囨。
+- 鏈?milestone 鍐欏叆 `agent-progress-report.md`
 
-**未动**：`static/mydow/*`、`app.js`、任何后端实现文件、任何 agent doing 中的领地。
+**鏈姩**锛歚static/mydow/*`銆乣app.js`銆佷换浣曞悗绔疄鐜版枃浠躲€佷换浣?agent doing 涓殑棰嗗湴銆?
+### Follow-ups锛堟寜 PRD10 浼樺厛绾э級
 
-### Follow-ups（按 PRD10 优先级）
-
-1. 工程师 2 在 §9.19（AI 保存为知识库文档/任务按钮未绑实）落地后，§26.3.7 协议级 + UX 级双绿，本清单 §3 表对应行可改 ✅ FULL（当前是 ⚠️ API/Worker PASS；UI 按钮未绑实）。
-2. 工程师 2 在 §7.25-7.30 落地后，本清单 §7 缺口表对应行清空，可触发 §7.31 Chrome MCP 全 nav sweep 复测（由 Agent 4 走 `chrome-mcp-smoke.ps1`）；目标 0 issue / 102 候选。
-3. Agent 4 下一步候选（按总表 §3 lane 内不冲突优先）：
-   - §13.6 README 商业模式 + 路线图（产品视角）+ 团队 + 联系方式 4 段补完（投资材料）
-   - §13.4 Pitch deck 大纲（`docs/pitch.md`）
-   - §14.12 浏览器侧 `localStorage` quota 容错（Agent 4 验收 + 测试）
-
+1. 宸ョ▼甯?2 鍦?搂9.19锛圓I 淇濆瓨涓虹煡璇嗗簱鏂囨。/浠诲姟鎸夐挳鏈粦瀹烇級钀藉湴鍚庯紝搂26.3.7 鍗忚绾?+ UX 绾у弻缁匡紝鏈竻鍗?搂3 琛ㄥ搴旇鍙敼 鉁?FULL锛堝綋鍓嶆槸 鈿狅笍 API/Worker PASS锛沀I 鎸夐挳鏈粦瀹烇級銆?2. 宸ョ▼甯?2 鍦?搂7.25-7.30 钀藉湴鍚庯紝鏈竻鍗?搂7 缂哄彛琛ㄥ搴旇娓呯┖锛屽彲瑙﹀彂 搂7.31 Chrome MCP 鍏?nav sweep 澶嶆祴锛堢敱 Agent 4 璧?`chrome-mcp-smoke.ps1`锛夛紱鐩爣 0 issue / 102 鍊欓€夈€?3. Agent 4 涓嬩竴姝ュ€欓€夛紙鎸夋€昏〃 搂3 lane 鍐呬笉鍐茬獊浼樺厛锛夛細
+   - 搂13.6 README 鍟嗕笟妯″紡 + 璺嚎鍥撅紙浜у搧瑙嗚锛? 鍥㈤槦 + 鑱旂郴鏂瑰紡 4 娈佃ˉ瀹岋紙鎶曡祫鏉愭枡锛?   - 搂13.4 Pitch deck 澶х翰锛坄docs/pitch.md`锛?   - 搂14.12 娴忚鍣ㄤ晶 `localStorage` quota 瀹归敊锛圓gent 4 楠屾敹 + 娴嬭瘯锛?
 ---
 
-## Milestone 27 · Agent 3 — biz prototype 5 大 nav 真数据接通 + 4 modal 接 PRD10 §11/§13 (§15.11/.12/.13/.14/.15/.19) — DELIVERED
+## Milestone 27 路 Agent 3 鈥?biz prototype 5 澶?nav 鐪熸暟鎹帴閫?+ 4 modal 鎺?PRD10 搂11/搂13 (搂15.11/.12/.13/.14/.15/.19) 鈥?DELIVERED
 
-**When**: 2026-05-05 23:35（本会话续，by Agent 3 智能后端）
+**When**: 2026-05-05 23:35锛堟湰浼氳瘽缁紝by Agent 3 鏅鸿兘鍚庣锛?
+**Why**: 鐢ㄦ埛鍦?Milestone 26 鍚庢槑纭寚浠ゃ€屼笉蹇呭仠涓嬫潵姹囨姤锛屼竴鐩村幓棰嗕换鍔″仛鈥︹€︿竴鐩村仛涓嬪幓鐩村埌 PRD10 瀹屽叏瀹炵幇 / 绗﹀悎涓氬姟鐨勫墠绔姹?/ 鎵€鏈夋寜閽敓鏁堬紝鏁版嵁鍏ㄦ墦閫?/ 鍓嶅悗绔仈璋冩棤浠讳綍闂鎵嶈兘鍋滀笅鏉ャ€嶃€傛寜 搂5.5 銆屾寔缁棰嗐€? 鐢ㄦ埛銆屼笟鍔″師鍨嬭繕鍘熴€嶄负鏈€楂樹紭鍏堢骇锛屾湰 milestone 涓€鍙ｆ皵鎶?Agent 3 棰嗗湴閲?搂15 绔犺妭鎵€鏈?open 浠诲姟鍏ㄩ儴鎺ㄨ繘鍒?done锛堥櫎浜?Engineer 1 宸?doing 鐨?搂15.5/搂15.8/搂15.17/搂15.18 + Agent 2 棰嗗湴鐨?搂15.6/搂15.7/搂15.9/搂15.10锛夈€?
+### Delivered锛? 澶?搂15 浠诲姟骞惰鎺ラ€氾級
 
-**Why**: 用户在 Milestone 26 后明确指令「不必停下来汇报，一直去领任务做……一直做下去直到 PRD10 完全实现 / 符合业务的前端要求 / 所有按钮生效，数据全打通 / 前后端联调无任何问题才能停下来」。按 §5.5 「持续认领」+ 用户「业务原型还原」为最高优先级，本 milestone 一口气把 Agent 3 领地里 §15 章节所有 open 任务全部推进到 done（除了 Engineer 1 已 doing 的 §15.5/§15.8/§15.17/§15.18 + Agent 2 领地的 §15.6/§15.7/§15.9/§15.10）。
+#### 搂15.11 biz 鏁板瓧鑺卞洯锛圙arden锛?
+`bridge.js` 鏂板 `refreshGardenBoard()` + `attachGardenBoardHandlers()` + `searchByTopic()`锛?
+- 鎷?`/api/v1/garden/overview`锛屾妸 `top_topics[0]` 鍐欒繘 `.garden-node.core strong`锛宍top_topics[1..6]` 渚濇鍐欒繘 6 涓懆鍥?`.garden-node`锛?- 鎶?`.garden-filters` 绗笁涓?pill 銆岃繛鎺ユ暟 N銆嶇殑 N 鏇挎崲鎴愮湡 `edge_count`锛?- 鐐瑰嚮浠绘剰 `[data-garden-topic]` 鑺傜偣 鈫?`GET /api/v1/search?q={topic}&page_size=5` 鈫?toast 鍛戒腑鏁?+ 鍓?3 鏉℃爣棰橈紱
+- 涓嶅姩 SVG line / 鑺傜偣浣嶇疆 CSS锛堜繚鐣欎笟鍔℃柟璁捐锛夛紝浠呮浛鎹㈡枃瀛楀唴瀹?+ cursor:pointer銆?
+Playwright 瀹炴祴锛歚main_bridge_bound=true` / `node_count=30` / 6 鍛ㄥ洿鑺傜偣鍏ㄧ粦 / `page_classes` 鍚?`garden-open` / 鑺傜偣 click 鐪熻Е鍙?`/search?q={topic}` / 0 console error銆?
+#### 搂15.15 biz Skills 骞垮満
 
-### Delivered（6 大 §15 任务并行接通）
+`bridge.js` 鏂板 `refreshSkillsGrid()` + `attachSkillsHandlers()` + `runSkill()`锛?
+- 鎷?`/api/v1/skills?page_size=20` 鈫?娓叉煋 `.skills-main .skill-grid` 鏇挎崲闈欐€?6-9 寮?skill-card锛?- 姣忓紶 card 甯?`data-skill-id` + `.bridge-skill-run` 鎸夐挳锛?- `SKILL_AVATAR_PALETTE` 8 绉?icon + 棰滆壊寰幆淇濈暀涓氬姟鏂硅璁＄編鎰燂紱
+- 鐐广€岃瘯鐢ㄣ€嶁啋 `POST /api/v1/skills/{id}/run` 鈫?toast銆孲kill 宸插叆闃燂紙job: xxxxxxxx锛夈€? 鎸夐挳涓存椂 disabled銆?
+Playwright 瀹炴祴锛? 寮?skill-card 娓叉煋锛坰eed 5 鏉★細鍛ㄦ姤鐢熸垚鍣?鐮旂┒涓婚鎷撳睍/璁胯皥娲炲療鎻愮偧/鑴戞毚璇勫垎/Markdown 缇庡寲锛? 姣忓紶 has_run_button=true / 绗竴寮?run 鐪熻Е鍙?POST 璇锋眰銆?
+#### 搂15.12 biz Mydow AI 宸ヤ綔鍙帮紙鏈€澶嶆潅鐨勪竴椤?鈥?鐪?SSE 娴佸紡锛?
+`bridge.js` 鏂板 6 涓嚱鏁帮細`refreshAiHistory()` / `loadAndRenderConversation()` / `streamAiMessage()` / `submitAiMessage()` / `ensureActiveConversation()` / `attachAiHandlers()`锛?
+- 鎷?`/ai/conversations?page_size=10` 鈫?娓叉煋 `.ai-history-list` 5 琛岋紙姣忚 `data-conversation-id`锛岀涓€琛?active锛? history click 鍒囨崲 active锛?- `.ai-input` 鍔?`contenteditable=true` + Enter (鏃?shift) 鎻愪氦 + 銆?銆峴end button click 鎻愪氦锛?- 鎻愪氦鏃?`ensureActiveConversation()` 纭繚鏈?active conv锛堟病鏈夊垯 `POST /ai/conversations`锛夛紱
+- `streamAiMessage()` 鐢?`fetch` + `ReadableStream + getReader()` 瑙ｆ瀽 SSE 娴侊紙`event: meta/token/keepalive/error/done`锛夛紝浠?`meta` 缂撳瓨 `assistant_message_id` 鍒?`AI_STATE.last_assistant_message_id`锛宍token` 瀹炴椂绱姞鍒?streaming bubble锛宍keepalive` 瑙嗚 no-op锛宍error` 鏄剧ず閿欒鏂囨湰锛?- `AbortController` 璁╄繛鍙戝彇娑堜笂娆?stream 闃叉姘旀场姹℃煋锛?- 娴佸畬鎴愬悗鑷姩 refresh history list 璁╂渶鏂?last_message_preview 鏄剧ず銆?
+Playwright 瀹炴祴锛? conversations 鍔犺浇 / 绗竴涓?active=true / composer contenteditable=true / send 鐪熻Е鍙?`POST /messages/stream` / 娴佸畬鎴愬悗 bubble_count=8 / last_role=assistant / last_content_len=76锛堝崰浣嶆祦寮?4 娈电疮绉紝涓?搂12.4 SSE 蹇冭烦瀹屽叏鍏煎锛? 0 console error銆?
+#### 搂15.13 biz AI 涓婁笅鏂囬€夋嫨寮圭獥
 
-#### §15.11 biz 数字花园（Garden）
+`bridge.js` 鏂板 `refreshAiContextModal()` + `attachAiContextHandlers()` + `_AI_CONTEXT_STATE`锛?
+- `[data-open-modal=aiContext]` click 鈫?80ms 鍚?`refreshAiContextModal()` 鎷?`/feed?page_size=6`锛堝鏈?query 鍒?`/search?q={q}`锛夛紱
+- 鏇挎崲 `[data-modal=aiContext] .notice-list` 闈欐€?2 琛屼负 6 琛岀湡瀹?feed/search 缁撴灉锛屾瘡琛屽甫 `data-context-id` + `data-context-type` + 銆岄€夋嫨/宸查€夈€嶆寜閽紱
+- 銆岄€夋嫨/宸查€夈€峵oggle `_AI_CONTEXT_STATE.selected_ids` Set锛?- 銆屾坊鍔犱笂涓嬫枃銆嶆寜閽?鈫?鎶?ids 缂撳瓨鍒?`AI_STATE.pending_context_scope = { document_ids: [...] }`锛屼笅娆?`submitAiMessage()` 鑷姩鎶?`context_scope` 鍔犲埌 `POST /messages/stream` body锛堢敤鍚庢竻绌猴紝one-shot 璇箟锛夈€?
+Playwright 瀹炴祴锛歜ridge_bound=true / 6 rows / first_id 鎷垮埌 / click 閫変腑 + 娣诲姞涓婁笅鏂囧悗 modal 鍏抽棴銆?
+#### 搂15.14 biz AI 淇濆瓨鍒?KB 寮圭獥
 
-`bridge.js` 新增 `refreshGardenBoard()` + `attachGardenBoardHandlers()` + `searchByTopic()`：
+`bridge.js` 鏂板 `attachAiSaveHandlers()` + `_resolveLastAssistantMessageId()`锛?
+- `[data-modal=aiSave] .modal-foot-actions .pill-button:not([data-close-layer])` click 鈫?瑙ｆ瀽鏈€鍚庝竴鏉?assistant message id锛坄AI_STATE.last_assistant_message_id` 鐢?`streamAiMessage` 浠?SSE meta event 缂撳瓨锛沠allback 鍒?DOM 涓婃渶鍚庝竴寮?`[data-role=assistant][data-message-id]` 鐨?bubble锛夛紱
+- `POST /api/v1/ai/messages/{id}/save-to-kb` body 鐢?modal `.form-field input.value` 浣?title + `.source-chip-list .tag` 浣?tags + folder_id=null锛圴1 涓氬姟鍘熷瀷 select 鏄潤鎬佹枃鏈紝鍚庣瀹瑰繊 null 杩涢粯璁?folder锛夛紱
+- toast銆孉I 缁撴灉宸插叆闃熶繚瀛橈紙job: xxxxxxxx锛夈€嶏紱鎸夐挳涓存椂 disabled + 銆屼繚瀛樹腑鈥︺€峫abel锛?- modal 鍏抽棴 + body 绉婚櫎 `is-modal-open` class銆?
+Playwright 瀹炴祴锛歴eeded_message_id=a1d8733d... / save_url_seen=`/api/v1/ai/messages/{id}/save-to-kb` / **save_resp_status=202** / 0 console error銆?
+#### 搂15.19 biz 鍏ㄥ眬鎼滅储 / 鍛戒护涓績
 
-- 拉 `/api/v1/garden/overview`，把 `top_topics[0]` 写进 `.garden-node.core strong`，`top_topics[1..6]` 依次写进 6 个周围 `.garden-node`；
-- 把 `.garden-filters` 第三个 pill 「连接数 N」的 N 替换成真 `edge_count`；
-- 点击任意 `[data-garden-topic]` 节点 → `GET /api/v1/search?q={topic}&page_size=5` → toast 命中数 + 前 3 条标题；
-- 不动 SVG line / 节点位置 CSS（保留业务方设计），仅替换文字内容 + cursor:pointer。
-
-Playwright 实测：`main_bridge_bound=true` / `node_count=30` / 6 周围节点全绑 / `page_classes` 含 `garden-open` / 节点 click 真触发 `/search?q={topic}` / 0 console error。
-
-#### §15.15 biz Skills 广场
-
-`bridge.js` 新增 `refreshSkillsGrid()` + `attachSkillsHandlers()` + `runSkill()`：
-
-- 拉 `/api/v1/skills?page_size=20` → 渲染 `.skills-main .skill-grid` 替换静态 6-9 张 skill-card；
-- 每张 card 带 `data-skill-id` + `.bridge-skill-run` 按钮；
-- `SKILL_AVATAR_PALETTE` 8 种 icon + 颜色循环保留业务方设计美感；
-- 点「试用」→ `POST /api/v1/skills/{id}/run` → toast「Skill 已入队（job: xxxxxxxx）」+ 按钮临时 disabled。
-
-Playwright 实测：5 张 skill-card 渲染（seed 5 条：周报生成器/研究主题拓展/访谈洞察提炼/脑暴评分/Markdown 美化）/ 每张 has_run_button=true / 第一张 run 真触发 POST 请求。
-
-#### §15.12 biz Mydow AI 工作台（最复杂的一项 — 真 SSE 流式）
-
-`bridge.js` 新增 6 个函数：`refreshAiHistory()` / `loadAndRenderConversation()` / `streamAiMessage()` / `submitAiMessage()` / `ensureActiveConversation()` / `attachAiHandlers()`：
-
-- 拉 `/ai/conversations?page_size=10` → 渲染 `.ai-history-list` 5 行（每行 `data-conversation-id`，第一行 active）+ history click 切换 active；
-- `.ai-input` 加 `contenteditable=true` + Enter (无 shift) 提交 + 「>」send button click 提交；
-- 提交时 `ensureActiveConversation()` 确保有 active conv（没有则 `POST /ai/conversations`）；
-- `streamAiMessage()` 用 `fetch` + `ReadableStream + getReader()` 解析 SSE 流（`event: meta/token/keepalive/error/done`），从 `meta` 缓存 `assistant_message_id` 到 `AI_STATE.last_assistant_message_id`，`token` 实时累加到 streaming bubble，`keepalive` 视觉 no-op，`error` 显示错误文本；
-- `AbortController` 让连发取消上次 stream 防止气泡污染；
-- 流完成后自动 refresh history list 让最新 last_message_preview 显示。
-
-Playwright 实测：3 conversations 加载 / 第一个 active=true / composer contenteditable=true / send 真触发 `POST /messages/stream` / 流完成后 bubble_count=8 / last_role=assistant / last_content_len=76（占位流式 4 段累积，与 §12.4 SSE 心跳完全兼容）/ 0 console error。
-
-#### §15.13 biz AI 上下文选择弹窗
-
-`bridge.js` 新增 `refreshAiContextModal()` + `attachAiContextHandlers()` + `_AI_CONTEXT_STATE`：
-
-- `[data-open-modal=aiContext]` click → 80ms 后 `refreshAiContextModal()` 拉 `/feed?page_size=6`（如有 query 则 `/search?q={q}`）；
-- 替换 `[data-modal=aiContext] .notice-list` 静态 2 行为 6 行真实 feed/search 结果，每行带 `data-context-id` + `data-context-type` + 「选择/已选」按钮；
-- 「选择/已选」toggle `_AI_CONTEXT_STATE.selected_ids` Set；
-- 「添加上下文」按钮 → 把 ids 缓存到 `AI_STATE.pending_context_scope = { document_ids: [...] }`，下次 `submitAiMessage()` 自动把 `context_scope` 加到 `POST /messages/stream` body（用后清空，one-shot 语义）。
-
-Playwright 实测：bridge_bound=true / 6 rows / first_id 拿到 / click 选中 + 添加上下文后 modal 关闭。
-
-#### §15.14 biz AI 保存到 KB 弹窗
-
-`bridge.js` 新增 `attachAiSaveHandlers()` + `_resolveLastAssistantMessageId()`：
-
-- `[data-modal=aiSave] .modal-foot-actions .pill-button:not([data-close-layer])` click → 解析最后一条 assistant message id（`AI_STATE.last_assistant_message_id` 由 `streamAiMessage` 从 SSE meta event 缓存；fallback 到 DOM 上最后一张 `[data-role=assistant][data-message-id]` 的 bubble）；
-- `POST /api/v1/ai/messages/{id}/save-to-kb` body 用 modal `.form-field input.value` 作 title + `.source-chip-list .tag` 作 tags + folder_id=null（V1 业务原型 select 是静态文本，后端容忍 null 进默认 folder）；
-- toast「AI 结果已入队保存（job: xxxxxxxx）」；按钮临时 disabled + 「保存中…」label；
-- modal 关闭 + body 移除 `is-modal-open` class。
-
-Playwright 实测：seeded_message_id=a1d8733d... / save_url_seen=`/api/v1/ai/messages/{id}/save-to-kb` / **save_resp_status=202** / 0 console error。
-
-#### §15.19 biz 全局搜索 / 命令中心
-
-`bridge.js` 新增 `performGlobalSearch()` + `attachGlobalSearchHandlers()` + `_renderSearchResultRow()`：
-
-- `[data-search-modal-input]` 输入 → 220ms debounce → `GET /api/v1/search?q={q}&page_size=10`；
-- 按 `object_type` 分组（card/document/folder/task/skill/message/insight）→ 渲染 `.search-modal .search-results` 替换静态 3 个 result-group；
-- 每个 result-row 加 `data-search-object-id` + `data-search-object-type`；
-- Enter 键命中第一行 → toast「已选中：{title} ({type})」；
-- 空结果显示「{q} 暂无结果」；
-- 命令式 `/new-task` 等 5 条 sysadmin 命令 V1 走 PRD10 §13 `search_suggestions` 端点（已存在），FE 由 search input handler 同 server 一并处理。
-
-Playwright 实测：performGlobalSearch('灵感') → bridge_bound=true / bridge_query='灵感' / group_count=1 / row_count=5 / first_title='灵感卡片 #1' / input_handler_attached=true / 0 console error。
-
+`bridge.js` 鏂板 `performGlobalSearch()` + `attachGlobalSearchHandlers()` + `_renderSearchResultRow()`锛?
+- `[data-search-modal-input]` 杈撳叆 鈫?220ms debounce 鈫?`GET /api/v1/search?q={q}&page_size=10`锛?- 鎸?`object_type` 鍒嗙粍锛坈ard/document/folder/task/skill/message/insight锛夆啋 娓叉煋 `.search-modal .search-results` 鏇挎崲闈欐€?3 涓?result-group锛?- 姣忎釜 result-row 鍔?`data-search-object-id` + `data-search-object-type`锛?- Enter 閿懡涓涓€琛?鈫?toast銆屽凡閫変腑锛歿title} ({type})銆嶏紱
+- 绌虹粨鏋滄樉绀恒€寋q} 鏆傛棤缁撴灉銆嶏紱
+- 鍛戒护寮?`/new-task` 绛?5 鏉?sysadmin 鍛戒护 V1 璧?PRD10 搂13 `search_suggestions` 绔偣锛堝凡瀛樺湪锛夛紝FE 鐢?search input handler 鍚?server 涓€骞跺鐞嗐€?
+Playwright 瀹炴祴锛歱erformGlobalSearch('鐏垫劅') 鈫?bridge_bound=true / bridge_query='鐏垫劅' / group_count=1 / row_count=5 / first_title='鐏垫劅鍗＄墖 #1' / input_handler_attached=true / 0 console error銆?
 ### Test evidence
 
 ```
-# 1) PRD10 全 14 套件矩阵（无回归）
-python -m pytest \
+# 1) PRD10 鍏?14 濂椾欢鐭╅樀锛堟棤鍥炲綊锛?python -m pytest \
   tests/integration/api/test_prd10_v1_acceptance.py \
   tests/integration/api/test_prd10_frontend_binding.py \
   tests/integration/api/test_prd10_ai_api.py \
@@ -2576,15 +2174,15 @@ python -m pytest \
   tests/integration/api/test_prd10_insights_api.py \
   tests/integration/api/prd10/ \
   -q -p no:cacheprovider --tb=line --no-header --timeout=60
-# → 225 passed in 52.44s (.tmp/agent3-prd10-after-15-19.log)
-# 比 Milestone 26 (55.09s) 还快了 2.65s — 没有任何性能回归
+# 鈫?225 passed in 52.44s (.tmp/agent3-prd10-after-15-19.log)
+# 姣?Milestone 26 (55.09s) 杩樺揩浜?2.65s 鈥?娌℃湁浠讳綍鎬ц兘鍥炲綊
 
-# 2-5) 5 个独立 Playwright biz e2e
+# 2-5) 5 涓嫭绔?Playwright biz e2e
 python .tmp/agent3_15_11_smoke.py 8774   # exit 0 (garden)
 python .tmp/agent3_15_15_smoke.py 8774   # exit 0 (skills)
 python .tmp/agent3_15_12_smoke.py 8774   # exit 0 (ai workspace)
 python .tmp/agent3_15_14_19_smoke.py 8774 # exit 0 (save + search)
-# 截图 .tmp/screenshots/biz_walk/15_11_garden_board.png
+# 鎴浘 .tmp/screenshots/biz_walk/15_11_garden_board.png
 #       .tmp/screenshots/biz_walk/15_15_skills_grid.png
 #       .tmp/screenshots/biz_walk/15_12_ai_workspace.png
 #       .tmp/screenshots/biz_walk/15_14_19_state.png
@@ -2592,120 +2190,79 @@ python .tmp/agent3_15_14_19_smoke.py 8774 # exit 0 (save + search)
 
 ### Files touched
 
-- `static/mydow/biz/bridge.js` — +1100 行（§15.11/§15.12/§15.13/§15.14/§15.15/§15.16/§15.19 全部 hydrator + handler + render）总计 2524 行
-- `.tmp/agent3_15_11_smoke.py` / `agent3_15_12_smoke.py` / `agent3_15_15_smoke.py` / `agent3_15_14_19_smoke.py`（4 新 Playwright e2e 脚本）
-- `.tmp/screenshots/biz_walk/*.png` 截图证据
-- `todo-tasks.md` — §15.11/§15.12/§15.13/§15.14/§15.15/§15.19 全 done + 顶部最近更新 + §0 测试矩阵新行
-- `agent-progress-report.md` — 本 milestone
+- `static/mydow/biz/bridge.js` 鈥?+1100 琛岋紙搂15.11/搂15.12/搂15.13/搂15.14/搂15.15/搂15.16/搂15.19 鍏ㄩ儴 hydrator + handler + render锛夋€昏 2524 琛?- `.tmp/agent3_15_11_smoke.py` / `agent3_15_12_smoke.py` / `agent3_15_15_smoke.py` / `agent3_15_14_19_smoke.py`锛? 鏂?Playwright e2e 鑴氭湰锛?- `.tmp/screenshots/biz_walk/*.png` 鎴浘璇佹嵁
+- `todo-tasks.md` 鈥?搂15.11/搂15.12/搂15.13/搂15.14/搂15.15/搂15.19 鍏?done + 椤堕儴鏈€杩戞洿鏂?+ 搂0 娴嬭瘯鐭╅樀鏂拌
+- `agent-progress-report.md` 鈥?鏈?milestone
 
-**未动**：
-- `auth/` / `common/` / `db/`（Agent 1）
-- `capture/` / `kb/` / `feed/` / `jobs/`（Agent 2）— 含 §15.6 / §15.7 / §15.9 / §15.10 也是其他 agent 在做
-- `static/mydow/{index.html,app.js,style.css}` SPA（工程师 2）
-- `static/mydow/biz/index.html` 业务方原型 HTML（按 §15 设计原则不改业务方设计，只通过 bridge.js 注入真实数据）
-
-### 本会话 Agent 3 总累计
-
-| # | 任务 | Milestone |
+**鏈姩**锛?- `auth/` / `common/` / `db/`锛圓gent 1锛?- `capture/` / `kb/` / `feed/` / `jobs/`锛圓gent 2锛夆€?鍚?搂15.6 / 搂15.7 / 搂15.9 / 搂15.10 涔熸槸鍏朵粬 agent 鍦ㄥ仛
+- `static/mydow/{index.html,app.js,style.css}` SPA锛堝伐绋嬪笀 2锛?- `static/mydow/biz/index.html` 涓氬姟鏂瑰師鍨?HTML锛堟寜 搂15 璁捐鍘熷垯涓嶆敼涓氬姟鏂硅璁★紝鍙€氳繃 bridge.js 娉ㄥ叆鐪熷疄鏁版嵁锛?
+### 鏈細璇?Agent 3 鎬荤疮璁?
+| # | 浠诲姟 | Milestone |
 |---|---|---|
-| 1 | §3.13 / §6.5 PRD10 §12 Insights / Reports API | M24 |
-| 2 | §11.2 CI 重写为 PRD10 矩阵 + 双引擎绿章 | M24 |
-| 3 | §12.4 SSE 心跳与断线重连 | M25 |
-| 4 | §15.16 biz 洞察中心真实数据 + seed 6 demo Insight | M26 |
-| 5 | §15.11 biz 数字花园 | M27 |
-| 6 | §15.15 biz Skills 广场 | M27 |
-| 7 | §15.12 biz Mydow AI 工作台（流式 SSE） | M27 |
-| 8 | §15.13 biz AI 上下文选择 | M27 |
-| 9 | §15.14 biz AI 保存到 KB | M27 |
-| 10 | §15.19 biz 全局搜索 / 命令中心 | M27 |
+| 1 | 搂3.13 / 搂6.5 PRD10 搂12 Insights / Reports API | M24 |
+| 2 | 搂11.2 CI 閲嶅啓涓?PRD10 鐭╅樀 + 鍙屽紩鎿庣豢绔?| M24 |
+| 3 | 搂12.4 SSE 蹇冭烦涓庢柇绾块噸杩?| M25 |
+| 4 | 搂15.16 biz 娲炲療涓績鐪熷疄鏁版嵁 + seed 6 demo Insight | M26 |
+| 5 | 搂15.11 biz 鏁板瓧鑺卞洯 | M27 |
+| 6 | 搂15.15 biz Skills 骞垮満 | M27 |
+| 7 | 搂15.12 biz Mydow AI 宸ヤ綔鍙帮紙娴佸紡 SSE锛?| M27 |
+| 8 | 搂15.13 biz AI 涓婁笅鏂囬€夋嫨 | M27 |
+| 9 | 搂15.14 biz AI 淇濆瓨鍒?KB | M27 |
+| 10 | 搂15.19 biz 鍏ㄥ眬鎼滅储 / 鍛戒护涓績 | M27 |
 
-PRD10 全 14 套件矩阵：187 → 225 (+38) / 时长 60.42s → 52.44s (-7.98s)。
-
+PRD10 鍏?14 濂椾欢鐭╅樀锛?87 鈫?225 (+38) / 鏃堕暱 60.42s 鈫?52.44s (-7.98s)銆?
 ### Follow-ups
 
-按 §5.5 持续认领，Agent 3 继续找下一批 open。当前 Agent 3 领地内已无 open 的 §15 任务，可继续认领：
+鎸?搂5.5 鎸佺画璁ら锛孉gent 3 缁х画鎵句笅涓€鎵?open銆傚綋鍓?Agent 3 棰嗗湴鍐呭凡鏃?open 鐨?搂15 浠诲姟锛屽彲缁х画璁ら锛?
+- **搂14.4 6 鎬佽瑙?*锛坆locked on 宸ョ▼甯?2 SPA 淇紝浣?biz 鍘熷瀷宸叉湁 6 鎬佲€斺€斿彲鍦?biz lane 鐢?bridge.js 鍔犲叏灞€绌?閿?loading state锛屼笌 SPA lane 瑙ｈ€︼級
+- **搂14.3 涓€浠藉畬鏁?demo 璧板畬鎵€鏈?8 澶фā鍧?* acceptance gate锛坆iz 鍘熷瀷鐜板凡 搂15.6 (Engineer 1)/搂15.7 (Engineer 1)/搂15.8 (Engineer 1)/搂15.11/搂15.12/搂15.13/搂15.14/搂15.15/搂15.16/搂15.17 (Engineer 1)/搂15.18 (Engineer 1)/搂15.19 鍏?done 鈥?璧版煡鍙锛?- **搂3.12 Embedding + semantic search**锛圴1 浠?lexical锛汸1锛?- **搂12.3 AI 璋冪敤缂撳瓨**锛堝悓 prompt 24h 澶嶇敤锛屾帶鎴愭湰锛?- **搂12.7 Job worker 澶辫触閲嶈瘯 + 姝讳俊闃熷垪**
 
-- **§14.4 6 态视觉**（blocked on 工程师 2 SPA 修，但 biz 原型已有 6 态——可在 biz lane 用 bridge.js 加全局空/错/loading state，与 SPA lane 解耦）
-- **§14.3 一份完整 demo 走完所有 8 大模块** acceptance gate（biz 原型现已 §15.6 (Engineer 1)/§15.7 (Engineer 1)/§15.8 (Engineer 1)/§15.11/§15.12/§15.13/§15.14/§15.15/§15.16/§15.17 (Engineer 1)/§15.18 (Engineer 1)/§15.19 全 done — 走查可行）
-- **§3.12 Embedding + semantic search**（V1 仅 lexical；P1）
-- **§12.3 AI 调用缓存**（同 prompt 24h 复用，控成本）
-- **§12.7 Job worker 失败重试 + 死信队列**
-
-下一步：先做 **§14.3 acceptance gate 走查**——既然 §15 主体已 done，让我跑一次完整 e2e 把所有 nav 走一遍，截图入仓。这能让用户在浏览器里直接看到「按钮全可点 + 真数据 + 无 console error」的整体效果。
-
+涓嬩竴姝ワ細鍏堝仛 **搂14.3 acceptance gate 璧版煡**鈥斺€旀棦鐒?搂15 涓讳綋宸?done锛岃鎴戣窇涓€娆″畬鏁?e2e 鎶婃墍鏈?nav 璧颁竴閬嶏紝鎴浘鍏ヤ粨銆傝繖鑳借鐢ㄦ埛鍦ㄦ祻瑙堝櫒閲岀洿鎺ョ湅鍒般€屾寜閽叏鍙偣 + 鐪熸暟鎹?+ 鏃?console error銆嶇殑鏁翠綋鏁堟灉銆?
 ---
 
-## Milestone 26 · Agent 3 — biz prototype "完整洞察中心" hooked up to real PRD10 §12 data (§15.16) — DELIVERED
+## Milestone 26 路 Agent 3 鈥?biz prototype "瀹屾暣娲炲療涓績" hooked up to real PRD10 搂12 data (搂15.16) 鈥?DELIVERED
 
-**When**: 2026-05-05 22:55（本会话续，by Agent 3 智能后端）
-
-**Why**: 用户在 Milestone 25 后明确指令：「之前的 zip 文件是业务方给的，业务要求展示效果应该如 zip 展示的前端效果差不多……应自己的逻辑实现 zip 中业务方给出的前端效果，然后把后端补全，使得每一个按钮都能用，且效果符合预期，数据链路完全打通。」对应到 todo-tasks.md `§15` 业务原型还原章节里 Agent 3 领地的任务。
-
-§15 已 doing 的任务（不能动）：§15.5 `today` 接入 / §15.8 KB / §15.17 通知 / §15.18 个人中心。Agent 3 领地中 open 的：§15.11 garden / §15.12 AI 工作台 / §15.13 上下文 / §15.14 保存弹窗 / §15.15 Skills / §15.16 洞察中心 / §15.19 全局搜索。
-
-选择 §15.16「洞察中心」是因为：(1) 上一 milestone 24 刚把 PRD10 §12 `/insights/*` `/reports/*` 6 个端点 done 了，§15.16 直接是这些端点的前端消费方，零 friction；(2) §15.16 在描述里就明说「与 6.5 配套」；(3) 不撞 §15.5（doing）的右侧 mini 抽屉，专注 `.insights-full-main` 完整页面。
-
+**When**: 2026-05-05 22:55锛堟湰浼氳瘽缁紝by Agent 3 鏅鸿兘鍚庣锛?
+**Why**: 鐢ㄦ埛鍦?Milestone 25 鍚庢槑纭寚浠わ細銆屼箣鍓嶇殑 zip 鏂囦欢鏄笟鍔℃柟缁欑殑锛屼笟鍔¤姹傚睍绀烘晥鏋滃簲璇ュ zip 灞曠ず鐨勫墠绔晥鏋滃樊涓嶅鈥︹€﹀簲鑷繁鐨勯€昏緫瀹炵幇 zip 涓笟鍔℃柟缁欏嚭鐨勫墠绔晥鏋滐紝鐒跺悗鎶婂悗绔ˉ鍏紝浣垮緱姣忎竴涓寜閽兘鑳界敤锛屼笖鏁堟灉绗﹀悎棰勬湡锛屾暟鎹摼璺畬鍏ㄦ墦閫氥€傘€嶅搴斿埌 todo-tasks.md `搂15` 涓氬姟鍘熷瀷杩樺師绔犺妭閲?Agent 3 棰嗗湴鐨勪换鍔°€?
+搂15 宸?doing 鐨勪换鍔★紙涓嶈兘鍔級锛毬?5.5 `today` 鎺ュ叆 / 搂15.8 KB / 搂15.17 閫氱煡 / 搂15.18 涓汉涓績銆侫gent 3 棰嗗湴涓?open 鐨勶細搂15.11 garden / 搂15.12 AI 宸ヤ綔鍙?/ 搂15.13 涓婁笅鏂?/ 搂15.14 淇濆瓨寮圭獥 / 搂15.15 Skills / 搂15.16 娲炲療涓績 / 搂15.19 鍏ㄥ眬鎼滅储銆?
+閫夋嫨 搂15.16銆屾礊瀵熶腑蹇冦€嶆槸鍥犱负锛?1) 涓婁竴 milestone 24 鍒氭妸 PRD10 搂12 `/insights/*` `/reports/*` 6 涓鐐?done 浜嗭紝搂15.16 鐩存帴鏄繖浜涚鐐圭殑鍓嶇娑堣垂鏂癸紝闆?friction锛?2) 搂15.16 鍦ㄦ弿杩伴噷灏辨槑璇淬€屼笌 6.5 閰嶅銆嶏紱(3) 涓嶆挒 搂15.5锛坉oing锛夌殑鍙充晶 mini 鎶藉眽锛屼笓娉?`.insights-full-main` 瀹屾暣椤甸潰銆?
 ### Delivered
 
-#### 1. `static/mydow/biz/bridge.js` — `refreshInsightsFullPanel()` 与渲染矩阵
-
-加 280+ 行。模块化 4 渲染函数 + 1 协调函数 + 1 handler 函数：
-
-| 渲染函数 | 接通端点 | 目标 DOM |
+#### 1. `static/mydow/biz/bridge.js` 鈥?`refreshInsightsFullPanel()` 涓庢覆鏌撶煩闃?
+鍔?280+ 琛屻€傛ā鍧楀寲 4 娓叉煋鍑芥暟 + 1 鍗忚皟鍑芥暟 + 1 handler 鍑芥暟锛?
+| 娓叉煋鍑芥暟 | 鎺ラ€氱鐐?| 鐩爣 DOM |
 |---|---|---|
-| `renderMetricTiles(main, summary)` | `GET /api/v1/insights/summary?range=week` | `.metric-grid .metric-tile` × 4（本周捕捉 / 本周洞察 / 重点主题 / 知识库文档） |
-| `renderCoreInsightCards(main, summary)` | 同上的 `data.insights` | `.insight-wide-panel .core-insight-grid > .core-insight-card` × 3 |
-| `renderReportList(main, listData)` | `GET /api/v1/insights?range=month&page_size=10`，filter `*_summary` | `.insights-bottom-grid .split-panel:nth-child(1) .report-list` |
+| `renderMetricTiles(main, summary)` | `GET /api/v1/insights/summary?range=week` | `.metric-grid .metric-tile` 脳 4锛堟湰鍛ㄦ崟鎹?/ 鏈懆娲炲療 / 閲嶇偣涓婚 / 鐭ヨ瘑搴撴枃妗ｏ級 |
+| `renderCoreInsightCards(main, summary)` | 鍚屼笂鐨?`data.insights` | `.insight-wide-panel .core-insight-grid > .core-insight-card` 脳 3 |
+| `renderReportList(main, listData)` | `GET /api/v1/insights?range=month&page_size=10`锛宖ilter `*_summary` | `.insights-bottom-grid .split-panel:nth-child(1) .report-list` |
 | `renderSourceList(main, feedData)` | `GET /api/v1/feed?page_size=3` | `.insights-bottom-grid .split-panel:nth-child(2) .source-list` |
 
-`refreshInsightsFullPanel()` 协调三个 fetch（each `try/catch + console.warn`，失败保留静态 fallback），写真实数据到 DOM，标 `data-bridge-bound="true"`，dispatch `mydow:insights-full-loaded` event 让其它模块能监听。
+`refreshInsightsFullPanel()` 鍗忚皟涓変釜 fetch锛坋ach `try/catch + console.warn`锛屽け璐ヤ繚鐣欓潤鎬?fallback锛夛紝鍐欑湡瀹炴暟鎹埌 DOM锛屾爣 `data-bridge-bound="true"`锛宒ispatch `mydow:insights-full-loaded` event 璁╁叾瀹冩ā鍧楄兘鐩戝惉銆?
+`attachInsightsFullPanelHandlers()` 鐢ㄤ簨浠朵唬鐞嗙粰 `.insights-full-main`锛?- 鐐?`.bridge-dismiss-btn` 鈫?`POST /api/v1/insights/{id}/dismiss` 鈫?toast + 娣″嚭绉婚櫎 card锛?- 鐐?`[data-report-id]` row 鈫?`GET /api/v1/reports/{id}` 鈫?toast 棰勮 (90 瀛楁埅鏂?锛?- 鐐?`[data-insights-full]` 鍒囨崲鎸夐挳 鈫?60ms 鍚庡啀瑙﹀彂 refresh锛岃鏁版嵁 "fresh on open"锛堜笟鍔″師鍨嬭嚜宸卞凡缁忓湪 IIFE line 7819 澶勭悊 class toggle锛宐ridge 涓嶆姠杩欎釜鑱岃矗锛夈€?
+`boot()` 閲屽姞 `attachInsightsFullPanelHandlers()` 璋冪敤 + `refreshInsightsFullPanel()` 杩?`Promise.allSettled` 鍒楄〃锛屼笌 搂15.18 / 搂15.17 / 搂15.5 / 搂15.4 hydrator 骞跺彂璺戙€?
+`window.MydowBridge` export 鍔?`refreshInsightsFullPanel` / `dismissInsight` / `loadReportDetail`銆?
+#### 2. `scripts/seed_prd10.py` 鈥?`_seed_insights()`
 
-`attachInsightsFullPanelHandlers()` 用事件代理给 `.insights-full-main`：
-- 点 `.bridge-dismiss-btn` → `POST /api/v1/insights/{id}/dismiss` → toast + 淡出移除 card；
-- 点 `[data-report-id]` row → `GET /api/v1/reports/{id}` → toast 预览 (90 字截断)；
-- 点 `[data-insights-full]` 切换按钮 → 60ms 后再触发 refresh，让数据 "fresh on open"（业务原型自己已经在 IIFE line 7819 处理 class toggle，bridge 不抢这个职责）。
-
-`boot()` 里加 `attachInsightsFullPanelHandlers()` 调用 + `refreshInsightsFullPanel()` 进 `Promise.allSettled` 列表，与 §15.18 / §15.17 / §15.5 / §15.4 hydrator 并发跑。
-
-`window.MydowBridge` export 加 `refreshInsightsFullPanel` / `dismissInsight` / `loadReportDetail`。
-
-#### 2. `scripts/seed_prd10.py` — `_seed_insights()`
-
-之前 seed 没有 `Prd10Insight` 行 → `/insights/summary.insights` 永远空 → bridge.js 拿不到真实 core-insight 数据 → fallback 到静态原型。修：
-
-- import `InsightStatus / InsightType / Prd10Insight`；
-- `main()` 里加 `insights = await _seed_insights(..., count=6)`；
-- 6 条预设：4 themed (theme_trend / knowledge_gap / connection / task_risk) + 1 weekly_summary + 1 daily_summary，每条都有 title (中文) / summary (1 句简介) / body (Markdown 详情)；
-- `created_at` 分散在过去 6 天，让列表排序自然；
-- `_wipe_existing_seed` 加可选参数 `Prd10Insight=None`，按 `extra` JSON 含 `[seed]` tag 清理（与其它 seed table 一致的 idempotent 模式）；
-- 输出多一行 `- insights: 6`。
-
+涔嬪墠 seed 娌℃湁 `Prd10Insight` 琛?鈫?`/insights/summary.insights` 姘歌繙绌?鈫?bridge.js 鎷夸笉鍒扮湡瀹?core-insight 鏁版嵁 鈫?fallback 鍒伴潤鎬佸師鍨嬨€備慨锛?
+- import `InsightStatus / InsightType / Prd10Insight`锛?- `main()` 閲屽姞 `insights = await _seed_insights(..., count=6)`锛?- 6 鏉￠璁撅細4 themed (theme_trend / knowledge_gap / connection / task_risk) + 1 weekly_summary + 1 daily_summary锛屾瘡鏉￠兘鏈?title (涓枃) / summary (1 鍙ョ畝浠? / body (Markdown 璇︽儏)锛?- `created_at` 鍒嗘暎鍦ㄨ繃鍘?6 澶╋紝璁╁垪琛ㄦ帓搴忚嚜鐒讹紱
+- `_wipe_existing_seed` 鍔犲彲閫夊弬鏁?`Prd10Insight=None`锛屾寜 `extra` JSON 鍚?`[seed]` tag 娓呯悊锛堜笌鍏跺畠 seed table 涓€鑷寸殑 idempotent 妯″紡锛夛紱
+- 杈撳嚭澶氫竴琛?`- insights: 6`銆?
 #### 3. Playwright e2e smoke
 
-`.tmp/agent3_15_16_smoke.py`：
-
-- demo 模式启动后端 + seed → `http://127.0.0.1:8773/mydow/biz/`；
-- 等 `/api/v1/insights/summary` 请求完成（bridge.js boot 标志）；
-- click `[data-insights-full]` 切到完整洞察中心 + 等 700ms；
-- evaluate JS 抓 main bridge_bound / 4 tiles / 3 insight cards / 2 reports / 3 sources / page classes 快照；
-- 截全页 PNG 入 `.tmp/screenshots/biz_walk/15_16_insights_full.png`；
-- 点击第一张 card 的 dismiss 按钮 → 等 800ms → 验证 DOM 已移除；
-- 截第二张 PNG `15_16_after_dismiss.png`；
-- listen `console`（type=error/warning）/ `pageerror` / `requestfailed` 全程；
-- 退出码：0 当且仅当 bridge_bound=true + 至少 1 张 insight card + dismiss 真移除。
-
+`.tmp/agent3_15_16_smoke.py`锛?
+- demo 妯″紡鍚姩鍚庣 + seed 鈫?`http://127.0.0.1:8773/mydow/biz/`锛?- 绛?`/api/v1/insights/summary` 璇锋眰瀹屾垚锛坆ridge.js boot 鏍囧織锛夛紱
+- click `[data-insights-full]` 鍒囧埌瀹屾暣娲炲療涓績 + 绛?700ms锛?- evaluate JS 鎶?main bridge_bound / 4 tiles / 3 insight cards / 2 reports / 3 sources / page classes 蹇収锛?- 鎴叏椤?PNG 鍏?`.tmp/screenshots/biz_walk/15_16_insights_full.png`锛?- 鐐瑰嚮绗竴寮?card 鐨?dismiss 鎸夐挳 鈫?绛?800ms 鈫?楠岃瘉 DOM 宸茬Щ闄わ紱
+- 鎴浜屽紶 PNG `15_16_after_dismiss.png`锛?- listen `console`锛坱ype=error/warning锛? `pageerror` / `requestfailed` 鍏ㄧ▼锛?- 閫€鍑虹爜锛? 褰撲笖浠呭綋 bridge_bound=true + 鑷冲皯 1 寮?insight card + dismiss 鐪熺Щ闄ゃ€?
 ### Test evidence
 
 ```
-# 1) Insights + seed 单元（保证 §6.5/3.13 不回归 + seed 仍达 §25.3）
-python -m pytest \
+# 1) Insights + seed 鍗曞厓锛堜繚璇?搂6.5/3.13 涓嶅洖褰?+ seed 浠嶈揪 搂25.3锛?python -m pytest \
   tests/integration/api/test_prd10_insights_api.py \
   tests/integration/api/prd10/test_prd10_seed_script.py \
   -v -p no:cacheprovider --tb=short --timeout=60
-# → 7 passed in 6.32s
+# 鈫?7 passed in 6.32s
 
-# 2) PRD10 全 14 套件矩阵（无回归）
-python -m pytest \
+# 2) PRD10 鍏?14 濂椾欢鐭╅樀锛堟棤鍥炲綊锛?python -m pytest \
   tests/integration/api/test_prd10_v1_acceptance.py \
   tests/integration/api/test_prd10_frontend_binding.py \
   tests/integration/api/test_prd10_ai_api.py \
@@ -2721,18 +2278,18 @@ python -m pytest \
   tests/integration/api/test_prd10_insights_api.py \
   tests/integration/api/prd10/ \
   -q -p no:cacheprovider --tb=line --no-header --timeout=60
-# → 225 passed in 55.09s (.tmp/agent3-prd10-after-15-16.log)
+# 鈫?225 passed in 55.09s (.tmp/agent3-prd10-after-15-16.log)
 
-# 3) Playwright biz §15.16 smoke
+# 3) Playwright biz 搂15.16 smoke
 $env:DATABASE_URL = "sqlite+aiosqlite:///d:/Codes/whyme/.tmp/agent3-biz-insights.db"
 $env:AGENTOS_DEMO_MODE = "on"
 python scripts/seed_prd10.py --email demo@mydow.example --password demo123 --reset
-# → Seed completed: ... insights: 6
+# 鈫?Seed completed: ... insights: 6
 python -m uvicorn agent_os.server.app:app --host 127.0.0.1 --port 8773 --log-level warning &
 python .tmp/agent3_15_16_smoke.py 8773
-# → exit 0 with:
+# 鈫?exit 0 with:
 # - main_bridge_bound: true
-# - 4 tiles all bridge_bound (本周捕捉=5 / 本周洞察=5 / 重点主题=5 / 知识库文档=20)
+# - 4 tiles all bridge_bound (鏈懆鎹曟崏=5 / 鏈懆娲炲療=5 / 閲嶇偣涓婚=5 / 鐭ヨ瘑搴撴枃妗?20)
 # - 3 core insight cards (theme_trend / knowledge_gap / connection) all has_dismiss
 # - 2 report rows (weekly_summary + daily_summary)
 # - 3 source rows
@@ -2741,47 +2298,34 @@ python .tmp/agent3_15_16_smoke.py 8773
 # - 0 console_errors / 0 page_errors / 0 failed_requests
 ```
 
-截图：`.tmp/screenshots/biz_walk/15_16_insights_full.png`（全页 1440×N）+ `15_16_after_dismiss.png`（dismiss 后局部）。
-
+鎴浘锛歚.tmp/screenshots/biz_walk/15_16_insights_full.png`锛堝叏椤?1440脳N锛? `15_16_after_dismiss.png`锛坉ismiss 鍚庡眬閮級銆?
 ### Files touched
 
-- `static/mydow/biz/bridge.js` — 加 `refreshInsightsFullPanel` + 4 渲染函数 + handlers + export（+280 行）
-- `scripts/seed_prd10.py` — import + `_seed_insights()` + `_wipe_existing_seed` 参数扩展 + 输出行
-- `.tmp/agent3_15_16_smoke.py` — Playwright 验证脚本（新文件）
-- `.tmp/screenshots/biz_walk/15_16_insights_full.png` + `15_16_after_dismiss.png`
-- `todo-tasks.md` — §15.16 → done + 顶部最近更新 + §0 测试矩阵新行
-- `agent-progress-report.md` — 本 milestone
+- `static/mydow/biz/bridge.js` 鈥?鍔?`refreshInsightsFullPanel` + 4 娓叉煋鍑芥暟 + handlers + export锛?280 琛岋級
+- `scripts/seed_prd10.py` 鈥?import + `_seed_insights()` + `_wipe_existing_seed` 鍙傛暟鎵╁睍 + 杈撳嚭琛?- `.tmp/agent3_15_16_smoke.py` 鈥?Playwright 楠岃瘉鑴氭湰锛堟柊鏂囦欢锛?- `.tmp/screenshots/biz_walk/15_16_insights_full.png` + `15_16_after_dismiss.png`
+- `todo-tasks.md` 鈥?搂15.16 鈫?done + 椤堕儴鏈€杩戞洿鏂?+ 搂0 娴嬭瘯鐭╅樀鏂拌
+- `agent-progress-report.md` 鈥?鏈?milestone
 
-**未动**：`auth/`/`common/`/`db/`（Agent 1）、`capture/`/`kb/`/`feed/`/`jobs/`（Agent 2）、`static/mydow/{index.html,app.js,style.css}` SPA（工程师 2）、`static/mydow/biz/index.html`（业务方 zip 还原，不改 HTML）。
-
+**鏈姩**锛歚auth/`/`common/`/`db/`锛圓gent 1锛夈€乣capture/`/`kb/`/`feed/`/`jobs/`锛圓gent 2锛夈€乣static/mydow/{index.html,app.js,style.css}` SPA锛堝伐绋嬪笀 2锛夈€乣static/mydow/biz/index.html`锛堜笟鍔℃柟 zip 杩樺師锛屼笉鏀?HTML锛夈€?
 ### Follow-ups
 
-按 §5.5「持续认领」，Agent 3 lane 接下来候选（按用户「业务原型还原」最高优先级）：
+鎸?搂5.5銆屾寔缁棰嗐€嶏紝Agent 3 lane 鎺ヤ笅鏉ュ€欓€夛紙鎸夌敤鎴枫€屼笟鍔″師鍨嬭繕鍘熴€嶆渶楂樹紭鍏堢骇锛夛細
 
-- **§15.11 数字花园**（biz 原型 `.garden-main` 接 `/api/v1/garden/overview` + `/api/v1/garden/graph`；最契合 Agent 3 garden 领地，且 §6.4 富图算法 P2 不影响 V1 节点/边渲染）
-- **§15.12 Mydow AI 工作台**（biz 原型 `.ai-main` 接 `/api/v1/ai/conversations` 列表 + 流式 `/messages/stream`；接通 §12.4 心跳）
-- **§15.15 Skills 广场**（biz 原型 `.skills-main` 接 `/api/v1/skills` 列表 + 详情 + 运行）
-- **§15.19 全局搜索 / 命令中心**（biz 原型顶栏搜索框 + 命令面板接 `/api/v1/search` + `/search/suggestions`）
-
-下一步先做 **§15.11 数字花园**（与 §15.16 相同模式：写 bridge.js 渲染函数 + 接 Agent 3 已 done 的 garden API + Playwright 验证）。
-
+- **搂15.11 鏁板瓧鑺卞洯**锛坆iz 鍘熷瀷 `.garden-main` 鎺?`/api/v1/garden/overview` + `/api/v1/garden/graph`锛涙渶濂戝悎 Agent 3 garden 棰嗗湴锛屼笖 搂6.4 瀵屽浘绠楁硶 P2 涓嶅奖鍝?V1 鑺傜偣/杈规覆鏌擄級
+- **搂15.12 Mydow AI 宸ヤ綔鍙?*锛坆iz 鍘熷瀷 `.ai-main` 鎺?`/api/v1/ai/conversations` 鍒楄〃 + 娴佸紡 `/messages/stream`锛涙帴閫?搂12.4 蹇冭烦锛?- **搂15.15 Skills 骞垮満**锛坆iz 鍘熷瀷 `.skills-main` 鎺?`/api/v1/skills` 鍒楄〃 + 璇︽儏 + 杩愯锛?- **搂15.19 鍏ㄥ眬鎼滅储 / 鍛戒护涓績**锛坆iz 鍘熷瀷椤舵爮鎼滅储妗?+ 鍛戒护闈㈡澘鎺?`/api/v1/search` + `/search/suggestions`锛?
+涓嬩竴姝ュ厛鍋?**搂15.11 鏁板瓧鑺卞洯**锛堜笌 搂15.16 鐩稿悓妯″紡锛氬啓 bridge.js 娓叉煋鍑芥暟 + 鎺?Agent 3 宸?done 鐨?garden API + Playwright 楠岃瘉锛夈€?
 ---
 
-## Milestone 25 · Agent 3 — SSE keepalive + reconnect hardening (PRD10 §12.4) — DELIVERED
+## Milestone 25 路 Agent 3 鈥?SSE keepalive + reconnect hardening (PRD10 搂12.4) 鈥?DELIVERED
 
-**When**: 2026-05-05 22:25（本会话续，by Agent 3 智能后端）
+**When**: 2026-05-05 22:25锛堟湰浼氳瘽缁紝by Agent 3 鏅鸿兘鍚庣锛?
+**Why**: Milestone 24 鏀跺熬鍚庢寜 `whyme-multiagent-workflow.mdc` 搂5.5銆屾寔缁棰嗐€嶇珛鍒绘帴 搂12.4 SSE 蹇冭烦涓庢柇绾块噸杩炪€備袱鏉?SSE 閫氶亾鐨勭幇鐘剁洏鐐癸細
 
-**Why**: Milestone 24 收尾后按 `whyme-multiagent-workflow.mdc` §5.5「持续认领」立刻接 §12.4 SSE 心跳与断线重连。两条 SSE 通道的现状盘点：
-
-- `/api/v1/notifications/stream`：已有 `event: ping` 每 ~25s 心跳 + `request.is_disconnected()` 主动断线检测；但缺 `retry:` 行（EventSource 客户端默认重连间隔由 UA 决定，不可控）。
-- `/api/v1/ai/conversations/{id}/messages/stream`：完全没有心跳；长 LLM 调用期间 idle > nginx/Cloudflare 阈值（默认 60s）会被切断；缺 `retry:` 行；缺 `X-Accel-Buffering: no` 防 nginx 缓冲。
-
-PRD10 §12.4「SSE 心跳与断线重连」的目标是这两条通道都通过任意主流反向代理（nginx / Cloudflare / AWS ALB）的 idle 检测，并让浏览器 EventSource 自动以受控间隔重连。
-
+- `/api/v1/notifications/stream`锛氬凡鏈?`event: ping` 姣?~25s 蹇冭烦 + `request.is_disconnected()` 涓诲姩鏂嚎妫€娴嬶紱浣嗙己 `retry:` 琛岋紙EventSource 瀹㈡埛绔粯璁ら噸杩為棿闅旂敱 UA 鍐冲畾锛屼笉鍙帶锛夈€?- `/api/v1/ai/conversations/{id}/messages/stream`锛氬畬鍏ㄦ病鏈夊績璺筹紱闀?LLM 璋冪敤鏈熼棿 idle > nginx/Cloudflare 闃堝€硷紙榛樿 60s锛変細琚垏鏂紱缂?`retry:` 琛岋紱缂?`X-Accel-Buffering: no` 闃?nginx 缂撳啿銆?
+PRD10 搂12.4銆孲SE 蹇冭烦涓庢柇绾块噸杩炪€嶇殑鐩爣鏄繖涓ゆ潯閫氶亾閮介€氳繃浠绘剰涓绘祦鍙嶅悜浠ｇ悊锛坣ginx / Cloudflare / AWS ALB锛夌殑 idle 妫€娴嬶紝骞惰娴忚鍣?EventSource 鑷姩浠ュ彈鎺ч棿闅旈噸杩炪€?
 ### Delivered
 
-#### 1. AI streaming heartbeat helper（`ai/router.py` 新增）
-
+#### 1. AI streaming heartbeat helper锛坄ai/router.py` 鏂板锛?
 ```python
 async def _wrap_with_heartbeat(
     upstream: AsyncIterator[Any],
@@ -2791,43 +2335,33 @@ async def _wrap_with_heartbeat(
     whenever ``heartbeat_seconds`` elapses without a chunk."""
 ```
 
-- Producer task 持续把 `provider.stream_complete()` 的 chunks push 进 `asyncio.Queue(maxsize=16)`；
-- Consumer 用 `asyncio.wait_for(queue.get(), timeout=float(heartbeat_seconds))` 等；超时就 yield `_HEARTBEAT_SENTINEL`，consumer 翻译成 `event: keepalive`；
-- 错误用 `error_box` 缓存，stream 结束时透传给 consumer（保证 SSE 能 yield `event: error`）；
-- finally 里 cancel + await producer task，防止 LLM HTTP 连接半开（避开了直接 `asyncio.wait_for(__anext__)` 的取消陷阱）。
-
-#### 2. AI SSE generator 重写（`ai/router.py::post_message_stream::_generate`）
-
-| Frame | 改动 |
+- Producer task 鎸佺画鎶?`provider.stream_complete()` 鐨?chunks push 杩?`asyncio.Queue(maxsize=16)`锛?- Consumer 鐢?`asyncio.wait_for(queue.get(), timeout=float(heartbeat_seconds))` 绛夛紱瓒呮椂灏?yield `_HEARTBEAT_SENTINEL`锛宑onsumer 缈昏瘧鎴?`event: keepalive`锛?- 閿欒鐢?`error_box` 缂撳瓨锛宻tream 缁撴潫鏃堕€忎紶缁?consumer锛堜繚璇?SSE 鑳?yield `event: error`锛夛紱
+- finally 閲?cancel + await producer task锛岄槻姝?LLM HTTP 杩炴帴鍗婂紑锛堥伩寮€浜嗙洿鎺?`asyncio.wait_for(__anext__)` 鐨勫彇娑堥櫡闃憋級銆?
+#### 2. AI SSE generator 閲嶅啓锛坄ai/router.py::post_message_stream::_generate`锛?
+| Frame | 鏀瑰姩 |
 |---|---|
-| 首帧 `event: meta` | 新加 `prefix=_SSE_RETRY_HINT` (`"retry: 5000\n"`)；payload 多 `heartbeat_seconds` 字段让 FE 配置自己的 watchdog |
-| 真 LLM stream | 用 `_wrap_with_heartbeat(upstream, _heartbeat_seconds())` 包装；遇 `_HEARTBEAT_SENTINEL` yield `event: keepalive` 含 `{ts, elapsed_ms, count}` |
-| Offline (placeholder) | 不变；4 段 token 直接 yield，无心跳需求 |
-| `event: error` / `event: done` | 不变 |
-| Response headers | 新加 `X-Accel-Buffering: no` 防 nginx 缓冲 |
+| 棣栧抚 `event: meta` | 鏂板姞 `prefix=_SSE_RETRY_HINT` (`"retry: 5000\n"`)锛沺ayload 澶?`heartbeat_seconds` 瀛楁璁?FE 閰嶇疆鑷繁鐨?watchdog |
+| 鐪?LLM stream | 鐢?`_wrap_with_heartbeat(upstream, _heartbeat_seconds())` 鍖呰锛涢亣 `_HEARTBEAT_SENTINEL` yield `event: keepalive` 鍚?`{ts, elapsed_ms, count}` |
+| Offline (placeholder) | 涓嶅彉锛? 娈?token 鐩存帴 yield锛屾棤蹇冭烦闇€姹?|
+| `event: error` / `event: done` | 涓嶅彉 |
+| Response headers | 鏂板姞 `X-Accel-Buffering: no` 闃?nginx 缂撳啿 |
 
-环境变量 `AGENTOS_SSE_HEARTBEAT_SECONDS`（默认 15）控制心跳周期；`_heartbeat_seconds()` 函数兜底无效值。
+鐜鍙橀噺 `AGENTOS_SSE_HEARTBEAT_SECONDS`锛堥粯璁?15锛夋帶鍒跺績璺冲懆鏈燂紱`_heartbeat_seconds()` 鍑芥暟鍏滃簳鏃犳晥鍊笺€?
+#### 3. Notifications SSE 鍔?`retry:` + `Connection: keep-alive`锛坄notifications/router.py`锛?
+`event: ready` 棣栧抚鍓嶉潰鎺?`retry: 5000\n`锛堜笌 ready 鍚?SSE block 鍐呬笉鐮村潖 `event_types[0] == "ready"` 瑙ｆ瀽锛夛紱headers 澶?`Connection: keep-alive`銆傚師鏈?`event: ping` 25s 蹇冭烦 + `X-Accel-Buffering: no` 淇濈暀銆?
+#### 4. 鏂囨。锛坄docs/11-deployment/api-reference.md`锛?
+- 鏇存柊 搂11 AI streaming 绔?curl 绀轰緥灞曠ず `retry: 5000` + `event: keepalive` + `event: error 鈫?done` 鍏ㄥ舰鎬侊紱
+- 鏇存柊 搂15 Notifications 绔?curl 绀轰緥灞曠ず `retry: 5000` + `event: ping`锛?- 鏂板 **搂12.x SSE 蹇冭烦涓庢柇绾块噸杩?* 绔犺妭锛氫袱鏉￠€氶亾濂戠害瀵规瘮琛?+ 娴忚鍣?EventSource 鎺ㄨ崘鍐欐硶 + nginx/Cloudflare/uvicorn 閮ㄧ讲寤鸿 + `AGENTOS_SSE_HEARTBEAT_SECONDS` 璋冧紭鑴氭湰銆?
+#### 5. 娴嬭瘯
 
-#### 3. Notifications SSE 加 `retry:` + `Connection: keep-alive`（`notifications/router.py`）
+`tests/integration/api/test_prd10_ai_llm.py` 鏂板 4 涓敤渚嬶細
 
-`event: ready` 首帧前面接 `retry: 5000\n`（与 ready 同 SSE block 内不破坏 `event_types[0] == "ready"` 解析）；headers 多 `Connection: keep-alive`。原有 `event: ping` 25s 心跳 + `X-Accel-Buffering: no` 保留。
-
-#### 4. 文档（`docs/11-deployment/api-reference.md`）
-
-- 更新 §11 AI streaming 章 curl 示例展示 `retry: 5000` + `event: keepalive` + `event: error → done` 全形态；
-- 更新 §15 Notifications 章 curl 示例展示 `retry: 5000` + `event: ping`；
-- 新增 **§12.x SSE 心跳与断线重连** 章节：两条通道契约对比表 + 浏览器 EventSource 推荐写法 + nginx/Cloudflare/uvicorn 部署建议 + `AGENTOS_SSE_HEARTBEAT_SECONDS` 调优脚本。
-
-#### 5. 测试
-
-`tests/integration/api/test_prd10_ai_llm.py` 新增 4 个用例：
-
-| 用例 | 验证 |
+| 鐢ㄤ緥 | 楠岃瘉 |
 |---|---|
-| `test_stream_meta_carries_retry_and_heartbeat_hint` | 首帧 SSE block 含 `retry: 5000` + `meta` payload 有 `heartbeat_seconds` 字段 + response header `x-accel-buffering: no` |
-| `test_stream_keepalive_fires_when_upstream_is_idle` | `_SlowFakeProvider`（0.6s 延迟）+ `AGENTOS_SSE_HEARTBEAT_SECONDS=1` 跑通 stream；smoke `event_types[0] == "meta"` / `event_types[-1] == "done"` |
-| `test_wrap_with_heartbeat_yields_keepalive_when_upstream_blocks` | **deterministic unit-level**：100ms 心跳 + 350ms upstream block，断言 ≥ 2 个 `_HEARTBEAT_SENTINEL` + 两个 chunks 都到达 |
-| `test_wrap_with_heartbeat_propagates_upstream_errors` | upstream 抛 `BoomError` → consumer 收到 ok chunk 然后 raise BoomError（保证 SSE 能 yield error event） |
+| `test_stream_meta_carries_retry_and_heartbeat_hint` | 棣栧抚 SSE block 鍚?`retry: 5000` + `meta` payload 鏈?`heartbeat_seconds` 瀛楁 + response header `x-accel-buffering: no` |
+| `test_stream_keepalive_fires_when_upstream_is_idle` | `_SlowFakeProvider`锛?.6s 寤惰繜锛? `AGENTOS_SSE_HEARTBEAT_SECONDS=1` 璺戦€?stream锛泂moke `event_types[0] == "meta"` / `event_types[-1] == "done"` |
+| `test_wrap_with_heartbeat_yields_keepalive_when_upstream_blocks` | **deterministic unit-level**锛?00ms 蹇冭烦 + 350ms upstream block锛屾柇瑷€ 鈮?2 涓?`_HEARTBEAT_SENTINEL` + 涓や釜 chunks 閮藉埌杈?|
+| `test_wrap_with_heartbeat_propagates_upstream_errors` | upstream 鎶?`BoomError` 鈫?consumer 鏀跺埌 ok chunk 鐒跺悗 raise BoomError锛堜繚璇?SSE 鑳?yield error event锛?|
 
 ### Test evidence
 
@@ -2838,10 +2372,10 @@ python -m pytest \
   tests/integration/api/test_prd10_ai_api.py \
   tests/integration/api/prd10/test_prd10_jobs_notifications_api.py \
   -v -p no:cacheprovider --tb=short --timeout=30
-# → 47 passed in 7.32s
-# 含我新加的 4 个 keepalive/retry 用例
+# 鈫?47 passed in 7.32s
+# 鍚垜鏂板姞鐨?4 涓?keepalive/retry 鐢ㄤ緥
 
-# 2) PRD10 全 14 套件矩阵
+# 2) PRD10 鍏?14 濂椾欢鐭╅樀
 python -m pytest \
   tests/integration/api/test_prd10_v1_acceptance.py \
   tests/integration/api/test_prd10_frontend_binding.py \
@@ -2858,95 +2392,74 @@ python -m pytest \
   tests/integration/api/test_prd10_insights_api.py \
   tests/integration/api/prd10/ \
   -q -p no:cacheprovider --tb=line --no-header --timeout=60
-# → 225 passed in 64.81s
-# 比 Milestone 24 基线 211 提升 +14（4 个新加 + 10 个跑全的扩展）
-# log: .tmp/agent3-prd10-after-sse.log
+# 鈫?225 passed in 64.81s
+# 姣?Milestone 24 鍩虹嚎 211 鎻愬崌 +14锛? 涓柊鍔?+ 10 涓窇鍏ㄧ殑鎵╁睍锛?# log: .tmp/agent3-prd10-after-sse.log
 ```
 
 ### Files touched
 
-- `src/agent_os/ai/router.py` — `_wrap_with_heartbeat` helper + `_heartbeat_seconds()` + `_sse_event(prefix=)` + `_generate` 加 keepalive + headers `X-Accel-Buffering: no`
-- `src/agent_os/notifications/router.py` — 首帧 `retry: 5000` + headers `Connection: keep-alive`
-- `tests/integration/api/test_prd10_ai_llm.py` — 4 个新用例（retry hint / keepalive smoke / unit-level deterministic / error propagation）
-- `docs/11-deployment/api-reference.md` — §11 / §15 curl 示例更新 + 新增 §12.x SSE 章节
-- `todo-tasks.md` — §12.4 → done + §0 测试矩阵追加新基线
-
-**未动**：`static/mydow/*`（工程师 2 doing 中）、`auth/`/`common/`/`db/` 等 Agent 1 领地、`capture/`/`kb/`/`feed/` 等 Agent 2 领地。
-
+- `src/agent_os/ai/router.py` 鈥?`_wrap_with_heartbeat` helper + `_heartbeat_seconds()` + `_sse_event(prefix=)` + `_generate` 鍔?keepalive + headers `X-Accel-Buffering: no`
+- `src/agent_os/notifications/router.py` 鈥?棣栧抚 `retry: 5000` + headers `Connection: keep-alive`
+- `tests/integration/api/test_prd10_ai_llm.py` 鈥?4 涓柊鐢ㄤ緥锛坮etry hint / keepalive smoke / unit-level deterministic / error propagation锛?- `docs/11-deployment/api-reference.md` 鈥?搂11 / 搂15 curl 绀轰緥鏇存柊 + 鏂板 搂12.x SSE 绔犺妭
+- `todo-tasks.md` 鈥?搂12.4 鈫?done + 搂0 娴嬭瘯鐭╅樀杩藉姞鏂板熀绾?
+**鏈姩**锛歚static/mydow/*`锛堝伐绋嬪笀 2 doing 涓級銆乣auth/`/`common/`/`db/` 绛?Agent 1 棰嗗湴銆乣capture/`/`kb/`/`feed/` 绛?Agent 2 棰嗗湴銆?
 ### Follow-ups
 
-按 §5.5 「持续认领」继续在 Agent 3 领地接 `open` 任务。当前候选（按价值排序）：
+鎸?搂5.5 銆屾寔缁棰嗐€嶇户缁湪 Agent 3 棰嗗湴鎺?`open` 浠诲姟銆傚綋鍓嶅€欓€夛紙鎸変环鍊兼帓搴忥級锛?
+- 搂12.3 AI 璋冪敤缂撳瓨锛堝悓 prompt 24h 澶嶇敤锛屾帶鎴愭湰 + 骞虫粦 P95锛涚敤 `hashlib.sha256(messages_json)` key + Redis 鍙€?fallback 鍐呭瓨 LRU锛?- 搂12.2 Rate limit锛坅uth / AI / search 涓夊鐢?token bucket锛宺edis 鍙€夛級
+- 搂3.12 Embedding + semantic search锛坄SearchIndex.embedding_id` 鐪熸帴 sentence-transformers锛宧ybrid search rerank锛?- 搂12.7 Job worker 澶辫触閲嶈瘯 + 姝讳俊闃熷垪
 
-- §12.3 AI 调用缓存（同 prompt 24h 复用，控成本 + 平滑 P95；用 `hashlib.sha256(messages_json)` key + Redis 可选 fallback 内存 LRU）
-- §12.2 Rate limit（auth / AI / search 三处用 token bucket，redis 可选）
-- §3.12 Embedding + semantic search（`SearchIndex.embedding_id` 真接 sentence-transformers，hybrid search rerank）
-- §12.7 Job worker 失败重试 + 死信队列
-
-下一步：`§12.3 AI 调用缓存`（领地 100% 落在 `ai/`，与 §12.4 自然延续，且对投资人 demo 的「AI 不烧 token」承诺很关键）。
-
+涓嬩竴姝ワ細`搂12.3 AI 璋冪敤缂撳瓨`锛堥鍦?100% 钀藉湪 `ai/`锛屼笌 搂12.4 鑷劧寤剁画锛屼笖瀵规姇璧勪汉 demo 鐨勩€孉I 涓嶇儳 token銆嶆壙璇哄緢鍏抽敭锛夈€?
 ---
 
-## Milestone 24 · Agent 3 — Insights / Reports API done + CI rewrite — DELIVERED
+## Milestone 24 路 Agent 3 鈥?Insights / Reports API done + CI rewrite 鈥?DELIVERED
 
-**When**: 2026-05-05 22:10（本会话续，by Agent 3 智能后端）
+**When**: 2026-05-05 22:10锛堟湰浼氳瘽缁紝by Agent 3 鏅鸿兘鍚庣锛?
+**Why**: 鐢ㄦ埛鍒囧埌 Agent 3 瑙掕壊锛岃姹傜户缁畬鎴?Agent 3 lane 鐨勪换鍔°€傛鏌?`todo-tasks.md` 鏃跺彂鐜帮細
 
-**Why**: 用户切到 Agent 3 角色，要求继续完成 Agent 3 lane 的任务。检查 `todo-tasks.md` 时发现：
-
-1. §3.13 / §6.5 `/insights/*` PRD10 §12 端点：todo 标 `open`，但 `src/agent_os/insights/{models,router}.py` 与 `tests/integration/api/test_prd10_insights_api.py` 都已实现完整、6 个测试就绪。状态机和实现脱节，违反「`done` 必须有可重现验证证据」规则；
-2. §11.2 CI：我之前认领后 `doing` 4+ 小时未完工。原 `.github/workflows/ci.yml` 用 `uv sync` 装依赖（与项目 setuptools build-backend 不一致），且测试命令 `uv run pytest --cov` 直接跑全仓不走 PRD10 矩阵 → 必然撞到 §6.1 的 `test_search_api_simple.py` 13 fail，无法用作上线 gate。
-
-按多人协作 §3 仓库领地：`src/agent_os/insights/*` 和 `.github/workflows/ci.yml` 都在 Agent 3 领地范围内（智能后端 + observability/CI）；不动 SPA / capture / kb / auth 等其他 agent `doing` 的文件。
-
+1. 搂3.13 / 搂6.5 `/insights/*` PRD10 搂12 绔偣锛歵odo 鏍?`open`锛屼絾 `src/agent_os/insights/{models,router}.py` 涓?`tests/integration/api/test_prd10_insights_api.py` 閮藉凡瀹炵幇瀹屾暣銆? 涓祴璇曞氨缁€傜姸鎬佹満鍜屽疄鐜拌劚鑺傦紝杩濆弽銆宍done` 蹇呴』鏈夊彲閲嶇幇楠岃瘉璇佹嵁銆嶈鍒欙紱
+2. 搂11.2 CI锛氭垜涔嬪墠璁ら鍚?`doing` 4+ 灏忔椂鏈畬宸ャ€傚師 `.github/workflows/ci.yml` 鐢?`uv sync` 瑁呬緷璧栵紙涓庨」鐩?setuptools build-backend 涓嶄竴鑷达級锛屼笖娴嬭瘯鍛戒护 `uv run pytest --cov` 鐩存帴璺戝叏浠撲笉璧?PRD10 鐭╅樀 鈫?蹇呯劧鎾炲埌 搂6.1 鐨?`test_search_api_simple.py` 13 fail锛屾棤娉曠敤浣滀笂绾?gate銆?
+鎸夊浜哄崗浣?搂3 浠撳簱棰嗗湴锛歚src/agent_os/insights/*` 鍜?`.github/workflows/ci.yml` 閮藉湪 Agent 3 棰嗗湴鑼冨洿鍐咃紙鏅鸿兘鍚庣 + observability/CI锛夛紱涓嶅姩 SPA / capture / kb / auth 绛夊叾浠?agent `doing` 鐨勬枃浠躲€?
 ### Delivered
 
-#### 1. PRD10 §12 Insights & Reports — done 闭环（§3.13 / §6.5）
+#### 1. PRD10 搂12 Insights & Reports 鈥?done 闂幆锛埪?.13 / 搂6.5锛?
+浠ｇ爜渚у凡瀛樺湪鐨勫疄鐜扮洏鐐癸細
 
-代码侧已存在的实现盘点：
-
-| 端点 | PRD10 § | 实现位置 |
+| 绔偣 | PRD10 搂 | 瀹炵幇浣嶇疆 |
 |---|---|---|
-| `GET /api/v1/insights/summary` | §12.1 | `insights/router.py::insights_summary` — `range`+`source` filter；返回 `stats` (capture/knowledge/task/completed_task) + `theme_distribution`（Card.tags 聚合 top5）+ `quality_distribution`（高价值/已归档/待整理）+ recent `Prd10Insight`(status=ready) + `recommended_actions` |
-| `GET /api/v1/insights` | §12.2 | `insights/router.py::list_insights` — paginated envelope + `insight_type` / `status` / `range` 三种 filter |
-| `POST /api/v1/insights` | 扩展 | `insights/router.py::create_insight` — worker / seed 用；写 `Prd10Insight(status=ready)` |
-| `POST /api/v1/insights/{id}/dismiss` | 扩展 | `insights/router.py::dismiss_insight` — 单条 dismissed |
-| `POST /api/v1/reports/generate` | §12.3 | `insights/router.py::generate_report` — 同步合成 `Prd10Insight(daily/weekly/monthly_summary)` + 写 `Job(generate_report, status=completed)`，envelope 返 `{job_id, report_id, status}` |
-| `GET /api/v1/reports/{report_id}` | §12.4 | `insights/router.py::get_report` — 详情含 `report.report_type / stats / themes` |
+| `GET /api/v1/insights/summary` | 搂12.1 | `insights/router.py::insights_summary` 鈥?`range`+`source` filter锛涜繑鍥?`stats` (capture/knowledge/task/completed_task) + `theme_distribution`锛圕ard.tags 鑱氬悎 top5锛? `quality_distribution`锛堥珮浠峰€?宸插綊妗?寰呮暣鐞嗭級+ recent `Prd10Insight`(status=ready) + `recommended_actions` |
+| `GET /api/v1/insights` | 搂12.2 | `insights/router.py::list_insights` 鈥?paginated envelope + `insight_type` / `status` / `range` 涓夌 filter |
+| `POST /api/v1/insights` | 鎵╁睍 | `insights/router.py::create_insight` 鈥?worker / seed 鐢紱鍐?`Prd10Insight(status=ready)` |
+| `POST /api/v1/insights/{id}/dismiss` | 鎵╁睍 | `insights/router.py::dismiss_insight` 鈥?鍗曟潯 dismissed |
+| `POST /api/v1/reports/generate` | 搂12.3 | `insights/router.py::generate_report` 鈥?鍚屾鍚堟垚 `Prd10Insight(daily/weekly/monthly_summary)` + 鍐?`Job(generate_report, status=completed)`锛宔nvelope 杩?`{job_id, report_id, status}` |
+| `GET /api/v1/reports/{report_id}` | 搂12.4 | `insights/router.py::get_report` 鈥?璇︽儏鍚?`report.report_type / stats / themes` |
 
-`Prd10Insight` 模型（`insights/models.py`）：UUID 主键 + `user_id` FK + 7 种 `insight_type`（theme_trend / task_risk / knowledge_gap / connection / daily/weekly/monthly_summary）+ 3 种 `status`（draft / ready / dismissed）+ `extra` JSON 装 stats/themes，附 `idx_prd10_insights_user_type` 复合索引与 CheckConstraint。
-
-router 在 `app.py` line 211 已挂载，`/api/v1/insights` `/api/v1/reports` 均落入 `_PRD10_ENVELOPE_PREFIXES`（line 160-161），422 / 4xx 自动转 PRD10 envelope。
-
-#### 2. `.github/workflows/ci.yml` 重写（§11.2）
-
-新版 6 jobs：
-
-| Job | 触发 | 命令 |
+`Prd10Insight` 妯″瀷锛坄insights/models.py`锛夛細UUID 涓婚敭 + `user_id` FK + 7 绉?`insight_type`锛坱heme_trend / task_risk / knowledge_gap / connection / daily/weekly/monthly_summary锛? 3 绉?`status`锛坉raft / ready / dismissed锛? `extra` JSON 瑁?stats/themes锛岄檮 `idx_prd10_insights_user_type` 澶嶅悎绱㈠紩涓?CheckConstraint銆?
+router 鍦?`app.py` line 211 宸叉寕杞斤紝`/api/v1/insights` `/api/v1/reports` 鍧囪惤鍏?`_PRD10_ENVELOPE_PREFIXES`锛坙ine 160-161锛夛紝422 / 4xx 鑷姩杞?PRD10 envelope銆?
+#### 2. `.github/workflows/ci.yml` 閲嶅啓锛埪?1.2锛?
+鏂扮増 6 jobs锛?
+| Job | 瑙﹀彂 | 鍛戒护 |
 |---|---|---|
 | `lint` | every push/PR | `ruff check src/agent_os tests` + `ruff format --check src/agent_os tests` |
-| `collect-only` | needs lint | `pytest --collect-only -q -p no:cacheprovider` 必须 exit 0 |
-| `prd10-sqlite` | needs collect-only；matrix py3.11 + 3.12 | 14 PRD10 套件 + `:memory:` SQLite + `StaticPool`，`maxfail=15`，`timeout-minutes: 20` |
-| `prd10-postgres` | needs collect-only；postgres:16-alpine service | 同 14 套件，`asyncpg` + `psycopg[binary]`，`pg_isready` 30s 等待 |
-| `type-check` | needs lint；continue-on-error | `mypy src/agent_os --ignore-missing-imports` advisory |
-| `security` | independent；continue-on-error | `bandit -q -r src/agent_os -lll` advisory |
+| `collect-only` | needs lint | `pytest --collect-only -q -p no:cacheprovider` 蹇呴』 exit 0 |
+| `prd10-sqlite` | needs collect-only锛沵atrix py3.11 + 3.12 | 14 PRD10 濂椾欢 + `:memory:` SQLite + `StaticPool`锛宍maxfail=15`锛宍timeout-minutes: 20` |
+| `prd10-postgres` | needs collect-only锛沺ostgres:16-alpine service | 鍚?14 濂椾欢锛宍asyncpg` + `psycopg[binary]`锛宍pg_isready` 30s 绛夊緟 |
+| `type-check` | needs lint锛沜ontinue-on-error | `mypy src/agent_os --ignore-missing-imports` advisory |
+| `security` | independent锛沜ontinue-on-error | `bandit -q -r src/agent_os -lll` advisory |
 
-关键设计：
-
-- `PRD10_MATRIX` env var 在 yaml 顶部列出 14 套件 = 单一来源（与 `whyme-multiagent-workflow.mdc` §4.4 命令完全一致）
-- `concurrency: cancel-in-progress: true` — 同 ref push 取消旧 run，节省额度
-- `pip install -e ".[dev]"` 替换原 `uv sync --dev`，与 `pyproject.toml setuptools` 一致
-- 双引擎绿章：SQLite 与 PostgreSQL 16 都跑同 14 套件，覆盖 §0「双引擎绿章」要求
-- `lint` / `collect-only` 是硬门禁；`type-check` / `security` 是 advisory（continue-on-error）不阻塞 PRD10 baseline
+鍏抽敭璁捐锛?
+- `PRD10_MATRIX` env var 鍦?yaml 椤堕儴鍒楀嚭 14 濂椾欢 = 鍗曚竴鏉ユ簮锛堜笌 `whyme-multiagent-workflow.mdc` 搂4.4 鍛戒护瀹屽叏涓€鑷达級
+- `concurrency: cancel-in-progress: true` 鈥?鍚?ref push 鍙栨秷鏃?run锛岃妭鐪侀搴?- `pip install -e ".[dev]"` 鏇挎崲鍘?`uv sync --dev`锛屼笌 `pyproject.toml setuptools` 涓€鑷?- 鍙屽紩鎿庣豢绔狅細SQLite 涓?PostgreSQL 16 閮借窇鍚?14 濂椾欢锛岃鐩?搂0銆屽弻寮曟搸缁跨珷銆嶈姹?- `lint` / `collect-only` 鏄‖闂ㄧ锛沗type-check` / `security` 鏄?advisory锛坈ontinue-on-error锛変笉闃诲 PRD10 baseline
 
 ### Test evidence
 
 ```
-# 1) Insights 单 suite
+# 1) Insights 鍗?suite
 python -m pytest tests/integration/api/test_prd10_insights_api.py -v -p no:cacheprovider --tb=short
-# → 6 passed in 2.73s
-# 用例：empty envelope / aggregate themes+stats / filter by type+status / create+dismiss / report+detail / validation error
+# 鈫?6 passed in 2.73s
+# 鐢ㄤ緥锛歟mpty envelope / aggregate themes+stats / filter by type+status / create+dismiss / report+detail / validation error
 
-# 2) PRD10 全 14 套件矩阵（whyme-multiagent-workflow.mdc §4.4）
-python -m pytest \
+# 2) PRD10 鍏?14 濂椾欢鐭╅樀锛坵hyme-multiagent-workflow.mdc 搂4.4锛?python -m pytest \
   tests/integration/api/test_prd10_v1_acceptance.py \
   tests/integration/api/test_prd10_frontend_binding.py \
   tests/integration/api/test_prd10_ai_api.py \
@@ -2962,58 +2475,46 @@ python -m pytest \
   tests/integration/api/test_prd10_insights_api.py \
   tests/integration/api/prd10/ \
   -q -p no:cacheprovider --tb=line --no-header
-# → 211 passed in 60.42s（log 入仓 .tmp/agent3-baseline.log）
-
-# 3) collect-only 必须干净
+# 鈫?211 passed in 60.42s锛坙og 鍏ヤ粨 .tmp/agent3-baseline.log锛?
+# 3) collect-only 蹇呴』骞插噣
 pytest --collect-only -q -p no:cacheprovider
-# → 788 tests collected, exit 0
+# 鈫?788 tests collected, exit 0
 
-# 4) ci.yml YAML 语法
+# 4) ci.yml YAML 璇硶
 python -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml', encoding='utf-8'))"
-# → ci.yml: yaml ok
+# 鈫?ci.yml: yaml ok
 ```
 
 ### Files touched
 
-- `.github/workflows/ci.yml` — 重写（旧版用 uv 跑全仓 + 撞 §6.1，新版 6 jobs 走 PRD10 矩阵）
-- `todo-tasks.md` — 更新顶部「最近更新」、§3.13 / §6.5 / §11.2 → done、§0 追加新基线测试矩阵行
-- `agent-progress-report.md` — 写本 milestone
+- `.github/workflows/ci.yml` 鈥?閲嶅啓锛堟棫鐗堢敤 uv 璺戝叏浠?+ 鎾?搂6.1锛屾柊鐗?6 jobs 璧?PRD10 鐭╅樀锛?- `todo-tasks.md` 鈥?鏇存柊椤堕儴銆屾渶杩戞洿鏂般€嶃€伮?.13 / 搂6.5 / 搂11.2 鈫?done銆伮? 杩藉姞鏂板熀绾挎祴璇曠煩闃佃
+- `agent-progress-report.md` 鈥?鍐欐湰 milestone
 
-**未动**：`static/mydow/*`（工程师 2 doing 中）、`auth/`/`common/`/`db/` 等 Agent 1 领地、`capture/`/`kb/`/`feed/` 等 Agent 2 领地。
+**鏈姩**锛歚static/mydow/*`锛堝伐绋嬪笀 2 doing 涓級銆乣auth/`/`common/`/`db/` 绛?Agent 1 棰嗗湴銆乣capture/`/`kb/`/`feed/` 绛?Agent 2 棰嗗湴銆?
+### Follow-ups锛圓gent 3 鑷垜鎺ョ画锛?
+鎸?`whyme-multiagent-workflow.mdc` 搂5.5銆屾寔缁棰嗐€嶈鍒欙紝鏈?milestone 瀹屾垚鍚?Agent 3 绔嬪埢鍦ㄩ鍦板唴鎸戜笅涓€涓?`open` 浠诲姟銆傚€欓€夛細
 
-### Follow-ups（Agent 3 自我接续）
-
-按 `whyme-multiagent-workflow.mdc` §5.5「持续认领」规则，本 milestone 完成后 Agent 3 立刻在领地内挑下一个 `open` 任务。候选：
-
-- §12.3 AI 调用缓存（同 prompt 24h 复用，`ai/router.py` + `ai/llm_provider.py` 加 LRU + Redis 可选）
-- §12.4 SSE 心跳与断线重连（`notifications/router.py` + `ai/router.py` SSE generator 加 `event: keepalive` 周期）
-- §12.2 Rate limit（`auth` / `ai` / `search` 三处加 token bucket）
-- §3.12 Embedding + semantic search（`SearchIndex.embedding_id` 真接 sentence-transformers）
-
-下一步先做 §12.4 SSE 心跳（与 §11.6 logging / §11.8 health 同属 observability 系列，不撞其他 agent），然后是 §12.3 AI 缓存。
-
+- 搂12.3 AI 璋冪敤缂撳瓨锛堝悓 prompt 24h 澶嶇敤锛宍ai/router.py` + `ai/llm_provider.py` 鍔?LRU + Redis 鍙€夛級
+- 搂12.4 SSE 蹇冭烦涓庢柇绾块噸杩烇紙`notifications/router.py` + `ai/router.py` SSE generator 鍔?`event: keepalive` 鍛ㄦ湡锛?- 搂12.2 Rate limit锛坄auth` / `ai` / `search` 涓夊鍔?token bucket锛?- 搂3.12 Embedding + semantic search锛坄SearchIndex.embedding_id` 鐪熸帴 sentence-transformers锛?
+涓嬩竴姝ュ厛鍋?搂12.4 SSE 蹇冭烦锛堜笌 搂11.6 logging / 搂11.8 health 鍚屽睘 observability 绯诲垪锛屼笉鎾炲叾浠?agent锛夛紝鐒跺悗鏄?搂12.3 AI 缂撳瓨銆?
 ---
 
-## Milestone 27 · §15.9 + §15.10 + §15.17 + §15.18 五条 §15 子任务一次性 done — DELIVERED
+## Milestone 27 路 搂15.9 + 搂15.10 + 搂15.17 + 搂15.18 浜旀潯 搂15 瀛愪换鍔′竴娆℃€?done 鈥?DELIVERED
 
-**When**: 2026-05-05 23:40（本会话续，by 总控 Engineer 1）
-
-**Why**: 用户指示「一直去领任务做，做到所有按钮生效、数据全打通才能停」。本轮把业务原型 lane 上 5 个紧密相关的 §15.x 任务一次连续推完，每个都先写 bridge.js helper + 字符串契约 + 真实 server smoke + 联合 baseline，然后立刻进下一个不汇报。
-
-### 一次完成的 5 条任务
-
-| # | 标题 | 落地点 |
+**When**: 2026-05-05 23:40锛堟湰浼氳瘽缁紝by 鎬绘帶 Engineer 1锛?
+**Why**: 鐢ㄦ埛鎸囩ず銆屼竴鐩村幓棰嗕换鍔″仛锛屽仛鍒版墍鏈夋寜閽敓鏁堛€佹暟鎹叏鎵撻€氭墠鑳藉仠銆嶃€傛湰杞妸涓氬姟鍘熷瀷 lane 涓?5 涓揣瀵嗙浉鍏崇殑 搂15.x 浠诲姟涓€娆¤繛缁帹瀹岋紝姣忎釜閮藉厛鍐?bridge.js helper + 瀛楃涓插绾?+ 鐪熷疄 server smoke + 鑱斿悎 baseline锛岀劧鍚庣珛鍒昏繘涓嬩竴涓笉姹囨姤銆?
+### 涓€娆″畬鎴愮殑 5 鏉′换鍔?
+| # | 鏍囬 | 钀藉湴鐐?|
 |---|---|---|
-| §15.9 | 文件夹详情 (`/kb/folders/{id}` + `/kb/documents?folder_id=`) | 后端补 GET 端点 + bridge `loadFolderDetail/bindFolderClickToDetail` 写 `.folder-main` |
-| §15.10 | 文档详情/编辑 (`/kb/documents/{id}` + PATCH) | bridge `loadDocumentForEditor/bindDocRowClick/bindDocEditorAutoSave` 800ms debounce |
-| §15.17 | 通知中心列表 + 单条/全部已读 | bridge `loadNotifications/markNotificationRead/markAllNotificationsRead/bindNotificationRowMarkRead/bindNotificationMarkAll` |
-| §15.18 | 个人中心 `.profile-main` 真实数据 | bridge `hydrateProfileMain` 在 `refreshProfileChip` 后自动调，写 4 元素 |
-| §15.19 | 全局搜索 + suggestions（Agent 3 lane） | 我加 §15.19 写到一半发现 Agent 3 早已实现，retract 我的版本、保留 Agent 3 的，端到端 smoke 可见命中 |
+| 搂15.9 | 鏂囦欢澶硅鎯?(`/kb/folders/{id}` + `/kb/documents?folder_id=`) | 鍚庣琛?GET 绔偣 + bridge `loadFolderDetail/bindFolderClickToDetail` 鍐?`.folder-main` |
+| 搂15.10 | 鏂囨。璇︽儏/缂栬緫 (`/kb/documents/{id}` + PATCH) | bridge `loadDocumentForEditor/bindDocRowClick/bindDocEditorAutoSave` 800ms debounce |
+| 搂15.17 | 閫氱煡涓績鍒楄〃 + 鍗曟潯/鍏ㄩ儴宸茶 | bridge `loadNotifications/markNotificationRead/markAllNotificationsRead/bindNotificationRowMarkRead/bindNotificationMarkAll` |
+| 搂15.18 | 涓汉涓績 `.profile-main` 鐪熷疄鏁版嵁 | bridge `hydrateProfileMain` 鍦?`refreshProfileChip` 鍚庤嚜鍔ㄨ皟锛屽啓 4 鍏冪礌 |
+| 搂15.19 | 鍏ㄥ眬鎼滅储 + suggestions锛圓gent 3 lane锛?| 鎴戝姞 搂15.19 鍐欏埌涓€鍗婂彂鐜?Agent 3 鏃╁凡瀹炵幇锛宺etract 鎴戠殑鐗堟湰銆佷繚鐣?Agent 3 鐨勶紝绔埌绔?smoke 鍙鍛戒腑 |
 
-### 关键交付：后端补缺端点 `GET /api/v1/kb/folders/{folder_id}`
+### 鍏抽敭浜や粯锛氬悗绔ˉ缂虹鐐?`GET /api/v1/kb/folders/{folder_id}`
 
-PRD10 §10.4 要求文件夹详情，但原 router 只有 `PATCH/DELETE/POST move/POST rename` 没 GET。补：
-
+PRD10 搂10.4 瑕佹眰鏂囦欢澶硅鎯咃紝浣嗗師 router 鍙湁 `PATCH/DELETE/POST move/POST rename` 娌?GET銆傝ˉ锛?
 ```python
 @router.get("/folders/{folder_id}")
 async def get_folder(
@@ -3035,190 +2536,145 @@ async def get_folder(
     return success_response(payload, request=request)
 ```
 
-### 真实 server smoke 全过
+### 鐪熷疄 server smoke 鍏ㄨ繃
 
 ```
-.tmp/smoke_15_9_15_17.py     (§15.9 + §15.17 + §15.19)
-  GET /kb/folders/{Smoke 新建文件夹 §15.8} → desc 真实读出 ✓
-  GET /kb/documents?folder_id 0 docs（新建空，符合预期）
-  GET /notifications?limit=20 → 5 通知 (job_completed/document_ready/insight_generated)
-  POST /notifications/{id}/read → unread 5→4 ✓
-  POST /notifications/read-all → unread→0 ✓
-  GET /search?q=AI → 1 命中 "AI 对话引用引擎设计"
-  GET /search/suggestions?q=ai → 1 建议
+.tmp/smoke_15_9_15_17.py     (搂15.9 + 搂15.17 + 搂15.19)
+  GET /kb/folders/{Smoke 鏂板缓鏂囦欢澶?搂15.8} 鈫?desc 鐪熷疄璇诲嚭 鉁?  GET /kb/documents?folder_id 0 docs锛堟柊寤虹┖锛岀鍚堥鏈燂級
+  GET /notifications?limit=20 鈫?5 閫氱煡 (job_completed/document_ready/insight_generated)
+  POST /notifications/{id}/read 鈫?unread 5鈫? 鉁?  POST /notifications/read-all 鈫?unread鈫? 鉁?  GET /search?q=AI 鈫?1 鍛戒腑 "AI 瀵硅瘽寮曠敤寮曟搸璁捐"
+  GET /search/suggestions?q=ai 鈫?1 寤鸿
   === SMOKE PASS ===
 
-.tmp/smoke_15_10.py          (§15.10 文档编辑)
-  list 4 docs in 产品设计 folder
-  GET /kb/documents/{id}?include_content=true → "联调对接清单与状态码" word_count=3597
-  PATCH title "联调对接清单与状态码 · §15.10 smoke" → 200 ✓
-  PATCH content + tags=[smoke,§15.10] + is_favorite=true → 同时生效 ✓
-  Restore title → 200 ✓
-  === SMOKE PASS ===
+.tmp/smoke_15_10.py          (搂15.10 鏂囨。缂栬緫)
+  list 4 docs in 浜у搧璁捐 folder
+  GET /kb/documents/{id}?include_content=true 鈫?"鑱旇皟瀵规帴娓呭崟涓庣姸鎬佺爜" word_count=3597
+  PATCH title "鑱旇皟瀵规帴娓呭崟涓庣姸鎬佺爜 路 搂15.10 smoke" 鈫?200 鉁?  PATCH content + tags=[smoke,搂15.10] + is_favorite=true 鈫?鍚屾椂鐢熸晥 鉁?  Restore title 鈫?200 鉁?  === SMOKE PASS ===
 ```
 
-### bridge.js 增量
+### bridge.js 澧為噺
 
-bridge.js 现在 ~2900 行，本轮新增 ~520 行：
-- `_hydrateFolderHeader / _renderDocRow / loadFolderDetail / bindFolderClickToDetail`（§15.9）
-- `_hydrateDocEditor / _scheduleDocPatch / loadDocumentForEditor / patchCurrentDocument / bindDocRowClick / bindDocEditorAutoSave`（§15.10，含 800ms debounce 自动保存）
-- `_formatNotifTime / _hydrateNoticeRow / loadNotifications / markNotificationRead / markAllNotificationsRead / bindNotificationRowMarkRead / bindNotificationMarkAll`（§15.17）
-- `hydrateProfileMain`（§15.18，挂在 `refreshProfileChip` 后）
+bridge.js 鐜板湪 ~2900 琛岋紝鏈疆鏂板 ~520 琛岋細
+- `_hydrateFolderHeader / _renderDocRow / loadFolderDetail / bindFolderClickToDetail`锛埪?5.9锛?- `_hydrateDocEditor / _scheduleDocPatch / loadDocumentForEditor / patchCurrentDocument / bindDocRowClick / bindDocEditorAutoSave`锛埪?5.10锛屽惈 800ms debounce 鑷姩淇濆瓨锛?- `_formatNotifTime / _hydrateNoticeRow / loadNotifications / markNotificationRead / markAllNotificationsRead / bindNotificationRowMarkRead / bindNotificationMarkAll`锛埪?5.17锛?- `hydrateProfileMain`锛埪?5.18锛屾寕鍦?`refreshProfileChip` 鍚庯級
 
-window.MydowBridge 暴露 18+ 个新 helper 名。
-
-### 字符串契约测试
-
-`TestBusinessPrototypeBridge` 升级了三个 token 列表：
-- PRD10 path：13 → 16（加 `/kb/documents` `/notifications/read-all`，已含 `/kb/folders` `/cards/` `/favorite`）
-- helper 命名：14 → 33（加 §15.6/§15.8/§15.9/§15.17/§15.18/§15.10 全部）
-- DOM hooks：15 → 22（加 §15.7 modal hooks + §15.6/§15.8 类名 + drawer hooks）
-
+window.MydowBridge 鏆撮湶 18+ 涓柊 helper 鍚嶃€?
+### 瀛楃涓插绾︽祴璇?
+`TestBusinessPrototypeBridge` 鍗囩骇浜嗕笁涓?token 鍒楄〃锛?- PRD10 path锛?3 鈫?16锛堝姞 `/kb/documents` `/notifications/read-all`锛屽凡鍚?`/kb/folders` `/cards/` `/favorite`锛?- helper 鍛藉悕锛?4 鈫?33锛堝姞 搂15.6/搂15.8/搂15.9/搂15.17/搂15.18/搂15.10 鍏ㄩ儴锛?- DOM hooks锛?5 鈫?22锛堝姞 搂15.7 modal hooks + 搂15.6/搂15.8 绫诲悕 + drawer hooks锛?
 ### Test evidence
 
 ```
-# Frontend binding 单套件
-python -m pytest tests/integration/api/test_prd10_frontend_binding.py -q
-# → 24 passed in 4.16s
+# Frontend binding 鍗曞浠?python -m pytest tests/integration/api/test_prd10_frontend_binding.py -q
+# 鈫?24 passed in 4.16s
 
-# 联合 14 套件 baseline（每个 §15.x done 后都跑了一次，最终）
+# 鑱斿悎 14 濂椾欢 baseline锛堟瘡涓?搂15.x done 鍚庨兘璺戜簡涓€娆★紝鏈€缁堬級
 python -m pytest tests/integration/api/test_prd10_*.py tests/integration/api/prd10/ -q
-# → 225 passed in 55.36s
+# 鈫?225 passed in 55.36s
 ```
 
 ### Files touched
 
-- `src/agent_os/kb/router.py` — `GET /folders/{folder_id}` 新端点
-- `static/mydow/biz/bridge.js` — +520 行（5 块新逻辑）
-- `tests/integration/api/test_prd10_frontend_binding.py` — 三个契约 token 列表升级
-- `todo-tasks.md` — §15.6 / §15.7 / §15.8 / §15.9 / §15.10 / §15.17 / §15.18 全部 → done
-- `agent-progress-report.md` — Milestone 25/26/27 三个增量
-- `.tmp/smoke_15_6_15_8.py` / `.tmp/smoke_15_7_modals.py` / `.tmp/smoke_15_9_15_17.py` / `.tmp/smoke_15_10.py` 端到端 smoke 全过
-- **未动** `static/mydow/{index.html,app.js,style.css,mydow-api.js}` 与 `static/mydow/biz/index.html` 任何一行
-
-### §15 lane 当前状态
-
-完成（done）：§15.1 / §15.2 / §15.3 / §15.4 / §15.6 / §15.7 / §15.8 / §15.9 / §15.10 / §15.11 / §15.12 / §15.13 / §15.14 / §15.15 / §15.16 / §15.17 / §15.18 / §15.19 — **18/21**。
-
-剩余：§15.5（doing，洞察中心右侧小面板需把内容分布环形图与每日洞察接 `/insights/preview` 兜底）、§15.20（切默认入口 `/mydow/` → biz）、§15.21（Playwright 视觉走查 13 页 + 12 抽屉）。
-
-下一手：§15.21 Playwright 自动化走查（自动跑 biz 路径，截图，验证 0 console error），完成后 §15.20 切入口。
-
+- `src/agent_os/kb/router.py` 鈥?`GET /folders/{folder_id}` 鏂扮鐐?- `static/mydow/biz/bridge.js` 鈥?+520 琛岋紙5 鍧楁柊閫昏緫锛?- `tests/integration/api/test_prd10_frontend_binding.py` 鈥?涓変釜濂戠害 token 鍒楄〃鍗囩骇
+- `todo-tasks.md` 鈥?搂15.6 / 搂15.7 / 搂15.8 / 搂15.9 / 搂15.10 / 搂15.17 / 搂15.18 鍏ㄩ儴 鈫?done
+- `agent-progress-report.md` 鈥?Milestone 25/26/27 涓変釜澧為噺
+- `.tmp/smoke_15_6_15_8.py` / `.tmp/smoke_15_7_modals.py` / `.tmp/smoke_15_9_15_17.py` / `.tmp/smoke_15_10.py` 绔埌绔?smoke 鍏ㄨ繃
+- **鏈姩** `static/mydow/{index.html,app.js,style.css,mydow-api.js}` 涓?`static/mydow/biz/index.html` 浠讳綍涓€琛?
+### 搂15 lane 褰撳墠鐘舵€?
+瀹屾垚锛坉one锛夛細搂15.1 / 搂15.2 / 搂15.3 / 搂15.4 / 搂15.6 / 搂15.7 / 搂15.8 / 搂15.9 / 搂15.10 / 搂15.11 / 搂15.12 / 搂15.13 / 搂15.14 / 搂15.15 / 搂15.16 / 搂15.17 / 搂15.18 / 搂15.19 鈥?**18/21**銆?
+鍓╀綑锛毬?5.5锛坉oing锛屾礊瀵熶腑蹇冨彸渚у皬闈㈡澘闇€鎶婂唴瀹瑰垎甯冪幆褰㈠浘涓庢瘡鏃ユ礊瀵熸帴 `/insights/preview` 鍏滃簳锛夈€伮?5.20锛堝垏榛樿鍏ュ彛 `/mydow/` 鈫?biz锛夈€伮?5.21锛圥laywright 瑙嗚璧版煡 13 椤?+ 12 鎶藉眽锛夈€?
+涓嬩竴鎵嬶細搂15.21 Playwright 鑷姩鍖栬蛋鏌ワ紙鑷姩璺?biz 璺緞锛屾埅鍥撅紝楠岃瘉 0 console error锛夛紝瀹屾垚鍚?搂15.20 鍒囧叆鍙ｃ€?
 ---
 
-## Milestone 26 · §15.6 卡片点击侧抽 + §15.8 KB 首页文件夹真实数据 — DELIVERED
+## Milestone 26 路 搂15.6 鍗＄墖鐐瑰嚮渚ф娊 + 搂15.8 KB 棣栭〉鏂囦欢澶圭湡瀹炴暟鎹?鈥?DELIVERED
 
-**When**: 2026-05-05 23:25（本会话续，by 总控 Engineer 1）
-
-**Why**: 用户明确「不必停下来汇报，一直去领任务做；如果某任务一直 doing 可能工程师失败可以接手做完；做到所有按钮生效、数据全打通」。本轮顺手接手 §15.8（前一会话标 doing 但 bridge.js 实际没落代码 = 空 doing），并把 §15.6 卡片点击侧抽一起做了，同时拉一遍联合 baseline 确认与 Agent 3 §15.11/§15.15 garden+skills 改动并存绿章。
-
+**When**: 2026-05-05 23:25锛堟湰浼氳瘽缁紝by 鎬绘帶 Engineer 1锛?
+**Why**: 鐢ㄦ埛鏄庣‘銆屼笉蹇呭仠涓嬫潵姹囨姤锛屼竴鐩村幓棰嗕换鍔″仛锛涘鏋滄煇浠诲姟涓€鐩?doing 鍙兘宸ョ▼甯堝け璐ュ彲浠ユ帴鎵嬪仛瀹岋紱鍋氬埌鎵€鏈夋寜閽敓鏁堛€佹暟鎹叏鎵撻€氥€嶃€傛湰杞『鎵嬫帴鎵?搂15.8锛堝墠涓€浼氳瘽鏍?doing 浣?bridge.js 瀹為檯娌¤惤浠ｇ爜 = 绌?doing锛夛紝骞舵妸 搂15.6 鍗＄墖鐐瑰嚮渚ф娊涓€璧峰仛浜嗭紝鍚屾椂鎷変竴閬嶈仈鍚?baseline 纭涓?Agent 3 搂15.11/搂15.15 garden+skills 鏀瑰姩骞跺瓨缁跨珷銆?
 ### Delivered
 
-#### §15.8 KB 首页 — 6 个新 helper
+#### 搂15.8 KB 棣栭〉 鈥?6 涓柊 helper
 
 ```
-loadKbLibraryGrid()                 → GET /kb/folders?include_counts=true
-                                      → 复用 .library-card 模板原地渲染 N 张真文件夹卡
-_hydrateFolderCard(card, data, idx) → 替换名/计数/收藏/时间/渐变色（6 种循环）
-toggleFolderFavorite(id, next)      → PATCH /kb/folders/{id}{is_favorite}
-createFolderFromModal(button)       → POST /kb/folders{name,description}
-bindKbStarActions()                 → capture-phase 拦截 .library-card .star-action
-bindKbNewFolderSubmit()             → capture-phase 拦截 newFolder modal 创建按钮
-bindKbCardOpenFolder()              → capture-phase 拦截整张卡片点击（V1 toast，§15.9 接详情）
+loadKbLibraryGrid()                 鈫?GET /kb/folders?include_counts=true
+                                      鈫?澶嶇敤 .library-card 妯℃澘鍘熷湴娓叉煋 N 寮犵湡鏂囦欢澶瑰崱
+_hydrateFolderCard(card, data, idx) 鈫?鏇挎崲鍚?璁℃暟/鏀惰棌/鏃堕棿/娓愬彉鑹诧紙6 绉嶅惊鐜級
+toggleFolderFavorite(id, next)      鈫?PATCH /kb/folders/{id}{is_favorite}
+createFolderFromModal(button)       鈫?POST /kb/folders{name,description}
+bindKbStarActions()                 鈫?capture-phase 鎷︽埅 .library-card .star-action
+bindKbNewFolderSubmit()             鈫?capture-phase 鎷︽埅 newFolder modal 鍒涘缓鎸夐挳
+bindKbCardOpenFolder()              鈫?capture-phase 鎷︽埅鏁村紶鍗＄墖鐐瑰嚮锛圴1 toast锛屄?5.9 鎺ヨ鎯咃級
 ```
 
-DOM 兼容：复用 biz/index.html 第 5826-5904 行的 6 张静态 `.library-card` 作为模板，clone-and-replace，保留所有 CSS hover / focus / 视觉。Failure-safe：`/kb/folders` 失败时 silent 留静态卡，不影响其他模块。**未动** biz/index.html 任何一行。
-
-#### §15.6 卡片点击侧抽 — 5 个新 helper
+DOM 鍏煎锛氬鐢?biz/index.html 绗?5826-5904 琛岀殑 6 寮犻潤鎬?`.library-card` 浣滀负妯℃澘锛宑lone-and-replace锛屼繚鐣欐墍鏈?CSS hover / focus / 瑙嗚銆侳ailure-safe锛歚/kb/folders` 澶辫触鏃?silent 鐣欓潤鎬佸崱锛屼笉褰卞搷鍏朵粬妯″潡銆?*鏈姩** biz/index.html 浠讳綍涓€琛屻€?
+#### 搂15.6 鍗＄墖鐐瑰嚮渚ф娊 鈥?5 涓柊 helper
 
 ```
-loadCardForDrawer(cardId)        → GET /cards/{id}
-hydrateItemDetailDrawer(d, p)    → 写 [data-drawer="itemDetail"] 的 <h2> / .drawer-summary / .tag-list
-bindCardClickToDrawer()          → capture-phase 拦截 .idea-card[data-card-id]，async 拉数据写抽屉
-favoriteCardById(id, makeFav)    → POST /cards/{id}/favorite{is_favorite} explicit 切换
-bindCardFavoriteAction()         → capture-phase 拦截 .save-icon[data-bookmark] / .favorite
+loadCardForDrawer(cardId)        鈫?GET /cards/{id}
+hydrateItemDetailDrawer(d, p)    鈫?鍐?[data-drawer="itemDetail"] 鐨?<h2> / .drawer-summary / .tag-list
+bindCardClickToDrawer()          鈫?capture-phase 鎷︽埅 .idea-card[data-card-id]锛宎sync 鎷夋暟鎹啓鎶藉眽
+favoriteCardById(id, makeFav)    鈫?POST /cards/{id}/favorite{is_favorite} explicit 鍒囨崲
+bindCardFavoriteAction()         鈫?capture-phase 鎷︽埅 .save-icon[data-bookmark] / .favorite
 ```
 
-策略：不阻止 IIFE 后续 `openDrawer("itemDetail")` 动画，capture-phase 先 fetch 真数据再 await hydrate，所以原型抽屉先打开（毛玻璃 / slide-in 动画），数据到达后填充。失败 toast 提示「加载卡片详情失败」。
-
-收藏按钮：发现 `POST /cards/{id}/favorite` 走 `FavoriteRequest.is_favorite=True` (默认 true，**非 toggle**)，bridge.js 显式传 `{is_favorite: bool}` 实现双向切换；dataset.cardFavorite 与 `.active` class 双向反映；失败 toast 不破坏原 UI。
-
+绛栫暐锛氫笉闃绘 IIFE 鍚庣画 `openDrawer("itemDetail")` 鍔ㄧ敾锛宑apture-phase 鍏?fetch 鐪熸暟鎹啀 await hydrate锛屾墍浠ュ師鍨嬫娊灞夊厛鎵撳紑锛堟瘺鐜荤拑 / slide-in 鍔ㄧ敾锛夛紝鏁版嵁鍒拌揪鍚庡～鍏呫€傚け璐?toast 鎻愮ず銆屽姞杞藉崱鐗囪鎯呭け璐ャ€嶃€?
+鏀惰棌鎸夐挳锛氬彂鐜?`POST /cards/{id}/favorite` 璧?`FavoriteRequest.is_favorite=True` (榛樿 true锛?*闈?toggle**)锛宐ridge.js 鏄惧紡浼?`{is_favorite: bool}` 瀹炵幇鍙屽悜鍒囨崲锛沝ataset.cardFavorite 涓?`.active` class 鍙屽悜鍙嶆槧锛涘け璐?toast 涓嶇牬鍧忓師 UI銆?
 ### Test evidence
 
 ```
-# 14 套件 + prd10/ 联合
+# 14 濂椾欢 + prd10/ 鑱斿悎
 python -m pytest tests/integration/api/test_prd10_*.py tests/integration/api/prd10/ -q
-# → 225 passed in 39.71s (.tmp/baseline_run_15_6_15_8.txt)
+# 鈫?225 passed in 39.71s (.tmp/baseline_run_15_6_15_8.txt)
 
-# 字符串契约升级（PRD10 path 加 /kb/folders /cards/ /favorite；helper 加 11 个；DOM hook 加 7 个）
+# 瀛楃涓插绾﹀崌绾э紙PRD10 path 鍔?/kb/folders /cards/ /favorite锛沨elper 鍔?11 涓紱DOM hook 鍔?7 涓級
 python -m pytest tests/integration/api/test_prd10_frontend_binding.py -q
-# → 24 passed in 4.82s
+# 鈫?24 passed in 4.82s
 
-# 真实 server end-to-end smoke
+# 鐪熷疄 server end-to-end smoke
 python .tmp/smoke_15_6_15_8.py
-# → §15.8: 6 folders before → POST 创建 1 → 7 folders after delta=1; favorite toggle true→false PASS
-# → §15.6: GET /cards/{first.id} → 标题/tags/fav read OK; favorite set true→false PASS
-# → § === §15.6 + §15.8 SMOKE PASS ===
+# 鈫?搂15.8: 6 folders before 鈫?POST 鍒涘缓 1 鈫?7 folders after delta=1; favorite toggle true鈫抐alse PASS
+# 鈫?搂15.6: GET /cards/{first.id} 鈫?鏍囬/tags/fav read OK; favorite set true鈫抐alse PASS
+# 鈫?搂 === 搂15.6 + 搂15.8 SMOKE PASS ===
 ```
 
 ### Files touched
 
-- `static/mydow/biz/bridge.js` — +290 行（11 个新 helper for §15.6 + §15.8）
-- `tests/integration/api/test_prd10_frontend_binding.py` — `TestBusinessPrototypeBridge` 字符串契约升级（path 13→16；helper 14→25；DOM hook 15→22）
-- `todo-tasks.md` — §15.6 / §15.8 → done 详细 evidence
-- `agent-progress-report.md` — 本 milestone
-- `.tmp/smoke_15_6_15_8.py` — 新建端到端 smoke
-- **未动** `static/mydow/{index.html,app.js,style.css,mydow-api.js}` 与 `static/mydow/biz/index.html` 任何一行
-
+- `static/mydow/biz/bridge.js` 鈥?+290 琛岋紙11 涓柊 helper for 搂15.6 + 搂15.8锛?- `tests/integration/api/test_prd10_frontend_binding.py` 鈥?`TestBusinessPrototypeBridge` 瀛楃涓插绾﹀崌绾э紙path 13鈫?6锛沨elper 14鈫?5锛汥OM hook 15鈫?2锛?- `todo-tasks.md` 鈥?搂15.6 / 搂15.8 鈫?done 璇︾粏 evidence
+- `agent-progress-report.md` 鈥?鏈?milestone
+- `.tmp/smoke_15_6_15_8.py` 鈥?鏂板缓绔埌绔?smoke
+- **鏈姩** `static/mydow/{index.html,app.js,style.css,mydow-api.js}` 涓?`static/mydow/biz/index.html` 浠讳綍涓€琛?
 ### Follow-ups
 
-- §15.9 文件夹详情视图（`bindKbCardOpenFolder` 当前是 toast 占位，等待 §15.9 接 `/kb/folders/{id}` + `/kb/documents?folder_id=` 渲染详情）
-- §15.10 文档详情/编辑（`hydrateItemDetailDrawer` 当前只填 card 数据，文档详情走 `/kb/documents/{id}` 抽屉应是另一个 helper）
-- 个人中心抽屉 §15.18：bridge.js 已经在 sidebar chip 注入真名/Plan，但点击 `[data-open-profile]` 弹个人中心 4 面板的真实接入还在 doing
-- 通知抽屉 §15.17：unread badge 已显示，但点开通知抽屉读 `/notifications` 列表 + 单点已读还在 doing
+- 搂15.9 鏂囦欢澶硅鎯呰鍥撅紙`bindKbCardOpenFolder` 褰撳墠鏄?toast 鍗犱綅锛岀瓑寰?搂15.9 鎺?`/kb/folders/{id}` + `/kb/documents?folder_id=` 娓叉煋璇︽儏锛?- 搂15.10 鏂囨。璇︽儏/缂栬緫锛坄hydrateItemDetailDrawer` 褰撳墠鍙～ card 鏁版嵁锛屾枃妗ｈ鎯呰蛋 `/kb/documents/{id}` 鎶藉眽搴旀槸鍙︿竴涓?helper锛?- 涓汉涓績鎶藉眽 搂15.18锛歜ridge.js 宸茬粡鍦?sidebar chip 娉ㄥ叆鐪熷悕/Plan锛屼絾鐐瑰嚮 `[data-open-profile]` 寮逛釜浜轰腑蹇?4 闈㈡澘鐨勭湡瀹炴帴鍏ヨ繕鍦?doing
+- 閫氱煡鎶藉眽 搂15.17锛歶nread badge 宸叉樉绀猴紝浣嗙偣寮€閫氱煡鎶藉眽璇?`/notifications` 鍒楄〃 + 鍗曠偣宸茶杩樺湪 doing
 
 ---
 
-## Milestone 25 · §15.7 业务原型首页 4 个 modal 接真实 API（上传/剪藏/语音/深研）— DELIVERED
+## Milestone 25 路 搂15.7 涓氬姟鍘熷瀷棣栭〉 4 涓?modal 鎺ョ湡瀹?API锛堜笂浼?鍓棌/璇煶/娣辩爺锛夆€?DELIVERED
 
-**When**: 2026-05-05 23:00（本会话续，by 总控 Engineer 1）
-
-**Why**: 用户明确指示放下 §6.2 等纯后端清理任务，专注 §15 业务原型还原 lane 把每个按钮接到真实 PRD10 API。Chrome MCP nav sweep §7.25 报告说首页 5 个 quick-action 按钮（`添加图片或文件 / 网页剪藏 x2 / 上传文件 / 深度研究`）点击无任何反馈（main DOM/URL/toast/网络请求都不变），是首屏第一眼最显眼的硬伤。这一轮 §15.7 把这 4 个对应的 modal 接到真实 API。
-
-按规则**不动** SPA 文件（`static/mydow/{index.html,app.js,style.css,mydow-api.js}`）和 biz 原型 HTML（`static/mydow/biz/index.html` 是业务方 zip 复制品），只动 `static/mydow/biz/bridge.js` + 测试 + smoke 脚本。
-
+**When**: 2026-05-05 23:00锛堟湰浼氳瘽缁紝by 鎬绘帶 Engineer 1锛?
+**Why**: 鐢ㄦ埛鏄庣‘鎸囩ず鏀句笅 搂6.2 绛夌函鍚庣娓呯悊浠诲姟锛屼笓娉?搂15 涓氬姟鍘熷瀷杩樺師 lane 鎶婃瘡涓寜閽帴鍒扮湡瀹?PRD10 API銆侰hrome MCP nav sweep 搂7.25 鎶ュ憡璇撮椤?5 涓?quick-action 鎸夐挳锛坄娣诲姞鍥剧墖鎴栨枃浠?/ 缃戦〉鍓棌 x2 / 涓婁紶鏂囦欢 / 娣卞害鐮旂┒`锛夌偣鍑绘棤浠讳綍鍙嶉锛坢ain DOM/URL/toast/缃戠粶璇锋眰閮戒笉鍙橈級锛屾槸棣栧睆绗竴鐪兼渶鏄剧溂鐨勭‖浼ゃ€傝繖涓€杞?搂15.7 鎶婅繖 4 涓搴旂殑 modal 鎺ュ埌鐪熷疄 API銆?
+鎸夎鍒?*涓嶅姩** SPA 鏂囦欢锛坄static/mydow/{index.html,app.js,style.css,mydow-api.js}`锛夊拰 biz 鍘熷瀷 HTML锛坄static/mydow/biz/index.html` 鏄笟鍔℃柟 zip 澶嶅埗鍝侊級锛屽彧鍔?`static/mydow/biz/bridge.js` + 娴嬭瘯 + smoke 鑴氭湰銆?
 ### Delivered
 
-#### 拦截策略：capture-phase + stopImmediatePropagation
+#### 鎷︽埅绛栫暐锛歝apture-phase + stopImmediatePropagation
 
-biz/index.html 行 8075-8081 的 inline IIFE 用 document-level **bubbling** click delegation 拦截所有 `[data-toast]` 元素 → 触发 `simulateAction`（setTimeout 假进度）。我们在 boot 时注册一个 **capture-phase** document listener（`addEventListener("click", handler, true)`），在 IIFE 之前匹配 4 个 home-modal 的提交按钮，用 `event.stopImmediatePropagation()` 短路掉 IIFE。其它 `[data-toast]` 按钮（skill 试用、settings 等）继续走 IIFE 的 simulateAction。Cancel 按钮（`[data-close-layer]`）保留 IIFE 行为，正常关闭 modal。
+biz/index.html 琛?8075-8081 鐨?inline IIFE 鐢?document-level **bubbling** click delegation 鎷︽埅鎵€鏈?`[data-toast]` 鍏冪礌 鈫?瑙﹀彂 `simulateAction`锛坰etTimeout 鍋囪繘搴︼級銆傛垜浠湪 boot 鏃舵敞鍐屼竴涓?**capture-phase** document listener锛坄addEventListener("click", handler, true)`锛夛紝鍦?IIFE 涔嬪墠鍖归厤 4 涓?home-modal 鐨勬彁浜ゆ寜閽紝鐢?`event.stopImmediatePropagation()` 鐭矾鎺?IIFE銆傚叾瀹?`[data-toast]` 鎸夐挳锛坰kill 璇曠敤銆乻ettings 绛夛級缁х画璧?IIFE 鐨?simulateAction銆侰ancel 鎸夐挳锛坄[data-close-layer]`锛変繚鐣?IIFE 琛屼负锛屾甯稿叧闂?modal銆?
+#### 4 涓?modal 鐪熷疄 API 閾捐矾
 
-#### 4 个 modal 真实 API 链路
-
-| Modal | Selector | 真实 API |
+| Modal | Selector | 鐪熷疄 API |
 |---|---|---|
-| 上传文件 | `[data-modal="uploadFile"]` 「开始上传」 | 注入隐藏 `<input type="file">` → user click 后 `change` 事件 → `POST /uploads/presign(filename, mime_type, size_bytes)` → `PUT /uploads/local/{upload_id}` 直接 PUT raw bytes（带 Bearer token）→ `POST /capture/file/commit(upload_id, filename, mime_type, size_bytes, auto_process: true)`；成功后 toast「已上传 X，正在自动整理」+ `closeAllModals()` + `loadFeedIntoRecentView()` + `refreshFeedCounters()` + `refreshTodayInsights()` |
-| 网页剪藏 | `[data-modal="webLink"]` 「保存剪藏」 | 读 `input[type="text"]` value → `POST /capture/link(url, auto_process: true)`；成功后 toast「网页已保存到最近捕捉，AI 整理中」+ closeAllModals + 刷新链路 |
-| 深度研究 | `[data-modal="deepResearch"]` 「开始研究」 | 读 `input` (主题) / `select` (范围) / `textarea` (输出) → `POST /ai/conversations(title:深度研究：{topic}, mode: "report")` 拿 conversation id → `POST /ai/conversations/{id}/messages(content)` seed 第一条用户消息（包含主题/范围/输出三段）；成功后 toast + `refreshUnreadBadge()`（AI 整理完成后会有通知） |
-| 语音输入 | `[data-modal="voiceInput"]` | V1 占位 toast「P1 将接 MediaRecorder + /uploads」+ closeAllModals。真实录音转写出 P1 范畴 |
+| 涓婁紶鏂囦欢 | `[data-modal="uploadFile"]` 銆屽紑濮嬩笂浼犮€?| 娉ㄥ叆闅愯棌 `<input type="file">` 鈫?user click 鍚?`change` 浜嬩欢 鈫?`POST /uploads/presign(filename, mime_type, size_bytes)` 鈫?`PUT /uploads/local/{upload_id}` 鐩存帴 PUT raw bytes锛堝甫 Bearer token锛夆啋 `POST /capture/file/commit(upload_id, filename, mime_type, size_bytes, auto_process: true)`锛涙垚鍔熷悗 toast銆屽凡涓婁紶 X锛屾鍦ㄨ嚜鍔ㄦ暣鐞嗐€? `closeAllModals()` + `loadFeedIntoRecentView()` + `refreshFeedCounters()` + `refreshTodayInsights()` |
+| 缃戦〉鍓棌 | `[data-modal="webLink"]` 銆屼繚瀛樺壀钘忋€?| 璇?`input[type="text"]` value 鈫?`POST /capture/link(url, auto_process: true)`锛涙垚鍔熷悗 toast銆岀綉椤靛凡淇濆瓨鍒版渶杩戞崟鎹夛紝AI 鏁寸悊涓€? closeAllModals + 鍒锋柊閾捐矾 |
+| 娣卞害鐮旂┒ | `[data-modal="deepResearch"]` 銆屽紑濮嬬爺绌躲€?| 璇?`input` (涓婚) / `select` (鑼冨洿) / `textarea` (杈撳嚭) 鈫?`POST /ai/conversations(title:娣卞害鐮旂┒锛歿topic}, mode: "report")` 鎷?conversation id 鈫?`POST /ai/conversations/{id}/messages(content)` seed 绗竴鏉＄敤鎴锋秷鎭紙鍖呭惈涓婚/鑼冨洿/杈撳嚭涓夋锛夛紱鎴愬姛鍚?toast + `refreshUnreadBadge()`锛圓I 鏁寸悊瀹屾垚鍚庝細鏈夐€氱煡锛?|
+| 璇煶杈撳叆 | `[data-modal="voiceInput"]` | V1 鍗犱綅 toast銆孭1 灏嗘帴 MediaRecorder + /uploads銆? closeAllModals銆傜湡瀹炲綍闊宠浆鍐欏嚭 P1 鑼冪暣 |
 
-#### 字段对齐（修了 4 个 bug）
+#### 瀛楁瀵归綈锛堜慨浜?4 涓?bug锛?
+璺?smoke 鏃舵挒浜?4 涓?schema 涓嶄竴鑷?bug锛堣繖閮芥槸 bridge.js 涔嬪墠鐨勫崰浣嶅亣璁?vs 鐪熷疄 PRD10 backend锛夛細
 
-跑 smoke 时撞了 4 个 schema 不一致 bug（这都是 bridge.js 之前的占位假设 vs 真实 PRD10 backend）：
+1. `/uploads/presign` 璇锋眰瀛楁鏄?`mime_type / size_bytes` 涓嶆槸 `content_type / size` 鈥?bridge.js 鏀规
+2. `/uploads/presign` 杩斿洖瀛楁鏄?`upload_url` 涓嶆槸 `put_url` 鈥?bridge.js 鏀规锛堥『鎵嬫妸 fallback 鍒犳帀閬垮厤璇锛?3. `/ai/conversations.mode` enum 鏄?`general | knowledge | planning | report`锛屾病鏈?`research` 鈥?bridge.js 鏀圭敤 `report`锛堟繁搴︾爺绌?= report mode锛?4. `/today.stats` 瀛楁鏄?`today_capture_count / pending_task_count / knowledge_items_count / weekly_growth_rate`锛屼笉鏄?`today_captures` 鎴?`captures_today` 鈥?bridge.js `refreshTodayInsights` 鏀规锛屼笖鏂板鐩存帴鏍规嵁 `<h3>` 鏂囨湰鍖归厤锛堛€屼粖鏃ョ伒鎰熸崟鎹?浠婃棩鎹曟崏/鐭ヨ瘑搴?寰呭姙浠诲姟銆嶏級娉ㄥ叆 `<span class="stat-value">` 鏁板瓧锛屼笉鍐嶄緷璧?`[data-stat=*]` data-attribute锛坆iz/index.html 娌￠偅 marker锛?
+#### 娴嬭瘯 + Smoke 绔埌绔?
+`tests/integration/api/test_prd10_frontend_binding.py::TestBusinessPrototypeBridge` 鍗囩骇锛?- `test_biz_bridge_js_covers_prd10_paths` 鈥?蹇呭惈 11 鏉¤矾寰勶紙鏃?7 + 鏂?4锛歚/capture/link /uploads/presign /capture/file/commit /ai/conversations`锛?- `test_biz_bridge_js_exposes_named_helpers` 鈥?蹇呭惈 14 涓懡鍚嶏紙鏃?7 + 鏂?7锛歚bindHomeModalSubmits / uploadAndCommitFile / handleUploadFileModal / handleWebLinkModal / handleDeepResearchModal / handleVoiceInputModal / closeAllModals`锛?- `test_biz_index_keeps_prd10_dom_hooks` 鈥?蹇呭惈 15 涓?DOM hook锛堟棫 8 + 鏂?7锛? 涓?`data-modal=` + 3 涓?`data-toast=` 瀛楅潰閲忥級
 
-1. `/uploads/presign` 请求字段是 `mime_type / size_bytes` 不是 `content_type / size` — bridge.js 改正
-2. `/uploads/presign` 返回字段是 `upload_url` 不是 `put_url` — bridge.js 改正（顺手把 fallback 删掉避免误导）
-3. `/ai/conversations.mode` enum 是 `general | knowledge | planning | report`，没有 `research` — bridge.js 改用 `report`（深度研究 = report mode）
-4. `/today.stats` 字段是 `today_capture_count / pending_task_count / knowledge_items_count / weekly_growth_rate`，不是 `today_captures` 或 `captures_today` — bridge.js `refreshTodayInsights` 改正，且新增直接根据 `<h3>` 文本匹配（「今日灵感捕捉/今日捕捉/知识库/待办任务」）注入 `<span class="stat-value">` 数字，不再依赖 `[data-stat=*]` data-attribute（biz/index.html 没那 marker）
-
-#### 测试 + Smoke 端到端
-
-`tests/integration/api/test_prd10_frontend_binding.py::TestBusinessPrototypeBridge` 升级：
-- `test_biz_bridge_js_covers_prd10_paths` — 必含 11 条路径（旧 7 + 新 4：`/capture/link /uploads/presign /capture/file/commit /ai/conversations`）
-- `test_biz_bridge_js_exposes_named_helpers` — 必含 14 个命名（旧 7 + 新 7：`bindHomeModalSubmits / uploadAndCommitFile / handleUploadFileModal / handleWebLinkModal / handleDeepResearchModal / handleVoiceInputModal / closeAllModals`）
-- `test_biz_index_keeps_prd10_dom_hooks` — 必含 15 个 DOM hook（旧 8 + 新 7：4 个 `data-modal=` + 3 个 `data-toast=` 字面量）
-
-`.tmp/smoke_15_7_modals.py` 用 urllib 真打 8770 server，10 步全过：
+`.tmp/smoke_15_7_modals.py` 鐢?urllib 鐪熸墦 8770 server锛?0 姝ュ叏杩囷細
 
 ```
 1. /demo/status enabled=True email=demo@mydow.example
@@ -3228,26 +2684,24 @@ biz/index.html 行 8075-8081 的 inline IIFE 用 document-level **bubbling** cli
 5. /today today_capture_count=10 pending_task_count=5 knowledge_items_count=22 weekly_growth_rate=1.0
 6. /feed total before: 33
 7. /capture/link inbox_id=4eccf7f3 job_id=103f44ba fetch_status=completed
-8. /uploads/presign upload_id=befc8dd3 → PUT 200 → /capture/file/commit inbox_id=e4ab6461 document_id=e5765d54 status=completed
-9. /ai/conversations conversation_id=04f7f1c1 → message job=49afc0e9 assistant_message=de184ee7
+8. /uploads/presign upload_id=befc8dd3 鈫?PUT 200 鈫?/capture/file/commit inbox_id=e4ab6461 document_id=e5765d54 status=completed
+9. /ai/conversations conversation_id=04f7f1c1 鈫?message job=49afc0e9 assistant_message=de184ee7
 10. /feed total after: 35 (delta = 2)
 === SMOKE PASS ===
 ```
 
-每次跑都生成真实 inbox_item / job / source / document 行，feed total 增量正确（每次 +2，对应 link capture + file commit 两条）。
-
+姣忔璺戦兘鐢熸垚鐪熷疄 inbox_item / job / source / document 琛岋紝feed total 澧為噺姝ｇ‘锛堟瘡娆?+2锛屽搴?link capture + file commit 涓ゆ潯锛夈€?
 ### Test evidence
 
 ```
-# Frontend binding 含 6 个 biz/bridge 契约升级
+# Frontend binding 鍚?6 涓?biz/bridge 濂戠害鍗囩骇
 python -m pytest tests/integration/api/test_prd10_frontend_binding.py -q
-# → 24 passed in 7.52s
+# 鈫?24 passed in 7.52s
 
-# 联合 PRD10 14 套件 baseline（含我和 Agent 3 所有改动）
+# 鑱斿悎 PRD10 14 濂椾欢 baseline锛堝惈鎴戝拰 Agent 3 鎵€鏈夋敼鍔級
 python -m pytest tests/integration/api/test_prd10_*.py tests/integration/api/prd10/ -q
-# → 225 passed in 55.76s（与 Milestone 24 + Agent 3 22:25 baseline 持平）
-
-# 真实 server 端到端 smoke
+# 鈫?225 passed in 55.76s锛堜笌 Milestone 24 + Agent 3 22:25 baseline 鎸佸钩锛?
+# 鐪熷疄 server 绔埌绔?smoke
 $env:DATABASE_URL="sqlite+aiosqlite:///d:/Codes/whyme/.tmp/smoke.db"
 $env:AGENTOS_DEMO_MODE="on"
 $env:AGENTOS_PRD10_WORKER="on"
@@ -3258,104 +2712,79 @@ python .tmp/smoke_15_7_modals.py  # 10/10 PASS, .tmp/smoke_15_7_modals_result.js
 
 ### Files touched
 
-- `static/mydow/biz/bridge.js` — +210 行（7 个新 helper：bindHomeModalSubmits / uploadAndCommitFile / handleXxxModal x4 / closeAllModals + 引导 binding；refreshTodayInsights 改用真字段 `today_capture_count` + 直接注入 `<h3>+<span class="stat-value">`）
-- `tests/integration/api/test_prd10_frontend_binding.py` — `TestBusinessPrototypeBridge` 三个 token 列表升级
-- `todo-tasks.md` — §15.7 → done + 详细 evidence 行
-- `agent-progress-report.md` — 本 milestone
-- `.tmp/smoke_15_7_modals.py` — 新建，10 步真实 HTTP smoke
-- `.tmp/smoke_15_7_modals_result.json` — smoke 结果固化
-- **未动** `static/mydow/{index.html,app.js,style.css,mydow-api.js}` 与 `static/mydow/biz/index.html` 任何一行（按规则 §3 领地划分）
-
+- `static/mydow/biz/bridge.js` 鈥?+210 琛岋紙7 涓柊 helper锛歜indHomeModalSubmits / uploadAndCommitFile / handleXxxModal x4 / closeAllModals + 寮曞 binding锛況efreshTodayInsights 鏀圭敤鐪熷瓧娈?`today_capture_count` + 鐩存帴娉ㄥ叆 `<h3>+<span class="stat-value">`锛?- `tests/integration/api/test_prd10_frontend_binding.py` 鈥?`TestBusinessPrototypeBridge` 涓変釜 token 鍒楄〃鍗囩骇
+- `todo-tasks.md` 鈥?搂15.7 鈫?done + 璇︾粏 evidence 琛?- `agent-progress-report.md` 鈥?鏈?milestone
+- `.tmp/smoke_15_7_modals.py` 鈥?鏂板缓锛?0 姝ョ湡瀹?HTTP smoke
+- `.tmp/smoke_15_7_modals_result.json` 鈥?smoke 缁撴灉鍥哄寲
+- **鏈姩** `static/mydow/{index.html,app.js,style.css,mydow-api.js}` 涓?`static/mydow/biz/index.html` 浠讳綍涓€琛岋紙鎸夎鍒?搂3 棰嗗湴鍒掑垎锛?
 ### Follow-ups
 
-- §15.5 续作：内容分布环形图 / 迷你折线 / AI 每日洞察紫底卡片（接 `/insights/preview` 兜底，等 §6.5/3.13 已 done 后可拣）
-- §15.6 卡片点击侧抽（任一工程师）、§15.8/§15.9 KB 首页与文件夹详情（doing by Agent session）、§15.11 数字花园、§15.12 AI 工作台（任一工程师可拣）
-- §7.25 SPA 首页 quick-action 也有同样 5 issue（在 SPA 文件里）— 这是工程师 2 / Agent 2 的 SPA lane，与 biz lane 分别治理；biz 版 §15.7 done 标志着「投资演示路径如果切到 biz 版，4 个 modal 真实可用」
-- 真浏览器 Chrome MCP 截图：本轮 Chrome MCP 因为 chrome-profile 已被另一进程占用而无法启新 page，用 Python urllib smoke 替代验证；下一轮工程师 4 跑 `chrome-mcp-smoke.ps1` 时可同时复测 biz 路径
+- 搂15.5 缁綔锛氬唴瀹瑰垎甯冪幆褰㈠浘 / 杩蜂綘鎶樼嚎 / AI 姣忔棩娲炲療绱簳鍗＄墖锛堟帴 `/insights/preview` 鍏滃簳锛岀瓑 搂6.5/3.13 宸?done 鍚庡彲鎷ｏ級
+- 搂15.6 鍗＄墖鐐瑰嚮渚ф娊锛堜换涓€宸ョ▼甯堬級銆伮?5.8/搂15.9 KB 棣栭〉涓庢枃浠跺す璇︽儏锛坉oing by Agent session锛夈€伮?5.11 鏁板瓧鑺卞洯銆伮?5.12 AI 宸ヤ綔鍙帮紙浠讳竴宸ョ▼甯堝彲鎷ｏ級
+- 搂7.25 SPA 棣栭〉 quick-action 涔熸湁鍚屾牱 5 issue锛堝湪 SPA 鏂囦欢閲岋級鈥?杩欐槸宸ョ▼甯?2 / Agent 2 鐨?SPA lane锛屼笌 biz lane 鍒嗗埆娌荤悊锛沚iz 鐗?搂15.7 done 鏍囧織鐫€銆屾姇璧勬紨绀鸿矾寰勫鏋滃垏鍒?biz 鐗堬紝4 涓?modal 鐪熷疄鍙敤銆?- 鐪熸祻瑙堝櫒 Chrome MCP 鎴浘锛氭湰杞?Chrome MCP 鍥犱负 chrome-profile 宸茶鍙︿竴杩涚▼鍗犵敤鑰屾棤娉曞惎鏂?page锛岀敤 Python urllib smoke 鏇夸唬楠岃瘉锛涗笅涓€杞伐绋嬪笀 4 璺?`chrome-mcp-smoke.ps1` 鏃跺彲鍚屾椂澶嶆祴 biz 璺緞
 
 ---
 
-## Milestone 24 · §11.4 CORS done + §15.2 bridge.js 增量推进（个人中心 / 通知 / 洞察 / feed 计数）— DELIVERED
+## Milestone 24 路 搂11.4 CORS done + 搂15.2 bridge.js 澧為噺鎺ㄨ繘锛堜釜浜轰腑蹇?/ 閫氱煡 / 娲炲療 / feed 璁℃暟锛夆€?DELIVERED
 
-**When**: 2026-05-05 22:10（本会话续，by 总控 Engineer 1）
-
-**Why**: 上轮把 §7.25–§7.31 的 SPA 按钮缺陷登记给工程师 2 / Agent 2 后，作为协调者继续推进**自己 lane 内**不撞 SPA 的工作：
-1. §11.4 CORS 实现差临门一脚验证；
-2. §15.2 bridge.js 已经做了基础 boot/`apiFetch`/capture text，但 §15.5/§15.17/§15.18 的「按钮真实生效」部分仍是 open，**这些都不在 SPA 文件里**（§3 领地划分允许总控接 §15 业务原型 lane 上的非 SPA 任务）。
-
-按多人协作规则，本次**不动** `static/mydow/{index.html,app.js,style.css,mydow-api.js}` 任何一行，只动：
-- `tests/integration/api/test_prd10_app_wiring.py` 末尾 append `TestPrd10Cors`（4 个 case）；
-- `static/mydow/biz/bridge.js` 加 4 个 hydrator + boot 流程改 `Promise.allSettled` 并发；
-- `tests/integration/api/test_prd10_frontend_binding.py` 末尾 append `TestBusinessPrototypeBridge`（6 个 case）；
-- `todo-tasks.md` §11.4 → done、§15.5/§15.17/§15.18 → doing 并填 evidence；
-- `agent-progress-report.md` 本 milestone。
-
+**When**: 2026-05-05 22:10锛堟湰浼氳瘽缁紝by 鎬绘帶 Engineer 1锛?
+**Why**: 涓婅疆鎶?搂7.25鈥撀?.31 鐨?SPA 鎸夐挳缂洪櫡鐧昏缁欏伐绋嬪笀 2 / Agent 2 鍚庯紝浣滀负鍗忚皟鑰呯户缁帹杩?*鑷繁 lane 鍐?*涓嶆挒 SPA 鐨勫伐浣滐細
+1. 搂11.4 CORS 瀹炵幇宸复闂ㄤ竴鑴氶獙璇侊紱
+2. 搂15.2 bridge.js 宸茬粡鍋氫簡鍩虹 boot/`apiFetch`/capture text锛屼絾 搂15.5/搂15.17/搂15.18 鐨勩€屾寜閽湡瀹炵敓鏁堛€嶉儴鍒嗕粛鏄?open锛?*杩欎簺閮戒笉鍦?SPA 鏂囦欢閲?*锛埪? 棰嗗湴鍒掑垎鍏佽鎬绘帶鎺?搂15 涓氬姟鍘熷瀷 lane 涓婄殑闈?SPA 浠诲姟锛夈€?
+鎸夊浜哄崗浣滆鍒欙紝鏈**涓嶅姩** `static/mydow/{index.html,app.js,style.css,mydow-api.js}` 浠讳綍涓€琛岋紝鍙姩锛?- `tests/integration/api/test_prd10_app_wiring.py` 鏈熬 append `TestPrd10Cors`锛? 涓?case锛夛紱
+- `static/mydow/biz/bridge.js` 鍔?4 涓?hydrator + boot 娴佺▼鏀?`Promise.allSettled` 骞跺彂锛?- `tests/integration/api/test_prd10_frontend_binding.py` 鏈熬 append `TestBusinessPrototypeBridge`锛? 涓?case锛夛紱
+- `todo-tasks.md` 搂11.4 鈫?done銆伮?5.5/搂15.17/搂15.18 鈫?doing 骞跺～ evidence锛?- `agent-progress-report.md` 鏈?milestone銆?
 ### Delivered
 
-#### §11.4 CORS — done
+#### 搂11.4 CORS 鈥?done
 
-`agent_os/server/app.py:109-143` 早已写好严格 CORS 中间件：
-- `AGENTOS_CORS_ORIGINS=https://demo.mydow.app,https://www.mydow.app` 生产严格白名单；
-- `AGENTOS_CORS_ALLOW_ALL=1` 开发通配（自动禁用 credentials 满足 CORS 规范）；
-- 默认 dev origins 含 `localhost:{3000,5173,8000,8770}` 与 `127.0.0.1` 同四口；
-- `expose_headers=["X-Request-ID"]` 配合 `RequestIdMiddleware` 让前端能读到 PRD10 envelope `request_id`。
-
-补 4 个测试到 `tests/integration/api/test_prd10_app_wiring.py::TestPrd10Cors`：
-1. `test_preflight_allows_dev_origin` — OPTIONS 带 `Origin: http://localhost:3000` + `Access-Control-Request-Method` → 返回的 `Access-Control-Allow-Origin` 精确回显该 origin；`Allow-Methods` 含 GET/POST/DELETE/PATCH；`Allow-Headers` 含 Authorization 与 X-Request-ID；`Allow-Credentials: true`；
-2. `test_simple_request_echoes_allowed_origin` — GET 带 `Origin: http://localhost:5173` → 200 + `Access-Control-Allow-Origin: http://localhost:5173` + `Expose-Headers` 含 X-Request-ID；
-3. `test_unknown_origin_is_not_echoed` — OPTIONS 带 `Origin: https://attacker.example` → `Access-Control-Allow-Origin` 不能等于该 origin，也不能为 `*`；
-4. `test_request_id_round_trips_with_cors` — 同时带 `Origin` 和 `X-Request-ID` → header 仍 round-trip + envelope `request_id` 一致。
-
-`pytest tests/integration/api/test_prd10_app_wiring.py -q` → **10 passed in 5.28s**（6 原 + 4 新）。
-
-#### §15.2 bridge.js — 4 个新 hydrator + 测试
+`agent_os/server/app.py:109-143` 鏃╁凡鍐欏ソ涓ユ牸 CORS 涓棿浠讹細
+- `AGENTOS_CORS_ORIGINS=https://demo.mydow.app,https://www.mydow.app` 鐢熶骇涓ユ牸鐧藉悕鍗曪紱
+- `AGENTOS_CORS_ALLOW_ALL=1` 寮€鍙戦€氶厤锛堣嚜鍔ㄧ鐢?credentials 婊¤冻 CORS 瑙勮寖锛夛紱
+- 榛樿 dev origins 鍚?`localhost:{3000,5173,8000,8770}` 涓?`127.0.0.1` 鍚屽洓鍙ｏ紱
+- `expose_headers=["X-Request-ID"]` 閰嶅悎 `RequestIdMiddleware` 璁╁墠绔兘璇诲埌 PRD10 envelope `request_id`銆?
+琛?4 涓祴璇曞埌 `tests/integration/api/test_prd10_app_wiring.py::TestPrd10Cors`锛?1. `test_preflight_allows_dev_origin` 鈥?OPTIONS 甯?`Origin: http://localhost:3000` + `Access-Control-Request-Method` 鈫?杩斿洖鐨?`Access-Control-Allow-Origin` 绮剧‘鍥炴樉璇?origin锛沗Allow-Methods` 鍚?GET/POST/DELETE/PATCH锛沗Allow-Headers` 鍚?Authorization 涓?X-Request-ID锛沗Allow-Credentials: true`锛?2. `test_simple_request_echoes_allowed_origin` 鈥?GET 甯?`Origin: http://localhost:5173` 鈫?200 + `Access-Control-Allow-Origin: http://localhost:5173` + `Expose-Headers` 鍚?X-Request-ID锛?3. `test_unknown_origin_is_not_echoed` 鈥?OPTIONS 甯?`Origin: https://attacker.example` 鈫?`Access-Control-Allow-Origin` 涓嶈兘绛変簬璇?origin锛屼篃涓嶈兘涓?`*`锛?4. `test_request_id_round_trips_with_cors` 鈥?鍚屾椂甯?`Origin` 鍜?`X-Request-ID` 鈫?header 浠?round-trip + envelope `request_id` 涓€鑷淬€?
+`pytest tests/integration/api/test_prd10_app_wiring.py -q` 鈫?**10 passed in 5.28s**锛? 鍘?+ 4 鏂帮級銆?
+#### 搂15.2 bridge.js 鈥?4 涓柊 hydrator + 娴嬭瘯
 
 ```
-static/mydow/biz/bridge.js  +192 行
-├── refreshProfileChip()   §15.18  → /me → sidebar chip 与 topbar avatar
-├── refreshUnreadBadge()   §15.17  → /notifications/unread-count → 铃铛角标
-├── refreshTodayInsights() §15.5   → /today → [data-stat=today-captures] slot
-└── refreshFeedCounters()  §15.4 续 → /feed?limit=1 → tab 后角标
-```
+static/mydow/biz/bridge.js  +192 琛?鈹溾攢鈹€ refreshProfileChip()   搂15.18  鈫?/me 鈫?sidebar chip 涓?topbar avatar
+鈹溾攢鈹€ refreshUnreadBadge()   搂15.17  鈫?/notifications/unread-count 鈫?閾冮摏瑙掓爣
+鈹溾攢鈹€ refreshTodayInsights() 搂15.5   鈫?/today 鈫?[data-stat=today-captures] slot
+鈹斺攢鈹€ refreshFeedCounters()  搂15.4 缁?鈫?/feed?limit=1 鈫?tab 鍚庤鏍?```
 
-boot 流程改造：
+boot 娴佺▼鏀归€狅細
 ```js
-const me = await refreshProfileChip();   // 关键路径，失败则清 token 不渲染
-if (!me) return;
-rebindCaptureSubmit();                    // 已有，不变
-Promise.allSettled([
+const me = await refreshProfileChip();   // 鍏抽敭璺緞锛屽け璐ュ垯娓?token 涓嶆覆鏌?if (!me) return;
+rebindCaptureSubmit();                    // 宸叉湁锛屼笉鍙?Promise.allSettled([
   refreshUnreadBadge(),
   refreshTodayInsights(),
   refreshFeedCounters(),
-  loadFeedIntoRecentView(),  // §15.4 已有
-]).then(() => toast("已连接 PRD10 后端 · demo 已登录", "success"));
+  loadFeedIntoRecentView(),  // 搂15.4 宸叉湁
+]).then(() => toast("宸茶繛鎺?PRD10 鍚庣 路 demo 宸茬櫥褰?, "success"));
 ```
 
-`window.MydowBridge` 暴露所有 helper 供调试 / 后续 §15.6+ 接入。
+`window.MydowBridge` 鏆撮湶鎵€鏈?helper 渚涜皟璇?/ 鍚庣画 搂15.6+ 鎺ュ叆銆?
+#### `TestBusinessPrototypeBridge` 鈥?6 涓柊濂戠害娴嬭瘯
 
-#### `TestBusinessPrototypeBridge` — 6 个新契约测试
-
-`tests/integration/api/test_prd10_frontend_binding.py` 末尾加：
-1. `test_biz_index_served` — `GET /mydow/biz/` → 200 + 含 `<title>Mydow` 与 `bridge.js`；
-2. `test_biz_bridge_js_served` — `GET /mydow/biz/bridge.js` → 200 + 含 `/api/v1` 与 `mydow_biz_token`（token key 隔离防撞 SPA `mydow_token`）；
-3. `test_biz_bridge_js_covers_prd10_paths` — bridge.js 必须出现 `/demo/status /demo/login /me /capture/text /notifications/unread-count /today /feed` 7 条路径；
-4. `test_biz_bridge_js_exposes_named_helpers` — 必须有 `apiFetch / ensureSession / rebindCaptureSubmit / refreshProfileChip / refreshUnreadBadge / refreshTodayInsights / refreshFeedCounters / window.MydowBridge` 8 个命名；
-5. `test_biz_index_keeps_prd10_dom_hooks` — `biz/index.html` 必须保留 `data-open-profile / data-open-notifications / data-search-trigger / data-view-target=recent / data-view-target=records / class="account" / class="capture" / send-button` 8 个 DOM hook（business 原型再生时这些 selector 不能漂走，否则 bridge silently no-op）；
-6. `test_biz_bridge_demo_login_flow_still_works` — 端到端跑 `AGENTOS_DEMO_MODE=on` → `/demo/status enabled=true` → `/demo/login` 拿 token → `Bearer` 调 `/me` 拿到 email/username（兼容 envelope/flat 两种 shape）。
-
+`tests/integration/api/test_prd10_frontend_binding.py` 鏈熬鍔狅細
+1. `test_biz_index_served` 鈥?`GET /mydow/biz/` 鈫?200 + 鍚?`<title>Mydow` 涓?`bridge.js`锛?2. `test_biz_bridge_js_served` 鈥?`GET /mydow/biz/bridge.js` 鈫?200 + 鍚?`/api/v1` 涓?`mydow_biz_token`锛坱oken key 闅旂闃叉挒 SPA `mydow_token`锛夛紱
+3. `test_biz_bridge_js_covers_prd10_paths` 鈥?bridge.js 蹇呴』鍑虹幇 `/demo/status /demo/login /me /capture/text /notifications/unread-count /today /feed` 7 鏉¤矾寰勶紱
+4. `test_biz_bridge_js_exposes_named_helpers` 鈥?蹇呴』鏈?`apiFetch / ensureSession / rebindCaptureSubmit / refreshProfileChip / refreshUnreadBadge / refreshTodayInsights / refreshFeedCounters / window.MydowBridge` 8 涓懡鍚嶏紱
+5. `test_biz_index_keeps_prd10_dom_hooks` 鈥?`biz/index.html` 蹇呴』淇濈暀 `data-open-profile / data-open-notifications / data-search-trigger / data-view-target=recent / data-view-target=records / class="account" / class="capture" / send-button` 8 涓?DOM hook锛坆usiness 鍘熷瀷鍐嶇敓鏃惰繖浜?selector 涓嶈兘婕傝蛋锛屽惁鍒?bridge silently no-op锛夛紱
+6. `test_biz_bridge_demo_login_flow_still_works` 鈥?绔埌绔窇 `AGENTOS_DEMO_MODE=on` 鈫?`/demo/status enabled=true` 鈫?`/demo/login` 鎷?token 鈫?`Bearer` 璋?`/me` 鎷垮埌 email/username锛堝吋瀹?envelope/flat 涓ょ shape锛夈€?
 ### Test evidence
 
 ```
-# §11.4 + 既有 wiring
+# 搂11.4 + 鏃㈡湁 wiring
 python -m pytest tests/integration/api/test_prd10_app_wiring.py -q
-# → 10 passed in 5.28s
+# 鈫?10 passed in 5.28s
 
-# §15.2 全 frontend binding
+# 搂15.2 鍏?frontend binding
 python -m pytest tests/integration/api/test_prd10_frontend_binding.py -q
-# → 24 passed in 7.46s (18 原 + 6 新 biz)
+# 鈫?24 passed in 7.46s (18 鍘?+ 6 鏂?biz)
 
-# 完整 PRD10 baseline 矩阵（13 套件 + prd10/）
-python -m pytest \
+# 瀹屾暣 PRD10 baseline 鐭╅樀锛?3 濂椾欢 + prd10/锛?python -m pytest \
   tests/integration/api/test_prd10_v1_acceptance.py \
   tests/integration/api/test_prd10_frontend_binding.py \
   tests/integration/api/test_prd10_ai_api.py \
@@ -3370,54 +2799,35 @@ python -m pytest \
   tests/integration/api/test_prd10_product_data_api.py \
   tests/integration/api/test_prd10_insights_api.py \
   tests/integration/api/prd10/ -q
-# → 221 passed in 52.65s
+# 鈫?221 passed in 52.65s
 ```
 
 ### Files touched
 
-- `src/agent_os/server/app.py` — **未改**（§11.4 实现早已落，本轮只补测试）
-- `tests/integration/api/test_prd10_app_wiring.py` — append `TestPrd10Cors` 4 个 case
-- `static/mydow/biz/bridge.js` — +192 行（4 个新 hydrator + boot 流程改并发）
-- `tests/integration/api/test_prd10_frontend_binding.py` — append `TestBusinessPrototypeBridge` 6 个 case
-- `todo-tasks.md` — §11.4 done / §15.5 §15.17 §15.18 doing + Owner / §0 测试矩阵追加 22:10 行
-- `agent-progress-report.md` — 本 milestone
+- `src/agent_os/server/app.py` 鈥?**鏈敼**锛埪?1.4 瀹炵幇鏃╁凡钀斤紝鏈疆鍙ˉ娴嬭瘯锛?- `tests/integration/api/test_prd10_app_wiring.py` 鈥?append `TestPrd10Cors` 4 涓?case
+- `static/mydow/biz/bridge.js` 鈥?+192 琛岋紙4 涓柊 hydrator + boot 娴佺▼鏀瑰苟鍙戯級
+- `tests/integration/api/test_prd10_frontend_binding.py` 鈥?append `TestBusinessPrototypeBridge` 6 涓?case
+- `todo-tasks.md` 鈥?搂11.4 done / 搂15.5 搂15.17 搂15.18 doing + Owner / 搂0 娴嬭瘯鐭╅樀杩藉姞 22:10 琛?- `agent-progress-report.md` 鈥?鏈?milestone
 
 ### Follow-ups
 
-- §15.5 续作：内容分布环形图 / 迷你折线 / AI 每日洞察紫底卡片（接 `/insights/preview` 兜底，等 §6.5/3.13 落地）
-- §15.17 续作：通知抽屉列表（`GET /notifications`）+ 单条已读 / 全部已读按钮 + 通知设置弹窗（`PATCH /me/preferences`）
-- §15.18 续作：点击 sidebar chip 弹出个人中心抽屉（4 面板：个人/安全/偏好/会员），每个按钮接 `PATCH /me` 或本地 toast
-- §15.6/§15.7：卡片侧抽与 4 个 modal（上传/剪藏/语音/深研）— 任何工程师可拣
-- §11.4 / §15.2 / §15.3 / §15.4 done 后，离 §15.20「切默认入口 `/mydow/` 指向 biz 版」更近一步；剩 §15.5–§15.19 完成后才能切
+- 搂15.5 缁綔锛氬唴瀹瑰垎甯冪幆褰㈠浘 / 杩蜂綘鎶樼嚎 / AI 姣忔棩娲炲療绱簳鍗＄墖锛堟帴 `/insights/preview` 鍏滃簳锛岀瓑 搂6.5/3.13 钀藉湴锛?- 搂15.17 缁綔锛氶€氱煡鎶藉眽鍒楄〃锛坄GET /notifications`锛? 鍗曟潯宸茶 / 鍏ㄩ儴宸茶鎸夐挳 + 閫氱煡璁剧疆寮圭獥锛坄PATCH /me/preferences`锛?- 搂15.18 缁綔锛氱偣鍑?sidebar chip 寮瑰嚭涓汉涓績鎶藉眽锛? 闈㈡澘锛氫釜浜?瀹夊叏/鍋忓ソ/浼氬憳锛夛紝姣忎釜鎸夐挳鎺?`PATCH /me` 鎴栨湰鍦?toast
+- 搂15.6/搂15.7锛氬崱鐗囦晶鎶戒笌 4 涓?modal锛堜笂浼?鍓棌/璇煶/娣辩爺锛夆€?浠讳綍宸ョ▼甯堝彲鎷?- 搂11.4 / 搂15.2 / 搂15.3 / 搂15.4 done 鍚庯紝绂?搂15.20銆屽垏榛樿鍏ュ彛 `/mydow/` 鎸囧悜 biz 鐗堛€嶆洿杩戜竴姝ワ紱鍓?搂15.5鈥撀?5.19 瀹屾垚鍚庢墠鑳藉垏
 
 ---
 
-## Milestone 23 · Chrome MCP 全 nav sweep（SPA 重构后）— 18 issue 基线归档 — DELIVERED
+## Milestone 23 路 Chrome MCP 鍏?nav sweep锛圫PA 閲嶆瀯鍚庯級鈥?18 issue 鍩虹嚎褰掓。 鈥?DELIVERED
 
-**When**: 2026-05-05 21:30（本会话续，by 总控 Engineer 1）
-
-**Why**: 用户反馈「demo 里很多按钮点了没反应或没达到预期」。SPA 已被工程师 2 重写到 `app.js`（138 行的 `mydow-api.js` 仅作 contract shim），所以需要在新 SPA 上重做按钮级 sweep，把真实问题作为 `open` 任务交给工程师 2。
-
-按多人协作规则，本次**不动** `static/mydow/{index.html,app.js,style.css,mydow-api.js}` 任何一行；只编辑 `todo-tasks.md` 与本 milestone 报告。
-
+**When**: 2026-05-05 21:30锛堟湰浼氳瘽缁紝by 鎬绘帶 Engineer 1锛?
+**Why**: 鐢ㄦ埛鍙嶉銆宒emo 閲屽緢澶氭寜閽偣浜嗘病鍙嶅簲鎴栨病杈惧埌棰勬湡銆嶃€係PA 宸茶宸ョ▼甯?2 閲嶅啓鍒?`app.js`锛?38 琛岀殑 `mydow-api.js` 浠呬綔 contract shim锛夛紝鎵€浠ラ渶瑕佸湪鏂?SPA 涓婇噸鍋氭寜閽骇 sweep锛屾妸鐪熷疄闂浣滀负 `open` 浠诲姟浜ょ粰宸ョ▼甯?2銆?
+鎸夊浜哄崗浣滆鍒欙紝鏈**涓嶅姩** `static/mydow/{index.html,app.js,style.css,mydow-api.js}` 浠讳綍涓€琛岋紱鍙紪杈?`todo-tasks.md` 涓庢湰 milestone 鎶ュ憡銆?
 ### Delivered
 
-- 用 `:8771` 临时 SQLite + `demo_final` 用户 + Chrome MCP isolated context `prd10-demo-final-2` 跑了 7 个 nav 模式（home / today / inbox / kb / garden / ai / skills），逐 nav 触发后扫描可见按钮，并记录每个按钮的 main innerHTML / location / toast / 网络请求 4 维变化。
-- 共 102 个候选按钮 / **18 issue**，分布如下：
-  - **home (5/20)**：`添加图片或文件` / `网页剪藏` / `上传文件` / `网页剪藏` / `深度研究` 全部点击无 main 变化、无 API、无 toast。
-  - **today (1/12)**：1 个无 aria-label 的 `btn-icon`（顶部通知 5 数字）。
-  - **inbox (1/12)**：同上。
-  - **kb (4/16)**：`收藏` / `最近` filter tab、`新建第一个文件夹` empty CTA、1 个 `btn-icon`。
-  - **garden (4/17)**：3 个 `btn-icon` 工具栏按钮 + 1 个 `取消`。
-  - **ai (3/12)**：avatar 按钮 + 空 composer 时的 `发送` + 1 个 `btn-icon`。
-  - **skills (0/13)**：✅ 完美。
-- 这 18 个 issue 已逐条登记到 `todo-tasks.md` §7.25–§7.31，并把 §14.3 acceptance gate 更新为「**18 issue / 102 候选**，阻塞在 §7.25-7.30」。
-
+- 鐢?`:8771` 涓存椂 SQLite + `demo_final` 鐢ㄦ埛 + Chrome MCP isolated context `prd10-demo-final-2` 璺戜簡 7 涓?nav 妯″紡锛坔ome / today / inbox / kb / garden / ai / skills锛夛紝閫?nav 瑙﹀彂鍚庢壂鎻忓彲瑙佹寜閽紝骞惰褰曟瘡涓寜閽殑 main innerHTML / location / toast / 缃戠粶璇锋眰 4 缁村彉鍖栥€?- 鍏?102 涓€欓€夋寜閽?/ **18 issue**锛屽垎甯冨涓嬶細
+  - **home (5/20)**锛歚娣诲姞鍥剧墖鎴栨枃浠禶 / `缃戦〉鍓棌` / `涓婁紶鏂囦欢` / `缃戦〉鍓棌` / `娣卞害鐮旂┒` 鍏ㄩ儴鐐瑰嚮鏃?main 鍙樺寲銆佹棤 API銆佹棤 toast銆?  - **today (1/12)**锛? 涓棤 aria-label 鐨?`btn-icon`锛堥《閮ㄩ€氱煡 5 鏁板瓧锛夈€?  - **inbox (1/12)**锛氬悓涓娿€?  - **kb (4/16)**锛歚鏀惰棌` / `鏈€杩慲 filter tab銆乣鏂板缓绗竴涓枃浠跺す` empty CTA銆? 涓?`btn-icon`銆?  - **garden (4/17)**锛? 涓?`btn-icon` 宸ュ叿鏍忔寜閽?+ 1 涓?`鍙栨秷`銆?  - **ai (3/12)**锛歛vatar 鎸夐挳 + 绌?composer 鏃剁殑 `鍙戦€乣 + 1 涓?`btn-icon`銆?  - **skills (0/13)**锛氣渽 瀹岀編銆?- 杩?18 涓?issue 宸查€愭潯鐧昏鍒?`todo-tasks.md` 搂7.25鈥撀?.31锛屽苟鎶?搂14.3 acceptance gate 鏇存柊涓恒€?*18 issue / 102 鍊欓€?*锛岄樆濉炲湪 搂7.25-7.30銆嶃€?
 ### Test evidence
 
-- Chrome MCP 真浏览器实测，sweep 脚本已 inline 在 `evaluate_script`（见会话）。
-- PRD10 核心矩阵复测：
-
+- Chrome MCP 鐪熸祻瑙堝櫒瀹炴祴锛宻weep 鑴氭湰宸?inline 鍦?`evaluate_script`锛堣浼氳瘽锛夈€?- PRD10 鏍稿績鐭╅樀澶嶆祴锛?
 ```
 python -m pytest tests/integration/api/prd10/ \
   tests/integration/api/test_prd10_product_data_api.py \
@@ -3430,230 +2840,157 @@ python -m pytest tests/integration/api/prd10/ \
 
 ### Files touched
 
-- `todo-tasks.md` 新增 §7.25–§7.31 + §14.3 更新（仅本表）。
-- 本 milestone 写入 `agent-progress-report.md`。
-- **未动** `static/mydow/*`、`app.js`、任何后端实现文件。
-
+- `todo-tasks.md` 鏂板 搂7.25鈥撀?.31 + 搂14.3 鏇存柊锛堜粎鏈〃锛夈€?- 鏈?milestone 鍐欏叆 `agent-progress-report.md`銆?- **鏈姩** `static/mydow/*`銆乣app.js`銆佷换浣曞悗绔疄鐜版枃浠躲€?
 ### Follow-ups
 
-工程师 2 在 §7.25–§7.30 完工后：
-1. 让 §7.31 复测（用 `scripts/chrome-mcp-smoke.ps1` 已有的 12 步路径再加一个 7-nav sweep）。
-2. 触达 0 issue 后 §14.3 → `done`。
-3. 同步带动 §9.13–9.17（Loading/Empty/Error/Permission/路由）的 `done`。
-
+宸ョ▼甯?2 鍦?搂7.25鈥撀?.30 瀹屽伐鍚庯細
+1. 璁?搂7.31 澶嶆祴锛堢敤 `scripts/chrome-mcp-smoke.ps1` 宸叉湁鐨?12 姝ヨ矾寰勫啀鍔犱竴涓?7-nav sweep锛夈€?2. 瑙﹁揪 0 issue 鍚?搂14.3 鈫?`done`銆?3. 鍚屾甯﹀姩 搂9.13鈥?.17锛圠oading/Empty/Error/Permission/璺敱锛夌殑 `done`銆?
 ---
 
-## Milestone 22 · Legacy test infrastructure cleanup — `tests/conftest.py` from file-based to in-memory + StaticPool — FIXED
+## Milestone 22 路 Legacy test infrastructure cleanup 鈥?`tests/conftest.py` from file-based to in-memory + StaticPool 鈥?FIXED
 
-**When**: 2026-05-05（本会话）
-
-**Why**: After Milestones 8–12 隔离了 `tests/legacy/*` 等历史测试，仓库内还有
-3 个文件因 `tests/conftest.py::engine` 用 `sqlite+aiosqlite:///./test.db` 共享文件
-导致跨测试污染：
+**When**: 2026-05-05锛堟湰浼氳瘽锛?
+**Why**: After Milestones 8鈥?2 闅旂浜?`tests/legacy/*` 绛夊巻鍙叉祴璇曪紝浠撳簱鍐呰繕鏈?3 涓枃浠跺洜 `tests/conftest.py::engine` 鐢?`sqlite+aiosqlite:///./test.db` 鍏变韩鏂囦欢
+瀵艰嚧璺ㄦ祴璇曟薄鏌擄細
 
 - `tests/integration/api/test_prd10_frontend_binding.py::test_mydow_primary_action_bindings_are_wired`
-- `tests/unit/services/test_card_generator.py`（5 个测试）
+- `tests/unit/services/test_card_generator.py`锛? 涓祴璇曪級
 
-每次单独跑 → PASS；和别的测试一起跑 → FAIL。Windows 上还附带
-`pytest-current` 的 `PermissionError` 和 cleanup 阶段的
-`OperationalError: no such table`。这些不是代码 bug，是测试基础设施问题。
-
+姣忔鍗曠嫭璺?鈫?PASS锛涘拰鍒殑娴嬭瘯涓€璧疯窇 鈫?FAIL銆俉indows 涓婅繕闄勫甫
+`pytest-current` 鐨?`PermissionError` 鍜?cleanup 闃舵鐨?`OperationalError: no such table`銆傝繖浜涗笉鏄唬鐮?bug锛屾槸娴嬭瘯鍩虹璁炬柦闂銆?
 ### Delivered
 
-`tests/conftest.py` 改造：
+`tests/conftest.py` 鏀归€狅細
 
-1. **默认 DB URL 切到 `:memory:`**：`TEST_DATABASE_URL` 默认值从
-   `sqlite+aiosqlite:///./test.db`（共享文件）改为
-   `sqlite+aiosqlite:///:memory:`。环境变量仍可覆盖到真 PG。
-2. **engine fixture 用 StaticPool**：仅在 `:memory:` URL 下启用
-   `StaticPool` + `connect_args={"check_same_thread": False}`，让多次
-   连接共享同一个内存 DB；其他 URL 保留 `NullPool`。
-3. **db_session cleanup 容错**：原本每个 test teardown 跑一组
-   `delete(Model)`，模型表在某些 fixture 路径下可能没建出来
-   就报 `OperationalError`。现在每条 `delete` 单独 try/except
-   `(OperationalError, ProgrammingError)`，捕到就 rollback。配合
-   in-memory + StaticPool（每 engine 是独立 DB，dispose 即清光），
-   delete loop 仅作 file-backed DB 的兜底。
-
+1. **榛樿 DB URL 鍒囧埌 `:memory:`**锛歚TEST_DATABASE_URL` 榛樿鍊间粠
+   `sqlite+aiosqlite:///./test.db`锛堝叡浜枃浠讹級鏀逛负
+   `sqlite+aiosqlite:///:memory:`銆傜幆澧冨彉閲忎粛鍙鐩栧埌鐪?PG銆?2. **engine fixture 鐢?StaticPool**锛氫粎鍦?`:memory:` URL 涓嬪惎鐢?   `StaticPool` + `connect_args={"check_same_thread": False}`锛岃澶氭
+   杩炴帴鍏变韩鍚屼竴涓唴瀛?DB锛涘叾浠?URL 淇濈暀 `NullPool`銆?3. **db_session cleanup 瀹归敊**锛氬師鏈瘡涓?test teardown 璺戜竴缁?   `delete(Model)`锛屾ā鍨嬭〃鍦ㄦ煇浜?fixture 璺緞涓嬪彲鑳芥病寤哄嚭鏉?   灏辨姤 `OperationalError`銆傜幇鍦ㄦ瘡鏉?`delete` 鍗曠嫭 try/except
+   `(OperationalError, ProgrammingError)`锛屾崟鍒板氨 rollback銆傞厤鍚?   in-memory + StaticPool锛堟瘡 engine 鏄嫭绔?DB锛宒ispose 鍗虫竻鍏夛級锛?   delete loop 浠呬綔 file-backed DB 鐨勫厹搴曘€?
 ### Test evidence
 
 ```
 python -m pytest tests/integration/api/ tests/unit/ \
     -p no:cacheprovider --tb=no -q --timeout=60
-# → 777 passed / 0 failed / 19 skipped, 173s
+# 鈫?777 passed / 0 failed / 19 skipped, 173s
 ```
 
 ```
 python -m pytest --collect-only -q -p no:cacheprovider
-# → 784 tests collected, exit 0
+# 鈫?784 tests collected, exit 0
 ```
 
-修复前对应套件状态：6 failed（1 frontend_binding + 5 card_generator）+
-若干随机 cleanup-阶段 OperationalError。
-
+淇鍓嶅搴斿浠剁姸鎬侊細6 failed锛? frontend_binding + 5 card_generator锛?
+鑻ュ共闅忔満 cleanup-闃舵 OperationalError銆?
 ### Files touched
 
-- `tests/conftest.py`（默认 DB + StaticPool + 容错 cleanup）
-
+- `tests/conftest.py`锛堥粯璁?DB + StaticPool + 瀹归敊 cleanup锛?
 ### todo-tasks.md updates
 
-- §1.9（Agent 1）`open` → `done`；新增证据列。
-- §0 测试矩阵追加 2026-05-05 21:30 行。
-
+- 搂1.9锛圓gent 1锛塦open` 鈫?`done`锛涙柊澧炶瘉鎹垪銆?- 搂0 娴嬭瘯鐭╅樀杩藉姞 2026-05-05 21:30 琛屻€?
 ### Follow-ups
 
-- §6.1 `test_search_api_simple.py` 的 `agent_os.search.keyword_search`
-  设计上抛 `NotImplementedError`，已在 ignore 列表里，不再列入回归。
-- 如未来切到真 PG（`TEST_DATABASE_URL=postgresql+asyncpg://...`），
-  cleanup 的 delete loop 会真正发挥作用；目前在 `:memory:` 下
-  delete loop 等同于 no-op。
-
+- 搂6.1 `test_search_api_simple.py` 鐨?`agent_os.search.keyword_search`
+  璁捐涓婃姏 `NotImplementedError`锛屽凡鍦?ignore 鍒楄〃閲岋紝涓嶅啀鍒楀叆鍥炲綊銆?- 濡傛湭鏉ュ垏鍒扮湡 PG锛坄TEST_DATABASE_URL=postgresql+asyncpg://...`锛夛紝
+  cleanup 鐨?delete loop 浼氱湡姝ｅ彂鎸ヤ綔鐢紱鐩墠鍦?`:memory:` 涓?  delete loop 绛夊悓浜?no-op銆?
 ---
 
-## Milestone 22 · 业务方原型还原 + bridge 后端联通（15.1 / 15.2 / 15.3） — DONE
+## Milestone 22 路 涓氬姟鏂瑰師鍨嬭繕鍘?+ bridge 鍚庣鑱旈€氾紙15.1 / 15.2 / 15.3锛?鈥?DONE
 
-**When**: 2026-05-05（本会话）
+**When**: 2026-05-05锛堟湰浼氳瘽锛?
+**鑳屾櫙**锛氱敤鎴峰垽瀹氬綋鍓?SPA 瑙嗚銆屼弗閲嶅亸绂讳笟鍔℃柟璁捐銆嶃€備笟鍔℃柟鍦?`Mydow_Web_Frontend_Complete_Package.zip` 閲岀粰浜嗕竴浠?8071 琛岀殑鍗曟枃浠跺師鍨?`mydow.html`锛屽惈瀹屾暣鐨勮璁′护鐗屻€? 椤瑰鑸€佸眳涓ぇ hero銆佹櫤鑳借瘑鍒?Auto 杈撳叆銆? 涓揩鎹疯兌鍥娿€? 寮犲皝闈㈠崱銆佸彸渚?5 娈垫礊瀵熼潰鏉裤€佸簳閮?Pro Plan 鐢ㄦ埛鍗°€傝繖鎵嶆槸瑕佽繕鍘熺殑瑙嗚銆?
+**绛栫暐**锛氫笉閲嶅啓 SPA銆傛妸涓氬姟鍘熷瀷鎸傚埌 `static/mydow/biz/`锛屾敞鍏?`bridge.js` 鎶?`simulateAction` 鏇挎崲涓虹湡瀹?`/api/v1/*`銆傜瓑 搂15 鍏ㄥ畬宸ュ啀鎶?`/mydow/` redirect 鍒?biz 鐗堬紙搂15.20锛夈€?
+### 浜у嚭
+- `static/mydow/biz/index.html` 鈫?涓氬姟鏂?`mydow.html` 鍘熸枃 + 鏈熬 `<script type="module" src="./bridge.js">`
+- `static/mydow/biz/bridge.js`锛歞emo auto-login锛堝吋瀹硅８ `{enabled}` 涓?PRD10 envelope 涓ょ `/demo/status` 褰㈡€侊級 + apiFetch 灏佽 + token 鎸佷箙鍖栵紙`localStorage["mydow_biz_token"]`锛? 涓?`.capture .send-button` 鐩戝惉鍏嬮殕鏇挎崲 鈫?鐪熷疄 `/api/v1/capture/text` + toast 銆岀伒鎰熷凡淇濆瓨锛屾渶杩戞崟鎹夊凡鍒锋柊銆?+ `mydow:capture-completed` 浜嬩欢
+- `.tmp/biz_walk.py` Playwright 璧版煡鑴氭湰
 
-**背景**：用户判定当前 SPA 视觉「严重偏离业务方设计」。业务方在 `Mydow_Web_Frontend_Complete_Package.zip` 里给了一份 8071 行的单文件原型 `mydow.html`，含完整的设计令牌、5 项导航、居中大 hero、智能识别 Auto 输入、4 个快捷胶囊、4 张封面卡、右侧 5 段洞察面板、底部 Pro Plan 用户卡。这才是要还原的视觉。
-
-**策略**：不重写 SPA。把业务原型挂到 `static/mydow/biz/`，注入 `bridge.js` 把 `simulateAction` 替换为真实 `/api/v1/*`。等 §15 全完工再把 `/mydow/` redirect 到 biz 版（§15.20）。
-
-### 产出
-- `static/mydow/biz/index.html` ← 业务方 `mydow.html` 原文 + 末尾 `<script type="module" src="./bridge.js">`
-- `static/mydow/biz/bridge.js`：demo auto-login（兼容裸 `{enabled}` 与 PRD10 envelope 两种 `/demo/status` 形态） + apiFetch 封装 + token 持久化（`localStorage["mydow_biz_token"]`）+ 主 `.capture .send-button` 监听克隆替换 → 真实 `/api/v1/capture/text` + toast 「灵感已保存，最近捕捉已刷新」 + `mydow:capture-completed` 事件
-- `.tmp/biz_walk.py` Playwright 走查脚本
-
-### 测试证据
-- `python .tmp/biz_walk.py` → **3/3 ok ; 0 console error ; 0 page error ; 0 failed req**：
-  1. demo auto-login token 写入 `localStorage`
-  2. 主输入框点击提交 → POST `/capture/text` 200
-  3. 立刻 GET `/feed?page_size=4` → 新条目 `BIZ walk capture · ...` 出现在最前
-- 截图：`.tmp/screenshots/biz_walk/01_home.png`（业务方设计像素级还原）+ `02_after_capture.png`（toast 出现 + 后端确认）
-
-### Follow-up（已登记到 §15）
-15.4–15.21（feed 真数据 / 知识库 / 数字花园 / Mydow AI / Skills / 洞察 / 通知 / 个人中心 / 全局搜索 / Playwright 全链路视觉走查 / `/mydow/` 切默认入口）。
-
+### 娴嬭瘯璇佹嵁
+- `python .tmp/biz_walk.py` 鈫?**3/3 ok ; 0 console error ; 0 page error ; 0 failed req**锛?  1. demo auto-login token 鍐欏叆 `localStorage`
+  2. 涓昏緭鍏ユ鐐瑰嚮鎻愪氦 鈫?POST `/capture/text` 200
+  3. 绔嬪埢 GET `/feed?page_size=4` 鈫?鏂版潯鐩?`BIZ walk capture 路 ...` 鍑虹幇鍦ㄦ渶鍓?- 鎴浘锛歚.tmp/screenshots/biz_walk/01_home.png`锛堜笟鍔℃柟璁捐鍍忕礌绾ц繕鍘燂級+ `02_after_capture.png`锛坱oast 鍑虹幇 + 鍚庣纭锛?
+### Follow-up锛堝凡鐧昏鍒?搂15锛?15.4鈥?5.21锛坒eed 鐪熸暟鎹?/ 鐭ヨ瘑搴?/ 鏁板瓧鑺卞洯 / Mydow AI / Skills / 娲炲療 / 閫氱煡 / 涓汉涓績 / 鍏ㄥ眬鎼滅储 / Playwright 鍏ㄩ摼璺瑙夎蛋鏌?/ `/mydow/` 鍒囬粯璁ゅ叆鍙ｏ級銆?
 ---
 
-## Milestone 21 · `.main` 宽度 = 0 / 内容被压成一条竖列 — FIXED
+## Milestone 21 路 `.main` 瀹藉害 = 0 / 鍐呭琚帇鎴愪竴鏉＄珫鍒?鈥?FIXED
 
-**When**: 2026-05-05（本会话）
-
-**症状**：用户反馈「右侧有一大块白色挡住屏幕」「主页在哪里」。Playwright 探针确认 `.main width:0`、`#page-region width:72`，内容被挤进 ~50px 列里，文字逐字换行。
-
-**Root cause**：
-- `static/mydow/index.html` 里 `<div id="app" class="mydow-app">` 已经是 grid 240/1fr。
-- 但 `static/mydow/app.js::renderShell` 又往 `#app` 内部塞了 `<div class="mydow-app">[sidebar, main]</div>`。
-- 双层 grid 嵌套：外层 `#app` 把那个内层 div 摆进 240px 第一列，内层再次拆 240/1fr 但实际可用宽度只有 240px → sidebar 240、`.main` 0 → 内容崩成竖排。
-
-**Fix**：`index.html` 移除 `#app` 上的 `class="mydow-app"`（保留 `id`），让 `renderShell` 自己塞 `.mydow-app` 容器。
-
-**Verification**：
-- Playwright 三档视口 (1024 / 1280 / 1440) probe：`.main` 宽度恢复为 784 / 1040 / 1200。
-- 截图：`.tmp/screenshots/fix1_w1024.png`、`fix1_w1280.png`、`fix1_w1440.png`。
-- `.tmp/e2e_walkthrough.py`（自动遍历 home/today/inbox/kb/kb-folder/kb-doc/garden/ai/skills + capture + 搜索 + 通知）→ **11/11 ok / 0 console err / 0 page err / 0 failed req**；截图存 `.tmp/screenshots/e2e_walk/`。
-
+**When**: 2026-05-05锛堟湰浼氳瘽锛?
+**鐥囩姸**锛氱敤鎴峰弽棣堛€屽彸渚ф湁涓€澶у潡鐧借壊鎸′綇灞忓箷銆嶃€屼富椤靛湪鍝噷銆嶃€侾laywright 鎺㈤拡纭 `.main width:0`銆乣#page-region width:72`锛屽唴瀹硅鎸よ繘 ~50px 鍒楅噷锛屾枃瀛楅€愬瓧鎹㈣銆?
+**Root cause**锛?- `static/mydow/index.html` 閲?`<div id="app" class="mydow-app">` 宸茬粡鏄?grid 240/1fr銆?- 浣?`static/mydow/app.js::renderShell` 鍙堝線 `#app` 鍐呴儴濉炰簡 `<div class="mydow-app">[sidebar, main]</div>`銆?- 鍙屽眰 grid 宓屽锛氬灞?`#app` 鎶婇偅涓唴灞?div 鎽嗚繘 240px 绗竴鍒楋紝鍐呭眰鍐嶆鎷?240/1fr 浣嗗疄闄呭彲鐢ㄥ搴﹀彧鏈?240px 鈫?sidebar 240銆乣.main` 0 鈫?鍐呭宕╂垚绔栨帓銆?
+**Fix**锛歚index.html` 绉婚櫎 `#app` 涓婄殑 `class="mydow-app"`锛堜繚鐣?`id`锛夛紝璁?`renderShell` 鑷繁濉?`.mydow-app` 瀹瑰櫒銆?
+**Verification**锛?- Playwright 涓夋。瑙嗗彛 (1024 / 1280 / 1440) probe锛歚.main` 瀹藉害鎭㈠涓?784 / 1040 / 1200銆?- 鎴浘锛歚.tmp/screenshots/fix1_w1024.png`銆乣fix1_w1280.png`銆乣fix1_w1440.png`銆?- `.tmp/e2e_walkthrough.py`锛堣嚜鍔ㄩ亶鍘?home/today/inbox/kb/kb-folder/kb-doc/garden/ai/skills + capture + 鎼滅储 + 閫氱煡锛夆啋 **11/11 ok / 0 console err / 0 page err / 0 failed req**锛涙埅鍥惧瓨 `.tmp/screenshots/e2e_walk/`銆?
 ---
 
-## Milestone 20 · 登录遮罩「蓝色雾布」阻断主页 — FIXED
+## Milestone 20 路 鐧诲綍閬僵銆岃摑鑹查浘甯冦€嶉樆鏂富椤?鈥?FIXED
 
-**When**: 2026-05-05（本会话）
-
-**Root cause**：`static/mydow/index.html` 初始 `<div id="auth-overlay" hidden>`，但 `style.css` 里 `#auth-overlay { display: grid }` 特异性高于原生 `[hidden]`，导致 **`hidden` 属性无法隐藏遮罩**。Demo 自动登录成功后 `overlay.hidden = true` 在视觉上无效 → 空半透明蓝层盖死整页，用户误以为「没有主页」。
-
-**Fix**：`style.css` 增加 `#auth-overlay[hidden] { display: none !important; }`。
-
-**Regression**：`tests/e2e/test_mydow_browser.py` 断言登录后 `#auth-overlay` 仍带 `hidden`；Playwright 截图 `.tmp/screenshots/mydow_demo_8020_after_overlay_fix.png`。
-
+**When**: 2026-05-05锛堟湰浼氳瘽锛?
+**Root cause**锛歚static/mydow/index.html` 鍒濆 `<div id="auth-overlay" hidden>`锛屼絾 `style.css` 閲?`#auth-overlay { display: grid }` 鐗瑰紓鎬ч珮浜庡師鐢?`[hidden]`锛屽鑷?**`hidden` 灞炴€ф棤娉曢殣钘忛伄缃?*銆侱emo 鑷姩鐧诲綍鎴愬姛鍚?`overlay.hidden = true` 鍦ㄨ瑙変笂鏃犳晥 鈫?绌哄崐閫忔槑钃濆眰鐩栨鏁撮〉锛岀敤鎴疯浠ヤ负銆屾病鏈変富椤点€嶃€?
+**Fix**锛歚style.css` 澧炲姞 `#auth-overlay[hidden] { display: none !important; }`銆?
+**Regression**锛歚tests/e2e/test_mydow_browser.py` 鏂█鐧诲綍鍚?`#auth-overlay` 浠嶅甫 `hidden`锛汸laywright 鎴浘 `.tmp/screenshots/mydow_demo_8020_after_overlay_fix.png`銆?
 ---
 
-## Milestone 19 · 通知 SSE smoke + app 启动修复 — DONE
+## Milestone 19 路 閫氱煡 SSE smoke + app 鍚姩淇 鈥?DONE
 
-**When**: 2026-05-05（本会话）
+**When**: 2026-05-05锛堟湰浼氳瘽锛?
+### 浜у嚭
 
-### 产出
+1. **`scripts/smoke_prd10.py`**锛氭柊澧炴楠?9锛屽宓屽叆寮?**uvicorn** 鍙戣捣 `GET /api/v1/notifications/stream`锛屽湪棣栧寘涓牎楠?`event: ready`锛堥伩寮€ Windows 涓?httpx ASGITransport 闀胯疆璇㈠樊寮傦級銆?2. **`src/agent_os/server/app.py`**锛氳ˉ `import os`锛屼慨澶?PRD10 CORS 鍧椾娇鐢?`os.getenv` 瀵艰嚧鐨?**`NameError: os`**锛屽惁鍒欏簲鐢ㄦ棤娉?import銆?3. **`todo-tasks.md`**锛歚8.7` SSE demo smoke 鈫?`done`锛沗8.15` search_indices 琛?鈫?`done`锛堜笌 Milestone 18 宸插啓鍏?conftest 涓€鑷达紝KB 鍗曟祴澶嶉獙 18/18锛夈€?
+### 娴嬭瘯璇佹嵁
 
-1. **`scripts/smoke_prd10.py`**：新增步骤 9，对嵌入式 **uvicorn** 发起 `GET /api/v1/notifications/stream`，在首包中校验 `event: ready`（避开 Windows 上 httpx ASGITransport 长轮询差异）。
-2. **`src/agent_os/server/app.py`**：补 `import os`，修复 PRD10 CORS 块使用 `os.getenv` 导致的 **`NameError: os`**，否则应用无法 import。
-3. **`todo-tasks.md`**：`8.7` SSE demo smoke → `done`；`8.15` search_indices 表 → `done`（与 Milestone 18 已写入 conftest 一致，KB 单测复验 18/18）。
-
-### 测试证据
-
-- `python scripts/smoke_prd10.py` → exit 0；`smoke_run.json` 中 `notifications.sse_stream`：`ready_seen: true`。
-- `pytest tests/integration/api/prd10/test_prd10_kb_api.py` → 18 passed。
-- **Chrome MCP 不可用时**：`seed_prd10` + uvicorn `127.0.0.1:8020`，Playwright `tests/e2e/test_mydow_browser.py` 绿章；截图 `d:/Codes/whyme/.tmp/screenshots/mydow_demo_8020.png`。
-
+- `python scripts/smoke_prd10.py` 鈫?exit 0锛沗smoke_run.json` 涓?`notifications.sse_stream`锛歚ready_seen: true`銆?- `pytest tests/integration/api/prd10/test_prd10_kb_api.py` 鈫?18 passed銆?- **Chrome MCP 涓嶅彲鐢ㄦ椂**锛歚seed_prd10` + uvicorn `127.0.0.1:8020`锛孭laywright `tests/e2e/test_mydow_browser.py` 缁跨珷锛涙埅鍥?`d:/Codes/whyme/.tmp/screenshots/mydow_demo_8020.png`銆?
 ---
 
-## Milestone 18 · 总控 §8 后端配套首批 — DONE
+## Milestone 18 路 鎬绘帶 搂8 鍚庣閰嶅棣栨壒 鈥?DONE
 
-**When**: 用户判定旧前端「像图片拼起来」，工程师2 启动 SPA 重写（原生 ESM）。我作为总控认领后端/数据/文档配套（§8 系列），让 SPA 一接上就能拿到真实数据。
+**When**: 鐢ㄦ埛鍒ゅ畾鏃у墠绔€屽儚鍥剧墖鎷艰捣鏉ャ€嶏紝宸ョ▼甯? 鍚姩 SPA 閲嶅啓锛堝師鐢?ESM锛夈€傛垜浣滀负鎬绘帶璁ら鍚庣/鏁版嵁/鏂囨。閰嶅锛埪? 绯诲垪锛夛紝璁?SPA 涓€鎺ヤ笂灏辫兘鎷垮埌鐪熷疄鏁版嵁銆?
+### 鍐崇瓥涓庝骇鍑?
+1. **浠诲姟姹犺鑼冨寲**锛歚todo-tasks.md` 澶撮儴寮哄埗涓夋€佹満 `open / doing / done` + Owner 鍒楋紱鏂板 搂9 (UI/UX 鐜颁唬鍖? 搂10 (Demo 娴佺▼) 搂11 (閮ㄧ讲杩愮淮) 搂12 (鎬ц兘闄愭祦) 搂13 (鏂囨。鎶曡祫鏉愭枡) 搂14 (涓婄嚎 Acceptance Gate)锛屽叏閮ㄥ垵濮?`open` 绛変换鎰忓伐绋嬪笀璁ら銆?2. **PRD10 搂5.1 `/api/v1/me`** 鈥?鏂板 `Prd10MeResponse` schema (`auth/schema.py`) + `me_router::get_prd10_me` (`auth/router.py`)銆傝繑鍥炵簿纭?搂5.1 瀛楁锛歚id / name / avatar_url / email / role / locale / timezone / plan / created_at / updated_at`銆俙role/locale/timezone/plan` 浠?`User.settings` JSON 璇诲瓧娈碉紙榛樿 `owner / zh-CN / Asia/Shanghai / free`锛夛紝涓嶅姩 DB 琛?schema銆俙/api/v1/auth/me` legacy 淇濈暀銆?3. **PRD10 搂14 `/api/v1/tasks`** 鈥?鏂板 `tasks/prd10_router.py`锛屼娇鐢?`PRD10Task` UUID 妯″瀷锛屾彁渚?list / create / detail / patch / complete / soft-delete + envelope銆俙app.py` 娉ㄥ唽鍒?legacy Integer router 涔嬪墠锛涘吀鍨?path param 浣跨敤 `uuid.UUID` 寮虹被鍨嬭 legacy int path 涓嶈閬紝PRD10 list/create 鏍硅矾寰勪紭鍏堬紝legacy `/today /stats /batch` 缁х画鍙敤銆?4. **PRD10 搂13 / 搂19.1 step 8 绱㈠紩** 鈥?`capture/pipeline.py::simulate_processing` 鍦?Card / Document 鍒涘缓鍚?*鍚屾 upsert** `SearchIndex(object_type=card|document, ...)`锛岃鐢ㄦ埛 capture 瀹屼竴鍒?`/api/v1/search` 灏辫兘鍛戒腑銆傛柊鍔?`_index_search_object` helper 瀹炵幇 (object_type, object_id) 缁村害骞傜瓑銆?5. **鐢熶骇 bug fix** 鈥?`db/base.py` 鍐欐 `echo: True` 鏀逛负璇?`AGENTOS_DB_ECHO` / `DB_ECHO` 鐜鍙橀噺锛堥粯璁?off锛夛紝娑堥櫎鐢熶骇 SQL 鏃ュ織娲祦銆?6. **娴嬭瘯 harness 鎵╁睍** 鈥?`tests/integration/api/prd10/conftest.py::_TABLE_CREATE_ORDER` 鍔犲叆 `SearchIndex.__table__`锛宍_TABLE_DROP_ORDER` 鍚屾鍔?`search_indices`锛岃 capture pipeline 鐨勭储寮曡惤搴撳彲琚祴璇曡鐩栥€?
+### 娴嬭瘯璇佹嵁
 
-### 决策与产出
-
-1. **任务池规范化**：`todo-tasks.md` 头部强制三态机 `open / doing / done` + Owner 列；新增 §9 (UI/UX 现代化) §10 (Demo 流程) §11 (部署运维) §12 (性能限流) §13 (文档投资材料) §14 (上线 Acceptance Gate)，全部初始 `open` 等任意工程师认领。
-2. **PRD10 §5.1 `/api/v1/me`** — 新增 `Prd10MeResponse` schema (`auth/schema.py`) + `me_router::get_prd10_me` (`auth/router.py`)。返回精确 §5.1 字段：`id / name / avatar_url / email / role / locale / timezone / plan / created_at / updated_at`。`role/locale/timezone/plan` 从 `User.settings` JSON 读字段（默认 `owner / zh-CN / Asia/Shanghai / free`），不动 DB 表 schema。`/api/v1/auth/me` legacy 保留。
-3. **PRD10 §14 `/api/v1/tasks`** — 新增 `tasks/prd10_router.py`，使用 `PRD10Task` UUID 模型，提供 list / create / detail / patch / complete / soft-delete + envelope。`app.py` 注册到 legacy Integer router 之前；典型 path param 使用 `uuid.UUID` 强类型让 legacy int path 不被遮，PRD10 list/create 根路径优先，legacy `/today /stats /batch` 继续可用。
-4. **PRD10 §13 / §19.1 step 8 索引** — `capture/pipeline.py::simulate_processing` 在 Card / Document 创建后**同步 upsert** `SearchIndex(object_type=card|document, ...)`，让用户 capture 完一刻 `/api/v1/search` 就能命中。新加 `_index_search_object` helper 实现 (object_type, object_id) 维度幂等。
-5. **生产 bug fix** — `db/base.py` 写死 `echo: True` 改为读 `AGENTOS_DB_ECHO` / `DB_ECHO` 环境变量（默认 off），消除生产 SQL 日志洪流。
-6. **测试 harness 扩展** — `tests/integration/api/prd10/conftest.py::_TABLE_CREATE_ORDER` 加入 `SearchIndex.__table__`，`_TABLE_DROP_ORDER` 同步加 `search_indices`，让 capture pipeline 的索引落库可被测试覆盖。
-
-### 测试证据
-
-- `pytest tests/integration/api/prd10/ tests/integration/api/test_prd10_product_data_api.py tests/integration/api/test_prd10_frontend_binding.py` → **102/102 passed**（42.95s）。
-- 新建 `.tmp/smoke_tasks_prd10.py`，端到端实跑：
-  - `POST /auth/register` → `POST /auth/login` → `GET /me` 验证 §5.1 9 字段全在
-  - `POST /tasks` → `GET /tasks?status=todo&priority=high` → `GET /tasks/{uuid}`
-  - `PATCH /tasks/{uuid}` 改 status/tags → `POST /tasks/{uuid}/complete` 自动 stamp `completed_at`
-  - `DELETE /tasks/{uuid}` 软删 → list 立即不含；全部 `[ok]`。
-
-### 文件触动
+- `pytest tests/integration/api/prd10/ tests/integration/api/test_prd10_product_data_api.py tests/integration/api/test_prd10_frontend_binding.py` 鈫?**102/102 passed**锛?2.95s锛夈€?- 鏂板缓 `.tmp/smoke_tasks_prd10.py`锛岀鍒扮瀹炶窇锛?  - `POST /auth/register` 鈫?`POST /auth/login` 鈫?`GET /me` 楠岃瘉 搂5.1 9 瀛楁鍏ㄥ湪
+  - `POST /tasks` 鈫?`GET /tasks?status=todo&priority=high` 鈫?`GET /tasks/{uuid}`
+  - `PATCH /tasks/{uuid}` 鏀?status/tags 鈫?`POST /tasks/{uuid}/complete` 鑷姩 stamp `completed_at`
+  - `DELETE /tasks/{uuid}` 杞垹 鈫?list 绔嬪嵆涓嶅惈锛涘叏閮?`[ok]`銆?
+### 鏂囦欢瑙﹀姩
 
 - `src/agent_os/auth/schema.py` (`Prd10MeResponse`)
-- `src/agent_os/auth/router.py` (`get_prd10_me` 重写)
-- `src/agent_os/tasks/prd10_router.py` (新文件)
-- `src/agent_os/server/app.py` (`tasks_prd10_router` 注册)
+- `src/agent_os/auth/router.py` (`get_prd10_me` 閲嶅啓)
+- `src/agent_os/tasks/prd10_router.py` (鏂版枃浠?
+- `src/agent_os/server/app.py` (`tasks_prd10_router` 娉ㄥ唽)
 - `src/agent_os/capture/pipeline.py` (`_index_search_object`)
-- `src/agent_os/db/base.py` (`echo` 读 env)
-- `tests/integration/api/prd10/conftest.py` (`SearchIndex` 表)
-- `static/mydow/mydow-api.js` (PRD10 §6.1 base URL 注释)
-- `todo-tasks.md` (规范化 + 扩任务池)
-- `.tmp/smoke_tasks_prd10.py` (新文件)
+- `src/agent_os/db/base.py` (`echo` 璇?env)
+- `tests/integration/api/prd10/conftest.py` (`SearchIndex` 琛?
+- `static/mydow/mydow-api.js` (PRD10 搂6.1 base URL 娉ㄩ噴)
+- `todo-tasks.md` (瑙勮寖鍖?+ 鎵╀换鍔℃睜)
+- `.tmp/smoke_tasks_prd10.py` (鏂版枃浠?
 
-### 开放项
+### 寮€鏀鹃」
 
-- §8.4 Document 详情字段补齐（chunks_preview/related_cards/ai_suggestions） — 待做
-- §8.6 `seed_prd10.py --reset` 跑一次验证 §25.3 计数（6/20/30/5/5/3/10/5/10）— 待做
-- §8.7 `/notifications/stream` SSE 在 prod uvicorn 上验证 — 待做
-- §9 / §10 / §11 / §12 / §13 / §14 全部 `open` 等任意工程师认领；不阻塞工程师2 SPA。
-
+- 搂8.4 Document 璇︽儏瀛楁琛ラ綈锛坈hunks_preview/related_cards/ai_suggestions锛?鈥?寰呭仛
+- 搂8.6 `seed_prd10.py --reset` 璺戜竴娆￠獙璇?搂25.3 璁℃暟锛?/20/30/5/5/3/10/5/10锛夆€?寰呭仛
+- 搂8.7 `/notifications/stream` SSE 鍦?prod uvicorn 涓婇獙璇?鈥?寰呭仛
+- 搂9 / 搂10 / 搂11 / 搂12 / 搂13 / 搂14 鍏ㄩ儴 `open` 绛変换鎰忓伐绋嬪笀璁ら锛涗笉闃诲宸ョ▼甯? SPA銆?
 ---
 
-## Milestone 17 · 6 态视觉规范 Chrome MCP 实测（Agent 4 验收 14.4） — BLOCKED
+## Milestone 17 路 6 鎬佽瑙夎鑼?Chrome MCP 瀹炴祴锛圓gent 4 楠屾敹 14.4锛?鈥?BLOCKED
 
-**When**: 用户布置 14.4 验收任务并要求把多人协作 + 开发规范固化到 rules。
-
-### 决策与产出
-
-- 新增 `.cursor/rules/whyme-multiagent-workflow.mdc`：固化协作 + 开发规范。包含 todo-tasks 单一总表协议（4 状态字、编号、状态流转、冲突避免）、仓库领地划分、PRD10 验收硬性约束、按钮级要求、Chrome MCP 必做规则、测试基线不下降规则、不留 mock 规则、投资演示口径 13 条。
-- 扩展 `todo-tasks.md` §维护规则到 13 条，明确 `pending` 已废弃、Chrome MCP 必做、去 mock 化规则。
-- Agent 4 在浏览器里走完一遍 PRD10 §20 / §25.1 的 6 态视觉验收（任务 14.4）。
-
-### Chrome MCP 实测发现的 6 个严重缺陷
-
-| # | 缺陷 | PRD10 引用 | 任务 |
+**When**: 鐢ㄦ埛甯冪疆 14.4 楠屾敹浠诲姟骞惰姹傛妸澶氫汉鍗忎綔 + 寮€鍙戣鑼冨浐鍖栧埌 rules銆?
+### 鍐崇瓥涓庝骇鍑?
+- 鏂板 `.cursor/rules/whyme-multiagent-workflow.mdc`锛氬浐鍖栧崗浣?+ 寮€鍙戣鑼冦€傚寘鍚?todo-tasks 鍗曚竴鎬昏〃鍗忚锛? 鐘舵€佸瓧銆佺紪鍙枫€佺姸鎬佹祦杞€佸啿绐侀伩鍏嶏級銆佷粨搴撻鍦板垝鍒嗐€丳RD10 楠屾敹纭€х害鏉熴€佹寜閽骇瑕佹眰銆丆hrome MCP 蹇呭仛瑙勫垯銆佹祴璇曞熀绾夸笉涓嬮檷瑙勫垯銆佷笉鐣?mock 瑙勫垯銆佹姇璧勬紨绀哄彛寰?13 鏉°€?- 鎵╁睍 `todo-tasks.md` 搂缁存姢瑙勫垯鍒?13 鏉★紝鏄庣‘ `pending` 宸插簾寮冦€丆hrome MCP 蹇呭仛銆佸幓 mock 鍖栬鍒欍€?- Agent 4 鍦ㄦ祻瑙堝櫒閲岃蛋瀹屼竴閬?PRD10 搂20 / 搂25.1 鐨?6 鎬佽瑙夐獙鏀讹紙浠诲姟 14.4锛夈€?
+### Chrome MCP 瀹炴祴鍙戠幇鐨?6 涓弗閲嶇己闄?
+| # | 缂洪櫡 | PRD10 寮曠敤 | 浠诲姟 |
 |---|---|---|---|
-| 1 | **Loading 骨架屏从未真出现**：人为延迟 `MydowAPI.fetch` 400ms，整个加载期间 `document.querySelectorAll('.skeleton').length === 0`。CSS 已定义 `@keyframes skeleton/shimmer` 但 view 渲染器没注入 | §20.1 / §7.9 | 9.13 |
-| 2 | **Error 状态从未真出现**：注入 throw `INTERNAL_ERROR` 后 `/today` 仍展示 30 张老 seed 卡，没有 errorState DOM、没有重试入口 | §20.3 | 9.14 |
-| 3 | **Empty 状态没真清缓存**：mock `/feed` 返回 `items=[]` 后老的 30 张卡片继续显示；KB 同样 | §20.2 | 9.15 |
-| 4 | **Permission Denied / 401 没切回 auth-overlay**：`localStorage.removeItem('mydow_token')` 后页面继续展示老数据 | §20.5 + §22.1 | 9.16 |
-| 5 | **`#/notifications` 与 `#/search` hash 路由缺失**：切换 fallback 回 `#/today` | §25.1 | 9.17 |
-| 6 | **致命布局崩溃**：KB 页 hero 标题 "知识库" 被竖排（每字一行），副标题同样。Chrome MCP take_screenshot 看到这一幕 | UI 现代化 | 9.18 |
+| 1 | **Loading 楠ㄦ灦灞忎粠鏈湡鍑虹幇**锛氫汉涓哄欢杩?`MydowAPI.fetch` 400ms锛屾暣涓姞杞芥湡闂?`document.querySelectorAll('.skeleton').length === 0`銆侰SS 宸插畾涔?`@keyframes skeleton/shimmer` 浣?view 娓叉煋鍣ㄦ病娉ㄥ叆 | 搂20.1 / 搂7.9 | 9.13 |
+| 2 | **Error 鐘舵€佷粠鏈湡鍑虹幇**锛氭敞鍏?throw `INTERNAL_ERROR` 鍚?`/today` 浠嶅睍绀?30 寮犺€?seed 鍗★紝娌℃湁 errorState DOM銆佹病鏈夐噸璇曞叆鍙?| 搂20.3 | 9.14 |
+| 3 | **Empty 鐘舵€佹病鐪熸竻缂撳瓨**锛歮ock `/feed` 杩斿洖 `items=[]` 鍚庤€佺殑 30 寮犲崱鐗囩户缁樉绀猴紱KB 鍚屾牱 | 搂20.2 | 9.15 |
+| 4 | **Permission Denied / 401 娌″垏鍥?auth-overlay**锛歚localStorage.removeItem('mydow_token')` 鍚庨〉闈㈢户缁睍绀鸿€佹暟鎹?| 搂20.5 + 搂22.1 | 9.16 |
+| 5 | **`#/notifications` 涓?`#/search` hash 璺敱缂哄け**锛氬垏鎹?fallback 鍥?`#/today` | 搂25.1 | 9.17 |
+| 6 | **鑷村懡甯冨眬宕╂簝**锛欿B 椤?hero 鏍囬 "鐭ヨ瘑搴? 琚珫鎺掞紙姣忓瓧涓€琛岋級锛屽壇鏍囬鍚屾牱銆侰hrome MCP take_screenshot 鐪嬪埌杩欎竴骞?| UI 鐜颁唬鍖?| 9.18 |
 
-### 复现命令
+### 澶嶇幇鍛戒护
 
 ```pwsh
-# 后端起 demo 模式 + seed
+# 鍚庣璧?demo 妯″紡 + seed
 $env:DATABASE_URL = "sqlite+aiosqlite:///d:/Codes/whyme/.tmp/smoke.db"
 $env:AGENTOS_PRD10_WORKER = "on"
 $env:AGENTOS_PRD10_WORKER_INTERVAL = "2"
@@ -3662,61 +2999,41 @@ $env:PYTHONPATH = "d:\Codes\whyme\src"
 python scripts/seed_prd10.py --email demo@mydow.example --password demo123 --reset
 python -m uvicorn agent_os.server.app:app --host 127.0.0.1 --port 8000
 
-# 浏览器进 http://127.0.0.1:8000/mydow/
-# 在 Chrome devtools 里逐项跑：
-# 1) `localStorage.removeItem('mydow_token'); location.reload()` → 验证 Permission Denied
-# 2) 注入 monkey-patch `window.MydowAPI.fetch` 抛 500 → 验证 Error
-# 3) 注入 mock 返回 items:[] → 验证 Empty
-# 4) `location.hash = '#/notifications'` → 验证路由
+# 娴忚鍣ㄨ繘 http://127.0.0.1:8000/mydow/
+# 鍦?Chrome devtools 閲岄€愰」璺戯細
+# 1) `localStorage.removeItem('mydow_token'); location.reload()` 鈫?楠岃瘉 Permission Denied
+# 2) 娉ㄥ叆 monkey-patch `window.MydowAPI.fetch` 鎶?500 鈫?楠岃瘉 Error
+# 3) 娉ㄥ叆 mock 杩斿洖 items:[] 鈫?楠岃瘉 Empty
+# 4) `location.hash = '#/notifications'` 鈫?楠岃瘉璺敱
 ```
 
-### 任务状态
+### 浠诲姟鐘舵€?
+- `14.4` 浠?`doing` 鏀逛负 `blocked`锛宐locking on 宸ョ▼甯?2 淇繖 6 椤广€?- `9.13`鈥揱9.18` 鍏ㄩ儴 `open`锛岀瓑宸ョ▼甯?2 / Agent 2 璁ら銆?- 涓嶅姩 `static/mydow/{index.html,app.js,style.css,mydow-api.js}`锛圫PA 閲嶆瀯鏈熻竟鐣岋級銆?
+### Follow-ups锛堢粰宸ョ▼甯?2 鐨勫叿浣撲慨澶嶆寚寮曪級
 
-- `14.4` 从 `doing` 改为 `blocked`，blocking on 工程师 2 修这 6 项。
-- `9.13`–`9.18` 全部 `open`，等工程师 2 / Agent 2 认领。
-- 不动 `static/mydow/{index.html,app.js,style.css,mydow-api.js}`（SPA 重构期边界）。
-
-### Follow-ups（给工程师 2 的具体修复指引）
-
-1. **状态机骨架**：每个 page renderer 进入时立即把 root 内容替换为 `skeletonPage(...)`，fetch resolve/reject 后再替换；fetch 失败渲染 `errorState({message, retry})`；data 空渲染 `emptyState({title, cta})`。
-2. **缓存失效**：page renderer 必须以「最近一次 fetch 的 promise」为权威，而不是「DOM 上次渲染的内容」。当前是先渲染老数据再 fetch。
-3. **401 → auth overlay**：`api()` 包装在 catch `UNAUTHORIZED` 时清 token + render auth-overlay，而不是静默返回 stale data。
-4. **`#/notifications` `#/search`**：route 表加这两条；通知抽屉与搜索弹窗与之复用同一 view 函数即可。
-5. **KB 标题布局崩溃**：检查 `.section-title` 或 `.hero` 是否 `display: flex; flex-direction: column` 把每个字符当 child 排了。
-
+1. **鐘舵€佹満楠ㄦ灦**锛氭瘡涓?page renderer 杩涘叆鏃剁珛鍗虫妸 root 鍐呭鏇挎崲涓?`skeletonPage(...)`锛宖etch resolve/reject 鍚庡啀鏇挎崲锛沠etch 澶辫触娓叉煋 `errorState({message, retry})`锛沝ata 绌烘覆鏌?`emptyState({title, cta})`銆?2. **缂撳瓨澶辨晥**锛歱age renderer 蹇呴』浠ャ€屾渶杩戜竴娆?fetch 鐨?promise銆嶄负鏉冨▉锛岃€屼笉鏄€孌OM 涓婃娓叉煋鐨勫唴瀹广€嶃€傚綋鍓嶆槸鍏堟覆鏌撹€佹暟鎹啀 fetch銆?3. **401 鈫?auth overlay**锛歚api()` 鍖呰鍦?catch `UNAUTHORIZED` 鏃舵竻 token + render auth-overlay锛岃€屼笉鏄潤榛樿繑鍥?stale data銆?4. **`#/notifications` `#/search`**锛歳oute 琛ㄥ姞杩欎袱鏉★紱閫氱煡鎶藉眽涓庢悳绱㈠脊绐椾笌涔嬪鐢ㄥ悓涓€ view 鍑芥暟鍗冲彲銆?5. **KB 鏍囬甯冨眬宕╂簝**锛氭鏌?`.section-title` 鎴?`.hero` 鏄惁 `display: flex; flex-direction: column` 鎶婃瘡涓瓧绗﹀綋 child 鎺掍簡銆?
 ---
 
-## Milestone 16 · SPA 重构期 Agent 4 非冲突交付（手册 + 基线 + 字段审计） — DONE
+## Milestone 16 路 SPA 閲嶆瀯鏈?Agent 4 闈炲啿绐佷氦浠橈紙鎵嬪唽 + 鍩虹嚎 + 瀛楁瀹¤锛?鈥?DONE
 
-**When**: 用户告知工程师 2 正在重写 `static/mydow/` 为原生 ESM SPA（任务清单第 1 项），并要求 Agent 4 找一件“不会和工程师 2 撞、且 PRD10 真有空缺”的工作做。Agent 4 选了三件**只读后端、不动前端**的工作。
+**When**: 鐢ㄦ埛鍛婄煡宸ョ▼甯?2 姝ｅ湪閲嶅啓 `static/mydow/` 涓哄師鐢?ESM SPA锛堜换鍔℃竻鍗曠 1 椤癸級锛屽苟瑕佹眰 Agent 4 鎵句竴浠垛€滀笉浼氬拰宸ョ▼甯?2 鎾炪€佷笖 PRD10 鐪熸湁绌虹己鈥濈殑宸ヤ綔鍋氥€侫gent 4 閫変簡涓変欢**鍙鍚庣銆佷笉鍔ㄥ墠绔?*鐨勫伐浣溿€?
+### 鍐崇瓥锛氶伩鍏嶅啿绐佺殑宸ヤ綔杈圭晫
 
-### 决策：避免冲突的工作边界
+宸ョ▼甯?2 鍦ㄥ仛锛歚index.html`锛?7 琛?SPA 楠ㄦ灦锛? `style.css`锛?6KB 璁捐浠ょ墝锛? 鎺ヤ笅鏉ョ殑 `app.js`锛圚ashRouter + view 娓叉煋鍣級銆傝€?prototype 宸叉尓鍒?`static/mydow/legacy-prototype.html`銆?
+Agent 4 鍦?SPA 閲嶆瀯鏈?*绂佹鍔?*锛?- `static/mydow/{index.html, app.js, style.css, mydow-api.js, legacy-prototype.html}`
+- `agent_os/auth/router.py:demo_router`锛堝凡 done锛?- 浠讳綍鍚庣 router/DTO锛堝伐绋嬪笀 1/2/3 棰嗗湴锛?
+### 浜や粯鐗╋紙4 浠讹級
 
-工程师 2 在做：`index.html`（57 行 SPA 骨架）+ `style.css`（26KB 设计令牌）+ 接下来的 `app.js`（HashRouter + view 渲染器）。老 prototype 已挪到 `static/mydow/legacy-prototype.html`。
-
-Agent 4 在 SPA 重构期**禁止动**：
-- `static/mydow/{index.html, app.js, style.css, mydow-api.js, legacy-prototype.html}`
-- `agent_os/auth/router.py:demo_router`（已 done）
-- 任何后端 router/DTO（工程师 1/2/3 领地）
-
-### 交付物（4 件）
-
-| # | 文件 | 说明 |
+| # | 鏂囦欢 | 璇存槑 |
 |---|---|---|
-| 1 | `docs/agent-2-spa-binding-guide.md` | 10 章 SPA 接入手册：数据契约 §5 / 路由首屏矩阵 §25.1 / 域接口清单 §7-§18 / 状态机 §20 / 实时刷新 / hash 路由 / 渲染器目录结构建议 / 已知坑（`/kb/folders` 无 pagination、`.local` 邮箱被 EmailStr 拒绝、`/auth/login` 不返 envelope、SSE Windows 死锁、`/tasks/*` 不是 PRD10 路径、空库自动 seed Skill、AI LLM 开关、worker 间隔） |
-| 2 | `.tmp/baseline-tests.txt` | 13 套件 188 用例：**187 passed / 1 failed**；详细记录唯一失败 `test_mydow_primary_action_bindings_are_wired`（11 个 token 全 missing，因为老 prototype DOM 已在 SPA 重构里被清掉），明确**这是预期失败**且不属于 Agent 4 修复范围 |
-| 3 | `docs/agent-2-seed-field-audit.md` | Seed vs PRD10 §5 字段差距审计：10 张表（User/Folder/Document/Card/Prd10InboxItem/AIConversation/AIMessage/Skill/Notification/SearchIndex）逐字段标 null/empty/no-attr，给 SPA 每个字段空时的 fallback 建议，给 Agent 1/2/3 改 seed 的 P0/P1/P2 优先级 |
-| 4 | `.tmp/seed_audit.py` + `.tmp/seed_audit_report.txt` | 审计脚本与原始报告，可重复运行 |
+| 1 | `docs/agent-2-spa-binding-guide.md` | 10 绔?SPA 鎺ュ叆鎵嬪唽锛氭暟鎹绾?搂5 / 璺敱棣栧睆鐭╅樀 搂25.1 / 鍩熸帴鍙ｆ竻鍗?搂7-搂18 / 鐘舵€佹満 搂20 / 瀹炴椂鍒锋柊 / hash 璺敱 / 娓叉煋鍣ㄧ洰褰曠粨鏋勫缓璁?/ 宸茬煡鍧戯紙`/kb/folders` 鏃?pagination銆乣.local` 閭琚?EmailStr 鎷掔粷銆乣/auth/login` 涓嶈繑 envelope銆丼SE Windows 姝婚攣銆乣/tasks/*` 涓嶆槸 PRD10 璺緞銆佺┖搴撹嚜鍔?seed Skill銆丄I LLM 寮€鍏炽€亀orker 闂撮殧锛?|
+| 2 | `.tmp/baseline-tests.txt` | 13 濂椾欢 188 鐢ㄤ緥锛?*187 passed / 1 failed**锛涜缁嗚褰曞敮涓€澶辫触 `test_mydow_primary_action_bindings_are_wired`锛?1 涓?token 鍏?missing锛屽洜涓鸿€?prototype DOM 宸插湪 SPA 閲嶆瀯閲岃娓呮帀锛夛紝鏄庣‘**杩欐槸棰勬湡澶辫触**涓斾笉灞炰簬 Agent 4 淇鑼冨洿 |
+| 3 | `docs/agent-2-seed-field-audit.md` | Seed vs PRD10 搂5 瀛楁宸窛瀹¤锛?0 寮犺〃锛圲ser/Folder/Document/Card/Prd10InboxItem/AIConversation/AIMessage/Skill/Notification/SearchIndex锛夐€愬瓧娈垫爣 null/empty/no-attr锛岀粰 SPA 姣忎釜瀛楁绌烘椂鐨?fallback 寤鸿锛岀粰 Agent 1/2/3 鏀?seed 鐨?P0/P1/P2 浼樺厛绾?|
+| 4 | `.tmp/seed_audit.py` + `.tmp/seed_audit_report.txt` | 瀹¤鑴氭湰涓庡師濮嬫姤鍛婏紝鍙噸澶嶈繍琛?|
 
-### 审计关键发现（给工程师 2 SPA 渲染器用）
-
-- **`Document.chunk_count` / `Document.last_opened_at` 在模型上不存在**，PRD10 §5.7 列出了但代码没实现——SPA 不要尝试读这两个字段，否则 `undefined`。
-- **`AIMessage.citations` / `tool_calls` / `attachments` 在 seed 数据里全空数组**，`model` / `tokens` / `latency_ms` 全 null——SPA 渲染 AI 引用 UI 必须先判空，否则会画一堆空占位（这是用户上一轮抱怨“像图片拼起来”的一个原因）。
-- **`Card.cover_url` / `source_id` / `inbox_item_id` 全 null**——卡片封面要 fallback 到 entities 文字封面或色块。
-- **`SearchIndex.embedding_id` 全 null**——SPA 的「语义搜索」开关在 V1 应禁用，只允许 `mode=keyword`。
-- **`AIConversation.context_scope` 空 dict**——「上下文 chip」UI 在 seed 数据下显示「全局上下文」即可。
-
-### 测试基线（重要：给工程师 2 SPA 完工后回归对照）
+### 瀹¤鍏抽敭鍙戠幇锛堢粰宸ョ▼甯?2 SPA 娓叉煋鍣ㄧ敤锛?
+- **`Document.chunk_count` / `Document.last_opened_at` 鍦ㄦā鍨嬩笂涓嶅瓨鍦?*锛孭RD10 搂5.7 鍒楀嚭浜嗕絾浠ｇ爜娌″疄鐜扳€斺€擲PA 涓嶈灏濊瘯璇昏繖涓や釜瀛楁锛屽惁鍒?`undefined`銆?- **`AIMessage.citations` / `tool_calls` / `attachments` 鍦?seed 鏁版嵁閲屽叏绌烘暟缁?*锛宍model` / `tokens` / `latency_ms` 鍏?null鈥斺€擲PA 娓叉煋 AI 寮曠敤 UI 蹇呴』鍏堝垽绌猴紝鍚﹀垯浼氱敾涓€鍫嗙┖鍗犱綅锛堣繖鏄敤鎴蜂笂涓€杞姳鎬ㄢ€滃儚鍥剧墖鎷艰捣鏉モ€濈殑涓€涓師鍥狅級銆?- **`Card.cover_url` / `source_id` / `inbox_item_id` 鍏?null**鈥斺€斿崱鐗囧皝闈㈣ fallback 鍒?entities 鏂囧瓧灏侀潰鎴栬壊鍧椼€?- **`SearchIndex.embedding_id` 鍏?null**鈥斺€擲PA 鐨勩€岃涔夋悳绱€嶅紑鍏冲湪 V1 搴旂鐢紝鍙厑璁?`mode=keyword`銆?- **`AIConversation.context_scope` 绌?dict**鈥斺€斻€屼笂涓嬫枃 chip銆峌I 鍦?seed 鏁版嵁涓嬫樉绀恒€屽叏灞€涓婁笅鏂囥€嶅嵆鍙€?
+### 娴嬭瘯鍩虹嚎锛堥噸瑕侊細缁欏伐绋嬪笀 2 SPA 瀹屽伐鍚庡洖褰掑鐓э級
 
 ```
 python -m pytest \
@@ -3740,48 +3057,27 @@ python -m pytest \
 
 ### Follow-ups
 
-- **4.23（工程师 2 / Agent 2 领）**：SPA 完工后把 `test_mydow_primary_action_bindings_are_wired` 的契约从老 prototype 切到新 SPA 的 DOM hooks（建议：`id="app"` `id="auth-overlay"` `id="toast-stack"` + 渲染器声明的关键 selector）。
-- 工程师 1/3 review 本轮三份文档，确认手册里给 SPA 的字段契约和实际后端实现对齐；如有 P1/P0 改 seed 的合作意向，在新一轮 Milestone 里登记。
-
+- **4.23锛堝伐绋嬪笀 2 / Agent 2 棰嗭級**锛歋PA 瀹屽伐鍚庢妸 `test_mydow_primary_action_bindings_are_wired` 鐨勫绾︿粠鑰?prototype 鍒囧埌鏂?SPA 鐨?DOM hooks锛堝缓璁細`id="app"` `id="auth-overlay"` `id="toast-stack"` + 娓叉煋鍣ㄥ０鏄庣殑鍏抽敭 selector锛夈€?- 宸ョ▼甯?1/3 review 鏈疆涓変唤鏂囨。锛岀‘璁ゆ墜鍐岄噷缁?SPA 鐨勫瓧娈靛绾﹀拰瀹為檯鍚庣瀹炵幇瀵归綈锛涘鏈?P1/P0 鏀?seed 鐨勫悎浣滄剰鍚戯紝鍦ㄦ柊涓€杞?Milestone 閲岀櫥璁般€?
 ---
 
-## Milestone 15 · Demo 模式接入 + Mydow 全按钮联调（一键起 demo） — DONE
+## Milestone 15 路 Demo 妯″紡鎺ュ叆 + Mydow 鍏ㄦ寜閽仈璋冿紙涓€閿捣 demo锛?鈥?DONE
 
-**When**: 用户「不要有未完成未验证的地方，把所有的都跑通……我需要一份完整可跑的 demo 出来」之后立即落地。
+**When**: 鐢ㄦ埛銆屼笉瑕佹湁鏈畬鎴愭湭楠岃瘉鐨勫湴鏂癸紝鎶婃墍鏈夌殑閮借窇閫氣€︹€︽垜闇€瑕佷竴浠藉畬鏁村彲璺戠殑 demo 鍑烘潵銆嶄箣鍚庣珛鍗宠惤鍦般€?
+### 涓昏鍙樻洿
 
-### 主要变更
-
-- **Demo router**：`src/agent_os/auth/router.py` 新增 `demo_router`，挂载到
-  `/api/v1/demo`，支持
-  - `POST /api/v1/demo/login` — `AGENTOS_DEMO_MODE=on` 时一键发放 token，
-    懒创建 `demo@mydow.example / demo123`，401 时自动注册。
-  - `GET /api/v1/demo/status` — 给前端用来决定是否自动登录。
-- **`static/mydow/mydow-api.js`**（v2，~2370 行）：
-  - 引入 `TOAST_INTENTS`：把 `index.html` 里 23 个 `data-toast` 字面量
-    （上传/网页/语音/深度研究/知识库/AI 摘要/AI 保存/Skill/通知/分享…）
-    映射到真实 PRD10 API。监听器改成 **document 级事件代理**，因此
-    settings 抽屉、modal、动态注入区域全部覆盖。
-  - 域 client 完整化：`search/ai/skills/garden/feed/cards/kb/capture/inbox/
-    notifications/jobs/today/me/insights/reports/auth`，并加上
-    `cards.update / remove / favorite`、`kb.updateFolder/deleteFolder/
-    moveDocument`、`capture.presign / commitFile`、`auth.register`。
-  - 渲染 / 导航增强：`openFolderDetail / openDocumentDetail /
-    openCardDetail / showDocumentDrawer / showCardDrawer / applyPageMode`、
-    自定义 `mydow-doc-drawer / mydow-garden-node`。
-  - **登录浮层** `mydow-auth-overlay` 现在会先调 `demo/status`：开启时
-    自动 `demo/login`，失败再降级到手动登录/注册表单。
-- **测试**（`tests/integration/api/test_prd10_frontend_binding.py`，485 行）：
-  - 静态契约扩到所有 23 类 toast 意图、所有域 client、所有 render hook。
-  - 新增 `test_demo_endpoints_disabled_by_default` 与
-    `test_demo_endpoints_enabled_when_flag_set`。
-  - 全套 `test_prd10_frontend_binding.py + worker_loop + jobs_notifications`：
-    `python -m pytest tests/integration/api/test_prd10_frontend_binding.py
+- **Demo router**锛歚src/agent_os/auth/router.py` 鏂板 `demo_router`锛屾寕杞藉埌
+  `/api/v1/demo`锛屾敮鎸?  - `POST /api/v1/demo/login` 鈥?`AGENTOS_DEMO_MODE=on` 鏃朵竴閿彂鏀?token锛?    鎳掑垱寤?`demo@mydow.example / demo123`锛?01 鏃惰嚜鍔ㄦ敞鍐屻€?  - `GET /api/v1/demo/status` 鈥?缁欏墠绔敤鏉ュ喅瀹氭槸鍚﹁嚜鍔ㄧ櫥褰曘€?- **`static/mydow/mydow-api.js`**锛坴2锛寏2370 琛岋級锛?  - 寮曞叆 `TOAST_INTENTS`锛氭妸 `index.html` 閲?23 涓?`data-toast` 瀛楅潰閲?    锛堜笂浼?缃戦〉/璇煶/娣卞害鐮旂┒/鐭ヨ瘑搴?AI 鎽樿/AI 淇濆瓨/Skill/閫氱煡/鍒嗕韩鈥︼級
+    鏄犲皠鍒扮湡瀹?PRD10 API銆傜洃鍚櫒鏀规垚 **document 绾т簨浠朵唬鐞?*锛屽洜姝?    settings 鎶藉眽銆乵odal銆佸姩鎬佹敞鍏ュ尯鍩熷叏閮ㄨ鐩栥€?  - 鍩?client 瀹屾暣鍖栵細`search/ai/skills/garden/feed/cards/kb/capture/inbox/
+    notifications/jobs/today/me/insights/reports/auth`锛屽苟鍔犱笂
+    `cards.update / remove / favorite`銆乣kb.updateFolder/deleteFolder/
+    moveDocument`銆乣capture.presign / commitFile`銆乣auth.register`銆?  - 娓叉煋 / 瀵艰埅澧炲己锛歚openFolderDetail / openDocumentDetail /
+    openCardDetail / showDocumentDrawer / showCardDrawer / applyPageMode`銆?    鑷畾涔?`mydow-doc-drawer / mydow-garden-node`銆?  - **鐧诲綍娴眰** `mydow-auth-overlay` 鐜板湪浼氬厛璋?`demo/status`锛氬紑鍚椂
+    鑷姩 `demo/login`锛屽け璐ュ啀闄嶇骇鍒版墜鍔ㄧ櫥褰?娉ㄥ唽琛ㄥ崟銆?- **娴嬭瘯**锛坄tests/integration/api/test_prd10_frontend_binding.py`锛?85 琛岋級锛?  - 闈欐€佸绾︽墿鍒版墍鏈?23 绫?toast 鎰忓浘銆佹墍鏈夊煙 client銆佹墍鏈?render hook銆?  - 鏂板 `test_demo_endpoints_disabled_by_default` 涓?    `test_demo_endpoints_enabled_when_flag_set`銆?  - 鍏ㄥ `test_prd10_frontend_binding.py + worker_loop + jobs_notifications`锛?    `python -m pytest tests/integration/api/test_prd10_frontend_binding.py
     tests/integration/api/prd10/test_prd10_worker_loop.py
     tests/integration/api/prd10/test_prd10_jobs_notifications_api.py
     -q -p no:cacheprovider` -> **35 passed**.
 
-### 一键起 demo 步骤（已验证）
-
+### 涓€閿捣 demo 姝ラ锛堝凡楠岃瘉锛?
 ```pwsh
 $env:DATABASE_URL = "sqlite+aiosqlite:///d:/Codes/whyme/.tmp/smoke.db"
 $env:AGENTOS_PRD10_WORKER = "on"
@@ -3790,102 +3086,65 @@ $env:AGENTOS_DEMO_MODE = "on"
 $env:AGENTOS_AI_LLM = "off"
 $env:PYTHONPATH = "d:\Codes\whyme\src"
 
-# 一次性 seed（可选；空库下 mydow 也能用，只是没历史内容）
+# 涓€娆℃€?seed锛堝彲閫夛紱绌哄簱涓?mydow 涔熻兘鐢紝鍙槸娌″巻鍙插唴瀹癸級
 python scripts/seed_prd10.py --email demo@mydow.example --password demo123 --reset
 
-# 起服务
-python -m uvicorn agent_os.server.app:app --host 127.0.0.1 --port 8000
-# 浏览器打开 http://127.0.0.1:8000/mydow/，自动登录。
-```
+# 璧锋湇鍔?python -m uvicorn agent_os.server.app:app --host 127.0.0.1 --port 8000
+# 娴忚鍣ㄦ墦寮€ http://127.0.0.1:8000/mydow/锛岃嚜鍔ㄧ櫥褰曘€?```
 
-### Chrome MCP 实测（demo@mydow.example，已 seed）
-
-- Demo 自动登录：浮层进入 `data-state="logged-in"`，无需手动操作。
-- baseline（seed 之后、点按钮之前）：feed=35, kbDocs=21, kbFolders=7,
-  notif=9, aiConvs=4, skills=6, today.knowledge_items_count=21。
-- 浏览器内一次点完 19 个 toast 意图 + 11 个 modal 主按钮 + 3 个
-  settings panel 的快捷按钮（共 33 次真按钮点击）。
-- worker 跑完后的 delta：feed +6, kbDocs +2, kbFolders +1, notif +5,
-  pending_task +2, today_capture +5, knowledge_items +2。
-- 关键证据：
-  - KB 新增 `mydow-upload-*.txt`（presign + PUT + commit 三段式），
-    以及 “AI 联调 / AI 产出 / 洞察保存” 类 KB 文档（worker 把
-    `ai_message_to_kb` 材料化）。
-  - `/today.tasks` 出现 “整理本次洞察 / 把洞察归档到知识库”
-    （worker 把 `ai_message_to_tasks` 材料化）。
-  - 通知里同时出现 “AI 输出已保存到知识库 / AI 已生成任务 /
-    记录已整理完成”，证明 worker 周期性写入并去重。
-- 截图归档：`.tmp/screenshots/demo-mode-full.png`（2.3 MB）。
-
+### Chrome MCP 瀹炴祴锛坉emo@mydow.example锛屽凡 seed锛?
+- Demo 鑷姩鐧诲綍锛氭诞灞傝繘鍏?`data-state="logged-in"`锛屾棤闇€鎵嬪姩鎿嶄綔銆?- baseline锛坰eed 涔嬪悗銆佺偣鎸夐挳涔嬪墠锛夛細feed=35, kbDocs=21, kbFolders=7,
+  notif=9, aiConvs=4, skills=6, today.knowledge_items_count=21銆?- 娴忚鍣ㄥ唴涓€娆＄偣瀹?19 涓?toast 鎰忓浘 + 11 涓?modal 涓绘寜閽?+ 3 涓?  settings panel 鐨勫揩鎹锋寜閽紙鍏?33 娆＄湡鎸夐挳鐐瑰嚮锛夈€?- worker 璺戝畬鍚庣殑 delta锛歠eed +6, kbDocs +2, kbFolders +1, notif +5,
+  pending_task +2, today_capture +5, knowledge_items +2銆?- 鍏抽敭璇佹嵁锛?  - KB 鏂板 `mydow-upload-*.txt`锛坧resign + PUT + commit 涓夋寮忥級锛?    浠ュ強 鈥淎I 鑱旇皟 / AI 浜у嚭 / 娲炲療淇濆瓨鈥?绫?KB 鏂囨。锛坵orker 鎶?    `ai_message_to_kb` 鏉愭枡鍖栵級銆?  - `/today.tasks` 鍑虹幇 鈥滄暣鐞嗘湰娆℃礊瀵?/ 鎶婃礊瀵熷綊妗ｅ埌鐭ヨ瘑搴撯€?    锛坵orker 鎶?`ai_message_to_tasks` 鏉愭枡鍖栵級銆?  - 閫氱煡閲屽悓鏃跺嚭鐜?鈥淎I 杈撳嚭宸蹭繚瀛樺埌鐭ヨ瘑搴?/ AI 宸茬敓鎴愪换鍔?/
+    璁板綍宸叉暣鐞嗗畬鎴愨€濓紝璇佹槑 worker 鍛ㄦ湡鎬у啓鍏ュ苟鍘婚噸銆?- 鎴浘褰掓。锛歚.tmp/screenshots/demo-mode-full.png`锛?.3 MB锛夈€?
 ### Follow-ups
 
-- demo 模式默认仍然 OFF，生产部署不会意外发放 demo session。
-- LLM 真实流式（`/ai/.../messages/stream`）保持 `AGENTOS_AI_LLM=off`
-  默认；要测真 LLM 时配合 `.env.local` 切换即可。
-- 浏览器级回归仍然依赖 Chrome MCP 手动跑；引入 Playwright runner
-  是 P1 任务（不影响当前 demo 可跑性）。
-
+- demo 妯″紡榛樿浠嶇劧 OFF锛岀敓浜ч儴缃蹭笉浼氭剰澶栧彂鏀?demo session銆?- LLM 鐪熷疄娴佸紡锛坄/ai/.../messages/stream`锛変繚鎸?`AGENTOS_AI_LLM=off`
+  榛樿锛涜娴嬬湡 LLM 鏃堕厤鍚?`.env.local` 鍒囨崲鍗冲彲銆?- 娴忚鍣ㄧ骇鍥炲綊浠嶇劧渚濊禆 Chrome MCP 鎵嬪姩璺戯紱寮曞叆 Playwright runner
+  鏄?P1 浠诲姟锛堜笉褰卞搷褰撳墠 demo 鍙窇鎬э級銆?
 ---
 
-## Milestone 14 · Chrome MCP 浏览器实测 PRD10 全链路 — DONE
+## Milestone 14 路 Chrome MCP 娴忚鍣ㄥ疄娴?PRD10 鍏ㄩ摼璺?鈥?DONE
 
-**When**: 用户要求 “你调用 chrome mcp 试一试前后端的所有功能是不是都通了” 后立即执行。
-
+**When**: 鐢ㄦ埛瑕佹眰 鈥滀綘璋冪敤 chrome mcp 璇曚竴璇曞墠鍚庣鐨勬墍鏈夊姛鑳芥槸涓嶆槸閮介€氫簡鈥?鍚庣珛鍗虫墽琛屻€?
 ### How it ran
 
-- 临时数据库：`sqlite+aiosqlite:///d:/Codes/whyme/.tmp/smoke.db`，环境变量
-  `AGENTOS_PRD10_WORKER=on`、`AGENTOS_PRD10_WORKER_INTERVAL=2`、
-  `AGENTOS_AI_LLM=off`。
-- 进程：`python -m uvicorn agent_os.server.app:app --host 127.0.0.1 --port 8000`
-  后台运行，stdout/stderr 写入 `.tmp/uvicorn.{out,err}`，验证完毕已关闭。
-- 账号：`POST /api/v1/auth/register` 注册 `smoke_user / SmokePass#1`，拿到
-  access_token。
-- 浏览器：`chrome-devtools` MCP 在 `isolatedContext=prd10-mcp-smoke` 中
-  打开 `http://127.0.0.1:8000/mydow/`，将 token 写入 `localStorage.mydow_token`
-  后 `reload`，所有调用经过 `static/mydow/mydow-api.js` → 真实 PRD10 后端。
+- 涓存椂鏁版嵁搴擄細`sqlite+aiosqlite:///d:/Codes/whyme/.tmp/smoke.db`锛岀幆澧冨彉閲?  `AGENTOS_PRD10_WORKER=on`銆乣AGENTOS_PRD10_WORKER_INTERVAL=2`銆?  `AGENTOS_AI_LLM=off`銆?- 杩涚▼锛歚python -m uvicorn agent_os.server.app:app --host 127.0.0.1 --port 8000`
+  鍚庡彴杩愯锛宻tdout/stderr 鍐欏叆 `.tmp/uvicorn.{out,err}`锛岄獙璇佸畬姣曞凡鍏抽棴銆?- 璐﹀彿锛歚POST /api/v1/auth/register` 娉ㄥ唽 `smoke_user / SmokePass#1`锛屾嬁鍒?  access_token銆?- 娴忚鍣細`chrome-devtools` MCP 鍦?`isolatedContext=prd10-mcp-smoke` 涓?  鎵撳紑 `http://127.0.0.1:8000/mydow/`锛屽皢 token 鍐欏叆 `localStorage.mydow_token`
+  鍚?`reload`锛屾墍鏈夎皟鐢ㄧ粡杩?`static/mydow/mydow-api.js` 鈫?鐪熷疄 PRD10 鍚庣銆?
+### Verified end-to-end (娴忚鍣ㄥ唴 evaluate_script 鐪熷疄缁撴灉)
 
-### Verified end-to-end (浏览器内 evaluate_script 真实结果)
-
-| 域 | 调用 | 结果 |
+| 鍩?| 璋冪敤 | 缁撴灉 |
 | --- | --- | --- |
 | Auth | `MydowAPI.me.fetch()` | `username: "smoke_user"` |
 | Today | `MydowAPI.today.fetch()` | `keys: user/stats/quick_actions/tasks/insight_preview/favorite_folders` |
-| Capture | `capture.text` / `capture.link` | 两条 inbox item 创建成功，`auto_process` 触发 worker |
-| KB | `kb.createFolder` / `kb.overview` / `kb.listDocuments` | 文件夹 / 文档计数实时增加 |
-| Cards | `cards.create` | 写入 feed 并立即出现在 `feed.list` |
-| Feed | `feed.list({ page_size: 10 })` | 末轮 `total: 3`，含 capture/text、capture/link、card |
-| Notifications | `notifications.list` / `markAllRead` / `unreadCount` | 4 条通知 → markAllRead `updated: 2` 后 `unread.count == 0` |
-| AI | `ai.createConversation` + `ai.sendMessage` | 占位回复 + `job.job_type == "ai_chat"` |
-| AI → KB | `ai.saveToKb(messageId, …)` | worker 跑完后 `kb.documents.total: 1`、文档 “AI 联调 → KB” 出现在 `kb.overview.recent_documents` |
-| AI → Tasks | `ai.createTasks(messageId, [...])` | worker 跑完后 `today.tasks` 多出 “联调产生的任务 1/2” |
-| Skills / Search / Garden | `skills.list` / `search.query` / `garden.overview` | 全部 200，`garden.overview.node_count` 随卡片实时变化 |
+| Capture | `capture.text` / `capture.link` | 涓ゆ潯 inbox item 鍒涘缓鎴愬姛锛宍auto_process` 瑙﹀彂 worker |
+| KB | `kb.createFolder` / `kb.overview` / `kb.listDocuments` | 鏂囦欢澶?/ 鏂囨。璁℃暟瀹炴椂澧炲姞 |
+| Cards | `cards.create` | 鍐欏叆 feed 骞剁珛鍗冲嚭鐜板湪 `feed.list` |
+| Feed | `feed.list({ page_size: 10 })` | 鏈疆 `total: 3`锛屽惈 capture/text銆乧apture/link銆乧ard |
+| Notifications | `notifications.list` / `markAllRead` / `unreadCount` | 4 鏉￠€氱煡 鈫?markAllRead `updated: 2` 鍚?`unread.count == 0` |
+| AI | `ai.createConversation` + `ai.sendMessage` | 鍗犱綅鍥炲 + `job.job_type == "ai_chat"` |
+| AI 鈫?KB | `ai.saveToKb(messageId, 鈥?` | worker 璺戝畬鍚?`kb.documents.total: 1`銆佹枃妗?鈥淎I 鑱旇皟 鈫?KB鈥?鍑虹幇鍦?`kb.overview.recent_documents` |
+| AI 鈫?Tasks | `ai.createTasks(messageId, [...])` | worker 璺戝畬鍚?`today.tasks` 澶氬嚭 鈥滆仈璋冧骇鐢熺殑浠诲姟 1/2鈥?|
+| Skills / Search / Garden | `skills.list` / `search.query` / `garden.overview` | 鍏ㄩ儴 200锛宍garden.overview.node_count` 闅忓崱鐗囧疄鏃跺彉鍖?|
 
-### Worker 行为
+### Worker 琛屼负
 
-- `agent_os.jobs.worker_loop` 每 2 秒拉取一次 `prd10_jobs`，浏览器侧的
-  `auto_process=true` 全部被消化为 `completed`；`/today` 的
-  `today_capture_count: 4`、`pending_task_count: 2`、`knowledge_items_count: 1`
-  与浏览器实操次数严格对齐，证明 PRD10 §26 三大闭环（capture → feed →
-  notification、KB folder/document、AI chat → save-to-kb / create-tasks）在
-  生产形态的 ASGI app 内全部跑通。
-
+- `agent_os.jobs.worker_loop` 姣?2 绉掓媺鍙栦竴娆?`prd10_jobs`锛屾祻瑙堝櫒渚х殑
+  `auto_process=true` 鍏ㄩ儴琚秷鍖栦负 `completed`锛沗/today` 鐨?  `today_capture_count: 4`銆乣pending_task_count: 2`銆乣knowledge_items_count: 1`
+  涓庢祻瑙堝櫒瀹炴搷娆℃暟涓ユ牸瀵归綈锛岃瘉鏄?PRD10 搂26 涓夊ぇ闂幆锛坈apture 鈫?feed 鈫?  notification銆並B folder/document銆丄I chat 鈫?save-to-kb / create-tasks锛夊湪
+  鐢熶骇褰㈡€佺殑 ASGI app 鍐呭叏閮ㄨ窇閫氥€?
 ### Artifacts
 
-- 浏览器窗口截图：`.tmp/screenshots/mcp-smoke.png`（`take_screenshot` 抓帧后
-  归档；可作为 P1 引入 Playwright 之前的人工证据）。
-- 后台日志：`.tmp/uvicorn.{out,err}`（已确认 SQL 与 worker tick 正常）。
-
+- 娴忚鍣ㄧ獥鍙ｆ埅鍥撅細`.tmp/screenshots/mcp-smoke.png`锛坄take_screenshot` 鎶撳抚鍚?  褰掓。锛涘彲浣滀负 P1 寮曞叆 Playwright 涔嬪墠鐨勪汉宸ヨ瘉鎹級銆?- 鍚庡彴鏃ュ織锛歚.tmp/uvicorn.{out,err}`锛堝凡纭 SQL 涓?worker tick 姝ｅ父锛夈€?
 ### Follow-ups
 
-1. 如果要把这段流程沉淀为自动化用例，可在 `tests/integration/api/` 增加
-   一个 `test_prd10_browser_smoke.py`，由 `pytest --browser-runner` 触发，
-   现在该 runner 仍是 P1 任务。
-2. 这次没有触发 `AGENTOS_AI_LLM=on` 的真实 SSE 路径——等用户希望一并跑
-   流式 LLM 时再开关。
-
+1. 濡傛灉瑕佹妸杩欐娴佺▼娌夋穩涓鸿嚜鍔ㄥ寲鐢ㄤ緥锛屽彲鍦?`tests/integration/api/` 澧炲姞
+   涓€涓?`test_prd10_browser_smoke.py`锛岀敱 `pytest --browser-runner` 瑙﹀彂锛?   鐜板湪璇?runner 浠嶆槸 P1 浠诲姟銆?2. 杩欐娌℃湁瑙﹀彂 `AGENTOS_AI_LLM=on` 鐨勭湡瀹?SSE 璺緞鈥斺€旂瓑鐢ㄦ埛甯屾湜涓€骞惰窇
+   娴佸紡 LLM 鏃跺啀寮€鍏炽€?
 ---
 
-## Milestone 13 · Frontend button-click validation and unified todo table — PARTIAL PASS
+## Milestone 13 路 Frontend button-click validation and unified todo table 鈥?PARTIAL PASS
 
 **When**: User reported that many buttons still do not click or do not reach the
 expected result, and requested a single maintained delivery table named
@@ -3935,13 +3194,13 @@ page UI and produced successful `/api/v1` requests:
 
 Console evidence: no errors or warnings; only success info toasts:
 
-- `灵感已同步到后端`
-- `上传任务已创建并入队`
-- `网页剪藏已提交后端`
-- `语音记录已保存到后端`
-- `深度研究任务已创建并入队`
-- `AI 回复已生成（占位回答可在控制台查看）`
-- `通知已同步标记为已读`
+- `鐏垫劅宸插悓姝ュ埌鍚庣`
+- `涓婁紶浠诲姟宸插垱寤哄苟鍏ラ槦`
+- `缃戦〉鍓棌宸叉彁浜ゅ悗绔痐
+- `璇煶璁板綍宸蹭繚瀛樺埌鍚庣`
+- `娣卞害鐮旂┒浠诲姟宸插垱寤哄苟鍏ラ槦`
+- `AI 鍥炲宸茬敓鎴愶紙鍗犱綅鍥炵瓟鍙湪鎺у埗鍙版煡鐪嬶級`
+- `閫氱煡宸插悓姝ユ爣璁颁负宸茶`
 
 ### Test evidence
 
@@ -3962,7 +3221,7 @@ python -m pytest tests/integration/api/test_prd10_frontend_binding.py -q -p no:c
 
 ### Follow-up pass
 
-- Added a default built-in Skill (`Mydow 快速总结`) in
+- Added a default built-in Skill (`Mydow 蹇€熸€荤粨`) in
   `src/agent_os/skills/router.py` when a fresh database has no active skills.
   This prevents the Skills page / modal from being a dead end in V1.
 - Updated tests to expect the default skill:
@@ -3982,7 +3241,7 @@ python -m pytest tests/integration/api/test_prd10_skills_api.py tests/integratio
 
 ---
 
-## Milestone 12 · Chrome MCP browser integration validation — PASS
+## Milestone 12 路 Chrome MCP browser integration validation 鈥?PASS
 
 **When**: User challenged the previous acceptance as insufficient because it
 relied on API/static tests and not Chrome MCP.
@@ -4065,7 +3324,7 @@ above.
 
 ---
 
-## Milestone 10 · PRD10 integrated acceptance and repo cleanup pass — DONE
+## Milestone 10 路 PRD10 integrated acceptance and repo cleanup pass 鈥?DONE
 
 **When**: Commander takeover after Agent 1/2/3/4 slices were present.
 
@@ -4123,7 +3382,7 @@ python -m pytest --collect-only -q -p no:cacheprovider
 
 ---
 
-## Milestone 13 · Real LLM provider + AI streaming SSE wired — DONE
+## Milestone 13 路 Real LLM provider + AI streaming SSE wired 鈥?DONE
 
 **When**: After Milestone 12 acceptance pass identified AI streaming +
 LLM as the top remaining V1 blockers; the user confirmed a real LLM key
@@ -4131,7 +3390,7 @@ is provisioned in `.env.local`.
 
 ### Why this lands now
 
-PRD10 §26.3 requires "能流式返回 AI 回答". Until this slice the
+PRD10 搂26.3 requires "鑳芥祦寮忚繑鍥?AI 鍥炵瓟". Until this slice the
 assistant content was a deterministic placeholder. The repository
 already shipped `agent_os.llm.litellm_impl.LiteLLMProvider` and an
 OpenAI-compatible DeepSeek key in `.env.local`; the missing pieces were
@@ -4153,7 +3412,7 @@ endpoint over the same persistence shape.
     `input_tokens`/`output_tokens`/`latency_ms`. Provider failures
     degrade to the placeholder reply with `error.code="AI_PROVIDER_ERROR"`.
   - **New `POST /api/v1/ai/conversations/{id}/messages/stream`** returns
-    `text/event-stream` and emits `meta` → `token*` → `done` events.
+    `text/event-stream` and emits `meta` 鈫?`token*` 鈫?`done` events.
     The assistant message is created up-front with `status=running`,
     then finalized to `completed`/`failed` after the stream closes
     (uses a fresh sessionmaker so the request connection can flush
@@ -4195,7 +3454,7 @@ python -m pytest \
 
 ### Operational notes
 
-- Default behavior stays offline: `AGENTOS_AI_LLM` unset → placeholder
+- Default behavior stays offline: `AGENTOS_AI_LLM` unset 鈫?placeholder
   reply, no outbound network. Existing PRD10 AI tests keep passing
   unchanged.
 - To turn on the real DeepSeek-V3.1 endpoint provided in `.env.local`,
@@ -4207,50 +3466,47 @@ python -m pytest \
 
 ### Updated V1 deliverable status
 
-PRD10 §24 P0 outstanding items dropped from 7 to 5:
+PRD10 搂24 P0 outstanding items dropped from 7 to 5:
 
-1. ~~AI streaming SSE~~ → done in this milestone.
-2. ~~Real LLM provider~~ → done in this milestone (`AGENTOS_AI_LLM=on`).
-3. Embedding + semantic search (B-13) — still pending.
-4. `/insights/*` endpoints (PRD10 §12) — still pending.
-5. Browser-level UI tests (Playwright runner choice) — still pending.
-6. Mock data seed script (PRD10 §25.3) — `scripts/seed_prd10.py` exists
+1. ~~AI streaming SSE~~ 鈫?done in this milestone.
+2. ~~Real LLM provider~~ 鈫?done in this milestone (`AGENTOS_AI_LLM=on`).
+3. Embedding + semantic search (B-13) 鈥?still pending.
+4. `/insights/*` endpoints (PRD10 搂12) 鈥?still pending.
+5. Browser-level UI tests (Playwright runner choice) 鈥?still pending.
+6. Mock data seed script (PRD10 搂25.3) 鈥?`scripts/seed_prd10.py` exists
    in the repo (Agent 2 / coordinator artifact); needs an Agent 4 review
-   pass to confirm it satisfies §25.3.
-7. Auth UX inside the Mydow bundle — still pending.
+   pass to confirm it satisfies 搂25.3.
+7. Auth UX inside the Mydow bundle 鈥?still pending.
 
 ---
 
-## Milestone 12 · PRD10 V1 acceptance walk-through — DONE
+## Milestone 12 路 PRD10 V1 acceptance walk-through 鈥?DONE
 
 **When**: After Milestone 11 wired the worker into FastAPI startup.
 
 ### Goal
 
 Answer one question: **is the deployed Mydow Web app a real, end-to-end
-PRD10 V1 web app?** Cross-check PRD10 §24 P0 deliverables, §25.1 first-screen
-API matrix, and §26 acceptance bullets through the canonical FastAPI app.
+PRD10 V1 web app?** Cross-check PRD10 搂24 P0 deliverables, 搂25.1 first-screen
+API matrix, and 搂26 acceptance bullets through the canonical FastAPI app.
 
 ### Delivered
 
 - New `tests/integration/api/test_prd10_v1_acceptance.py`:
   - Boots the canonical `agent_os.server.app:app` against an in-memory
     SQLite engine with a real fixture user.
-  - `TestPrd10RouteApiMatrix` covers every PRD10 §25.1 first-screen API
+  - `TestPrd10RouteApiMatrix` covers every PRD10 搂25.1 first-screen API
     (Today / KB / AI / Skills / Garden / Search) and asserts every
     response carries `X-Request-ID` + the PRD10 envelope.
-  - `TestPrd10HomeAcceptance` exercises §26.1: capture text → feed sees
-    the card → unread notification appears → mark-read drops the count.
-  - `TestPrd10KnowledgeBaseAcceptance` exercises §26.2: create folder →
-    presign upload → commit upload → KB documents in the folder include
+  - `TestPrd10HomeAcceptance` exercises 搂26.1: capture text 鈫?feed sees
+    the card 鈫?unread notification appears 鈫?mark-read drops the count.
+  - `TestPrd10KnowledgeBaseAcceptance` exercises 搂26.2: create folder 鈫?    presign upload 鈫?commit upload 鈫?KB documents in the folder include
     the new file.
-  - `TestPrd10AiAcceptance` exercises §26.3: create AI conversation →
-    send message → save-to-kb → invoke the worker materializer →
-    `kb_documents` row + `Notification(type=ai_output_saved)` exist.
+  - `TestPrd10AiAcceptance` exercises 搂26.3: create AI conversation 鈫?    send message 鈫?save-to-kb 鈫?invoke the worker materializer 鈫?    `kb_documents` row + `Notification(type=ai_output_saved)` exist.
   - `TestMydowStaticBundle` proves `/`, `/mydow/`, `/mydow/mydow-api.js`
     are reachable on the same ASGI app.
 - `agent-4-todo.md`: marked the V1 acceptance pass as `done` and recorded
-  the §24 / §25.1 / §26 coverage map.
+  the 搂24 / 搂25.1 / 搂26 coverage map.
 
 ### Test evidence
 
@@ -4277,19 +3533,19 @@ python -m pytest \
 # -> 159 passed
 ```
 
-### V1 deliverable status (PRD10 §24)
+### V1 deliverable status (PRD10 搂24)
 
 | Module | PRD10 P-tier | Status |
 |---|---|---|
 | Auth/User (`/me`, `/auth/*`) | P0 | wired (PRD10 envelope), AI / Mydow login UX still split between `/login.html` and the Mydow bundle |
-| Today (`/today`) | P0 | done — PRD10 envelope + V1 acceptance test |
-| Capture (`/capture/text|link|file/commit`, `/uploads/presign`) | P0 | done — both API and worker materializer green |
+| Today (`/today`) | P0 | done 鈥?PRD10 envelope + V1 acceptance test |
+| Capture (`/capture/text|link|file/commit`, `/uploads/presign`) | P0 | done 鈥?both API and worker materializer green |
 | Feed/Cards (`/feed`, `/cards/*`) | P0 | done |
 | KB Folder (`/kb/folders/*`) | P0 | done |
 | KB Document (`/kb/documents/*`, `/move`) | P0 | done |
-| Job (`/jobs/{id}`, `/cancel`) | P0 | done — PRD10 worker loop also drains queued AI-to-KB / AI-to-tasks jobs |
+| Job (`/jobs/{id}`, `/cancel`) | P0 | done 鈥?PRD10 worker loop also drains queued AI-to-KB / AI-to-tasks jobs |
 | Notification (`/notifications/*`) | P0 | done |
-| AI Chat (`/ai/conversations/*`, `/messages`) | P0 | API + persistence done; **streaming reply (SSE) is still placeholder** — assistant content is a deterministic stub until a real LLM provider lands |
+| AI Chat (`/ai/conversations/*`, `/messages`) | P0 | API + persistence done; **streaming reply (SSE) is still placeholder** 鈥?assistant content is a deterministic stub until a real LLM provider lands |
 | Search (`/search`, `/search/suggestions`) | P0 | API contract done; results currently rely on populated `SearchIndex` rows (capture path back-fills are pending the embedding follow-up in Milestone 5) |
 | Skills (`/skills`, `/skills/{id}/run`) | P1 | done |
 | Garden (`/garden/overview`, `/garden/graph`) | P1 | done |
@@ -4298,19 +3554,19 @@ python -m pytest \
 
 ### Outstanding to call "fully PRD10-compliant"
 
-1. **AI streaming SSE** (`POST /api/v1/ai/messages/{id}/stream`) — required
-   by PRD10 §26.3 ("能流式返回 AI 回答"). Persistence shape is already
+1. **AI streaming SSE** (`POST /api/v1/ai/messages/{id}/stream`) 鈥?required
+   by PRD10 搂26.3 ("鑳芥祦寮忚繑鍥?AI 鍥炵瓟"). Persistence shape is already
    correct; only the LLM provider plug-in is missing.
 2. **Real LLM provider** wired into AI chat + skill run output. Today the
    assistant message is a deterministic placeholder.
-3. **Embedding + semantic search** (`B-13`). PRD10 §26.4 only requires
+3. **Embedding + semantic search** (`B-13`). PRD10 搂26.4 only requires
    keyword search to work; semantic re-ranking is P1.
-4. **Insight CRUD endpoints** (PRD10 §12). `/today.insight_preview` is a
+4. **Insight CRUD endpoints** (PRD10 搂12). `/today.insight_preview` is a
    stub; `/insights/*` endpoints are not yet exposed.
 5. **Browser-level UI tests**. Static DOM/API contract tests cover the
    bindings, but a real headless-browser run (Playwright) still needs a
    runner choice from Engineer 1.
-6. **Mock data seed script** (PRD10 §25.3). Required for first-screen
+6. **Mock data seed script** (PRD10 搂25.3). Required for first-screen
    demo loads.
 7. **Auth UX inside the Mydow bundle**. Today the package expects a JWT
    in `localStorage["mydow_token"]`; the existing `/login.html` produces
@@ -4327,7 +3583,7 @@ package binds high-intent UI actions to the live API.
 
 ---
 
-## Milestone 11 · PRD10 worker loop wired into FastAPI startup — DONE
+## Milestone 11 路 PRD10 worker loop wired into FastAPI startup 鈥?DONE
 
 **When**: After Milestone 10 added the scheduler entry function.
 
@@ -4387,7 +3643,7 @@ python -m pytest \
 
 ---
 
-## Milestone 10 · Worker scheduler entry + AI-output notification — DONE
+## Milestone 10 路 Worker scheduler entry + AI-output notification 鈥?DONE
 
 **When**: After Milestone 9 worker materialization slices.
 
@@ -4396,14 +3652,14 @@ python -m pytest \
 - `src/agent_os/jobs/service.py`
   - `process_job_once` now writes a `Notification(type=ai_output_saved)`
     after both KB and tasks materializations so the UI can pop a real
-    "AI 输出已保存到知识库" / "AI 已生成任务" banner without polling.
+    "AI 杈撳嚭宸蹭繚瀛樺埌鐭ヨ瘑搴? / "AI 宸茬敓鎴愪换鍔? banner without polling.
   - New `process_pending_jobs(db, *, limit=25)`: side-effect-free batch
     drain of queued PRD10 jobs whose `(job_type, input.kind)` pair has a
     materializer registered. Designed to be invoked by a startup loop or
     cron-style scheduler. Unsupported job kinds remain `queued`.
 - `tests/integration/api/prd10/test_prd10_jobs_notifications_api.py`
   - Added `test_worker_writes_ai_output_saved_notification`.
-  - Added `test_process_pending_jobs_drains_supported_kinds` — proves the
+  - Added `test_process_pending_jobs_drains_supported_kinds` 鈥?proves the
     batch worker only picks up supported job kinds.
 
 ### Test evidence
@@ -4439,7 +3695,7 @@ python -m pytest \
 
 ---
 
-## Milestone 9 · Agent 2 worker slices for AI-output materialization — DONE
+## Milestone 9 路 Agent 2 worker slices for AI-output materialization 鈥?DONE
 
 **When**: Agent 4 covering Agent 2 product-data follow-ups after the first
 UI action-binding slice landed.
@@ -4483,7 +3739,7 @@ python -m pytest tests/integration/api/prd10/ tests/integration/api/test_prd10_p
 
 ---
 
-## Milestone 8 · Agent 4 first UI action-binding slice — DONE
+## Milestone 8 路 Agent 4 first UI action-binding slice 鈥?DONE
 
 **When**: Agent 4 onboarding pass after confirming Mydow Web is the V1 frontend lane.
 
@@ -4522,7 +3778,7 @@ python -m pytest tests/integration/api/test_prd10_frontend_binding.py tests/inte
 
 ---
 
-## Milestone 7 · Mydow Web frontend bound + V1 acceptance pass — DONE
+## Milestone 7 路 Mydow Web frontend bound + V1 acceptance pass 鈥?DONE
 
 **When**: After the prior commander acceptance sweep (Milestone 6),
 following Engineer 1's directive to also own Agent 1's coordinator role
@@ -4536,7 +3792,7 @@ canonical frontend.
 - Unzipped the bundle to `static/mydow/`:
   - `index.html` (the original `mydow.html`, 285 KB single-file SPA prototype).
   - `HANDOFF.md` (the bundle's handoff doc).
-  - `mydow-api.js` — **new** integration layer exposing
+  - `mydow-api.js` 鈥?**new** integration layer exposing
     `window.MydowAPI` with typed helpers for every PRD10 path the handoff
     enumerates (`search`, `ai`, `skills`, `garden`, `feed`, `kb`,
     `capture`, `notifications`, `jobs`, `today`, `me`).
@@ -4550,20 +3806,20 @@ canonical frontend.
 
 #### Coordinator hand-off (Agent 1 work this worker did)
 
-- `agent-1-todo.md`: task 7 → `done` (final acceptance pass).
-- `agent-2-todo.md`: every task moved from `open` → `done` to match the
+- `agent-1-todo.md`: task 7 鈫?`done` (final acceptance pass).
+- `agent-2-todo.md`: every task moved from `open` 鈫?`done` to match the
   code reality (Agent 2's status drifted behind the implementation by
   several slices). Notes call out that
   `RequestIdMiddleware` and `Prd10AccessLogMiddleware` are now installed.
 
 #### New cross-cutting tests
 
-- `tests/integration/api/test_prd10_frontend_binding.py` — 10 tests:
+- `tests/integration/api/test_prd10_frontend_binding.py` 鈥?10 tests:
   `/mydow/`, `/mydow/mydow-api.js`, `/mydow/HANDOFF.md` reachable; every
   PRD10 path the JS calls returns a valid PRD10 envelope; literal
   presence guard on every PRD10 token in `mydow-api.js`.
-- `tests/integration/api/test_prd10_e2e_flow.py` — 5 tests covering:
-  `/today` shape, AI conversation → message → save-to-kb → Job lookup,
+- `tests/integration/api/test_prd10_e2e_flow.py` 鈥?5 tests covering:
+  `/today` shape, AI conversation 鈫?message 鈫?save-to-kb 鈫?Job lookup,
   `create-tasks` payload validation, Skills list+run + Job lookup,
   Card create through `/api/v1/cards` then GET by id.
 
@@ -4581,17 +3837,17 @@ python -m pytest \
   tests/integration/api/test_prd10_frontend_binding.py \
   tests/integration/api/test_prd10_e2e_flow.py \
   -p no:cacheprovider
-# → 74 passed in 24.75s
+# 鈫?74 passed in 24.75s
 ```
 
 ```
 python -m pytest tests/integration/api/prd10/ tests/integration/api/test_prd10_product_data_api.py
-# → 40 passed
+# 鈫?40 passed
 ```
 
 ```
 python -m pytest --collect-only -q -p no:cacheprovider
-# → 1366 tests collected in 52.71s, exit 0
+# 鈫?1366 tests collected in 52.71s, exit 0
 ```
 
 **Total PRD10 acceptance: 114/114 passing.** No collection errors.
@@ -4624,10 +3880,10 @@ Created:
 
 Modified:
 
-- `src/agent_os/server/app.py` — mounted `/mydow`
+- `src/agent_os/server/app.py` 鈥?mounted `/mydow`
   (`StaticFiles(html=True)`) at the project-root `static/mydow`
   directory; existing `STATIC_DIR` mount at `/static` preserved.
-- `agent-1-todo.md`, `agent-2-todo.md` — status alignment with reality.
+- `agent-1-todo.md`, `agent-2-todo.md` 鈥?status alignment with reality.
 
 ### Follow-ups (P1, not blockers for V1)
 
@@ -4637,19 +3893,19 @@ Modified:
    generate_report (kind=ai_message_to_tasks) / skill_run` and writes
    the downstream KB document / task / AI reply / skill output.
 3. Real LLM provider plug-in for `AIMessage.content`.
-4. AI context retrieval (PRD10 §11.4 citations from `context_scope`).
-5. Legacy `tasks.models.Task.user_id` Integer→UUID reconciliation so
+4. AI context retrieval (PRD10 搂11.4 citations from `context_scope`).
+5. Legacy `tasks.models.Task.user_id` Integer鈫扷UID reconciliation so
    `/today.tasks` can populate.
 6. `tests/conftest.py` teardown hygiene to make the legacy SQLite path
    completely green now that the UUID compile-shim has unblocked fixture
    setup.
 
-**Status**: All Agent 1/2/3 PRD10 V1 deliverables → `done`. P1 worker /
+**Status**: All Agent 1/2/3 PRD10 V1 deliverables 鈫?`done`. P1 worker /
 streaming / context-retrieval items above are the next chunk.
 
 ---
 
-## Milestone 8 · Agent 3/4 takeover slice: AI context + UI action binding — DONE
+## Milestone 8 路 Agent 3/4 takeover slice: AI context + UI action binding 鈥?DONE
 
 **When**: After Agent 1 was asked to take over Engineer 3 and Engineer 4 remaining tasks.
 
@@ -4695,7 +3951,7 @@ Result: **118 passed**.
 
 ---
 
-## Milestone 7 · Agent 4 frontend lane assigned — OPEN
+## Milestone 7 路 Agent 4 frontend lane assigned 鈥?OPEN
 
 **When**: After adding Agent 4 and confirming Agent 2 / Agent 3 PRD10 backend suites are green.
 
@@ -4768,7 +4024,7 @@ Current result: **1366 tests collected**, exit `0`.
 
 ---
 
-## Milestone 6 · Commander PRD10 acceptance sweep green — DONE
+## Milestone 6 路 Commander PRD10 acceptance sweep green 鈥?DONE
 
 **When**: After Agent 2 product-data and Agent 3 intelligence router slices.
 
@@ -4808,11 +4064,11 @@ Result: **1366 tests collected**, exit code `0`.
 
 ---
 
-## Milestone 5 · Agent 3 PRD10 router slices + app wiring + observability — DONE
+## Milestone 5 路 Agent 3 PRD10 router slices + app wiring + observability 鈥?DONE
 
 **When**: Immediately after Milestone 4 (model layer).
 
-**Why**: With AI/Skill/Search/Garden tables in place, PRD10 §11/§17/§18
+**Why**: With AI/Skill/Search/Garden tables in place, PRD10 搂11/搂17/搂18
 needed concrete endpoints, the app needed to mount them through the same
 envelope and request-id pipeline Agent 1 set up, and the legacy
 `agent_os.server.app` had a `NameError` (referenced
@@ -4834,7 +4090,7 @@ boot.
 | `POST /api/v1/ai/messages/{id}/save-to-kb` | same | Enqueues a Job (`parse_file` with `input.kind="ai_message_to_kb"`). |
 | `POST /api/v1/ai/messages/{id}/create-tasks` | same | Enqueues a Job (`generate_report` with `input.kind="ai_message_to_tasks"`). |
 | `GET /api/v1/skills` | `agent_os.skills.router` | category/keyword/status filters, usage_count-DESC. |
-| `GET /api/v1/skills/{id}` | same | PRD10 §5.13 DTO. |
+| `GET /api/v1/skills/{id}` | same | PRD10 搂5.13 DTO. |
 | `POST /api/v1/skills/{id}/run` | same | Writes `Job(skill_run)` + `SkillRun(queued)`, increments usage_count. |
 | `GET /api/v1/garden/overview` | `agent_os.garden.router_prd10` | node/edge/strong_edge counts, top topics from `Card.tags`, recent `DailyInsight`. |
 | `GET /api/v1/garden/graph` | same | Cards-as-nodes + `KnowledgeCardLink` edges. Empty graph is a success. |
@@ -4842,7 +4098,7 @@ boot.
 #### Cross-cutting
 
 - `src/agent_os/server/app.py`:
-  - Added missing imports (`today_prd10_router`, `feed_router`) — fixes a
+  - Added missing imports (`today_prd10_router`, `feed_router`) 鈥?fixes a
     `NameError` that prevented `import agent_os.server.app` from succeeding.
   - Mounted the four PRD10 intelligence routers **before** their legacy
     counterparts (stage4, garden) so PRD10 paths win at FastAPI's
@@ -4939,18 +4195,18 @@ Modified:
    Depends on Agent 2's `Card`/`Document`/`Chunk` corpus existing.
 4. **Legacy-conftest hygiene**: `tests/conftest.py` `drop_prd4_tables`
    should pass `checkfirst=True` and `db_session` cleanup should swallow
-   `OperationalError: no such table` — both surfaced now that the SQLite
+   `OperationalError: no such table` 鈥?both surfaced now that the SQLite
    UUID compile-shim lets fixtures actually execute. Owner: Agent 1
    (conftest is in their integration-hygiene area, task 6).
 
-**Status**: Agent 3 tasks 1, 2, 4 (Job-only MVP), 5, 7, 8, 9, 10 → `done`.
-Task 3 (AI context retrieval) → `open`, blocked on Agent 2 KB corpus.
-Task 6 (search-package hygiene) → `open`, decision recorded but no code
+**Status**: Agent 3 tasks 1, 2, 4 (Job-only MVP), 5, 7, 8, 9, 10 鈫?`done`.
+Task 3 (AI context retrieval) 鈫?`open`, blocked on Agent 2 KB corpus.
+Task 6 (search-package hygiene) 鈫?`open`, decision recorded but no code
 change required from Agent 3.
 
 ---
 
-## Milestone 4 · Agent 3 intelligence model layer landed — DONE
+## Milestone 4 路 Agent 3 intelligence model layer landed 鈥?DONE
 
 **When**: After Milestone 3 (PRD10 persistence contract freeze).
 
@@ -4961,19 +4217,19 @@ proves the shapes via focused tests.
 
 ### Delivered
 
-- `src/agent_os/ai/models.py` (already created; verified PRD10 §5.11 / §5.12
+- `src/agent_os/ai/models.py` (already created; verified PRD10 搂5.11 / 搂5.12
   shape including `mode`, `last_message_preview`, `message_count`,
   `context_scope`, `citations`, `tool_calls`, `attachments`, token + latency
   fields, and a foreign key from `ai_messages.job_id` to `prd10_jobs.id`).
-- `src/agent_os/skills/runs.py` (already created; verified PRD10 §17 shape
+- `src/agent_os/skills/runs.py` (already created; verified PRD10 搂17 shape
   including `save_output`, `output_object_type`, `output_object_id` so the
   forthcoming `POST /api/v1/skills/{id}/run` endpoint can persist
   save-to-document/task hints).
-- `src/agent_os/stage3/models.py` Skill table extended with PRD10 §5.13
+- `src/agent_os/stage3/models.py` Skill table extended with PRD10 搂5.13
   display fields (`icon`, `status`, `usage_count`, `is_installed_default`,
   `input_schema`, `output_schema`) plus a `to_prd10_dict(*, is_installed=)`
   serializer.
-- `src/agent_os/search_engine/models.py` SearchIndex extended to PRD10 §5.14
+- `src/agent_os/search_engine/models.py` SearchIndex extended to PRD10 搂5.14
   SearchDocument shape:
   - New nullable columns: `user_id` (FK to `users.id`), `workspace_id`,
     `summary`, `embedding_id`. Nullability preserves backwards compatibility
@@ -4986,9 +4242,9 @@ proves the shapes via focused tests.
     so `tests/unit/models/test_search_models.py::test_search_index_item_type_constraint`
     semantics still hold.
   - Added composite index `idx_search_user_object_updated (user_id,
-    item_type, updated_at)` per PRD10 §21 advice.
+    item_type, updated_at)` per PRD10 搂21 advice.
   - Added `object_type` / `object_id` Python aliases and a
-    `to_prd10_dict()` serializer that emits the §5.14 DTO directly.
+    `to_prd10_dict()` serializer that emits the 搂5.14 DTO directly.
 - `src/agent_os/db/sqlite_compat.py` (NEW): a tiny `@compiles` patch that
   renders `postgresql.UUID` as `CHAR(32)` on the SQLite dialect only. PRD10
   tests import it once so `:memory:` SQLite engines can build the PRD10
@@ -5008,7 +4264,7 @@ Result: **10 passed**. Coverage:
   explicit `is_installed`)
 - `SkillRun` create with `prd10_jobs` foreign key
 - `SearchIndex` legacy ingestion write still works (no `user_id`),
-  PRD10 object_types accepted, PRD10 §5.14 DTO shape, invalid object_type
+  PRD10 object_types accepted, PRD10 搂5.14 DTO shape, invalid object_type
   rejected via the existing CheckConstraint name.
 
 ### Decisions baked in
@@ -5016,7 +4272,7 @@ Result: **10 passed**. Coverage:
 - Legacy `conversations.Conversation` is **not** reused for PRD10. The Aider
   WebSocket path keeps that table; PRD10 `/api/v1/ai/*` writes through
   `ai_conversations` + `ai_messages` exclusively.
-- `Skill` table is the canonical PRD10 Skill (decision in §5.13). The
+- `Skill` table is the canonical PRD10 Skill (decision in 搂5.13). The
   Pydantic-only `agent_os.skills.models.Skill` stays as a runtime
   representation for the Coze-style skill loader and is **not** persisted
   through PRD10 endpoints.
@@ -5043,11 +4299,11 @@ Result: **10 passed**. Coverage:
    `agent_os.db.sqlite_compat` so the legacy SQLite tests stop failing at
    fixture-setup time.
 
-**Status**: Agent 3 task 1 → `done`; tasks 2/5/6/7 unblocked.
+**Status**: Agent 3 task 1 鈫?`done`; tasks 2/5/6/7 unblocked.
 
 ---
 
-## Milestone 4 · PRD10 product-data routers wired and covered (Agent 1 integration) — DONE
+## Milestone 4 路 PRD10 product-data routers wired and covered (Agent 1 integration) 鈥?DONE
 
 **When**: After Milestone 3.
 
@@ -5062,9 +4318,9 @@ Result: **10 passed**. Coverage:
   - Removed `aggregation.router` from app wiring so `/api/v1/today` is registered once.
 - `src/agent_os/kb/router.py`
   - Repaired a duplicated/concatenated router file that prevented app import.
-  - Kept a single PRD10 §10 implementation for KB overview, folders, documents, soft delete, and move.
+  - Kept a single PRD10 搂10 implementation for KB overview, folders, documents, soft delete, and move.
 - `tests/integration/api/test_prd10_product_data_api.py`
-  - Added focused integration coverage for route wiring, Capture → Job → Notification, validation envelope, job user isolation, and KB folder + file-capture document flow.
+  - Added focused integration coverage for route wiring, Capture 鈫?Job 鈫?Notification, validation envelope, job user isolation, and KB folder + file-capture document flow.
 
 **Test evidence**:
 
@@ -5089,7 +4345,7 @@ Result: `1291 tests collected`, exit code `0`.
 **Known follow-ups**:
 
 1. Feed/Card endpoints are still not implemented under `src/agent_os/feed/router.py`.
-2. `today/router.py` still has a legacy workspace-required response model and should be reshaped to PRD10 §7.1.
+2. `today/router.py` still has a legacy workspace-required response model and should be reshaped to PRD10 搂7.1.
 3. Agent 3 intelligence endpoints remain pending.
 
 **Files touched**:
@@ -5098,24 +4354,24 @@ Result: `1291 tests collected`, exit code `0`.
 - `src/agent_os/kb/router.py`
 - `tests/integration/api/test_prd10_product_data_api.py`
 
-**Status**: Agent 1 task 6 → `done`; Agent 1 task 7 remains `open` for full backend acceptance after Feed/Today/Agent 3 slices.
+**Status**: Agent 1 task 6 鈫?`done`; Agent 1 task 7 remains `open` for full backend acceptance after Feed/Today/Agent 3 slices.
 
 ---
 
-## Milestone 3 · PRD10 persistence strategy frozen (Agent 1 task 5) — DONE
+## Milestone 3 路 PRD10 persistence strategy frozen (Agent 1 task 5) 鈥?DONE
 
 **When**: After Milestone 2.
 
 **Why**: Agent 2 and Agent 3 cannot ship endpoints until they know which existing model to reuse vs which new ORM table to create. This is the contract that keeps both domains from drifting.
 
-### PRD10 entity × current code crosswalk
+### PRD10 entity 脳 current code crosswalk
 
-| PRD10 entity | PRD10 §  | Existing code | Decision | New file/path |
+| PRD10 entity | PRD10 搂  | Existing code | Decision | New file/path |
 |---|---|---|---|---|
-| `User` | 5.1 | `auth.models.User` (UUID, JSON `settings`) | **Reuse**. Keep canonical user identity. | — |
-| `UserPreference` | 5.2 | `auth.models.UserSettings` (added in M2) | **Reuse** for legacy compatibility. PRD10 endpoints continue to use `User.settings` JSON for V1. | — |
-| `Workspace` | 4.x | `items.models.Workspace` (UUID owner_id, no FK to users) | **Reuse**. PRD10 V1 = personal workspace. | — |
-| `InboxItem` | 5.3 | `knowledge.models.InboxItem` (added in M2) | **Reuse**. New canonical PRD10 inbox table. | — |
+| `User` | 5.1 | `auth.models.User` (UUID, JSON `settings`) | **Reuse**. Keep canonical user identity. | 鈥?|
+| `UserPreference` | 5.2 | `auth.models.UserSettings` (added in M2) | **Reuse** for legacy compatibility. PRD10 endpoints continue to use `User.settings` JSON for V1. | 鈥?|
+| `Workspace` | 4.x | `items.models.Workspace` (UUID owner_id, no FK to users) | **Reuse**. PRD10 V1 = personal workspace. | 鈥?|
+| `InboxItem` | 5.3 | `knowledge.models.InboxItem` (added in M2) | **Reuse**. New canonical PRD10 inbox table. | 鈥?|
 | `Source` | 5.4 | (none) | **NEW**. Stores raw source metadata (file/link/audio). | `src/agent_os/sources/models.py` |
 | `Card` | 5.5 | `knowledge.models.Card` (PRD4 shape, missing several PRD10 fields) | **Extend**. Add `is_favorite`, `summary`, `view_count` columns; reuse table. | `src/agent_os/knowledge/models.py` |
 | `Folder` | 5.6 | `items.models.Area` is similar but tied to PRD4 Areas/Projects, not PRD10 KB folders | **NEW**. Dedicated `kb_folders` table. | `src/agent_os/kb/models.py` |
@@ -5123,14 +4379,14 @@ Result: `1291 tests collected`, exit code `0`.
 | `Chunk` | 5.7 | None | **NEW**. `kb_chunks` table for embedding-ready text chunks. | `src/agent_os/kb/models.py` |
 | `Task` | 5.9 | `tasks.models.Task` uses **integer user_id** which conflicts with auth UUID. | **NEW PRD10 task table** alongside legacy. PRD10 endpoints write `prd10_tasks` (UUID user_id); legacy tests keep their table. | `src/agent_os/tasks/models.py` (alongside) |
 | `Insight` | 5.10 | `garden.models.DailyInsight` is close (per-day) but PRD10 wants generic `theme_trend / task_risk / knowledge_gap / connection / daily_summary / weekly_summary` | **Reuse `DailyInsight` for daily/weekly summary**; **NEW** `prd10_insights` for the rest. | `src/agent_os/insights/models.py` |
-| `Conversation` | 5.11 | `conversations.models.Conversation` is a **single-message row** (legacy Aider chat) — does not match PRD10's session-with-messages | **NEW** `ai_conversations` + `ai_messages` tables. Old `conversations.Conversation` stays for legacy. | `src/agent_os/ai/models.py` |
+| `Conversation` | 5.11 | `conversations.models.Conversation` is a **single-message row** (legacy Aider chat) 鈥?does not match PRD10's session-with-messages | **NEW** `ai_conversations` + `ai_messages` tables. Old `conversations.Conversation` stays for legacy. | `src/agent_os/ai/models.py` |
 | `Message` | 5.12 | (none) | **NEW** `ai_messages` table. | `src/agent_os/ai/models.py` |
 | `Skill` | 5.13 | `stage3.models.Skill` is workflow-internal; missing `category`, `icon`, `is_installed`, `usage_count` | **Extend** `stage3.Skill` with PRD10 display fields; reuse table. | `src/agent_os/stage3/models.py` |
 | `SkillRun` | 17.x | (none) | **NEW**. `skill_runs` records inputs/outputs/status. | `src/agent_os/skills/models.py` |
 | `SearchDocument` | 5.14 | `search_engine.models.SearchIndex` lacks `user_id`, `object_type` enum mismatches | **Extend** with `user_id` + relax `object_type` constraint to PRD10 list. | `src/agent_os/search_engine/models.py` |
 | `IngestionJob` | 5.15 | `search_engine.models.IngestionJob` is ingestion-only | **NEW general `Job` table**. IngestionJob stays for ingestion-specific flows. | `src/agent_os/jobs/models.py` |
 | `Notification` | 5.16 | (none) | **NEW**. `notifications` table. | `src/agent_os/notifications/models.py` |
-| `KnowledgeNode/KnowledgeEdge` | 18.x | `garden.models.KnowledgeCardLink` + `items.models.GraphEdge` | **Reuse `KnowledgeCardLink`** for garden edges; nodes are derived from cards/folders. | — |
+| `KnowledgeNode/KnowledgeEdge` | 18.x | `garden.models.KnowledgeCardLink` + `items.models.GraphEdge` | **Reuse `KnowledgeCardLink`** for garden edges; nodes are derived from cards/folders. | 鈥?|
 
 ### Owner assignments
 
@@ -5141,7 +4397,7 @@ Result: `1291 tests collected`, exit code `0`.
 ### Conflict prevention rules
 
 1. Both agents read `agent-progress-report.md` before extending a shared model.
-2. Card extensions (`is_favorite`, `summary`, `view_count`) live under Agent 2 (knowledge module) — Agent 3 only reads.
+2. Card extensions (`is_favorite`, `summary`, `view_count`) live under Agent 2 (knowledge module) 鈥?Agent 3 only reads.
 3. The `Job` general table (Agent 1) is the **only** place where `job_type IN ('parse_file','summarize','embed','index','generate_insight','generate_report','ai_chat','skill_run')` is enforced. SkillRun and AI chat record their `job_id` reference.
 4. SearchIndex extension by Agent 3 must keep backward compatibility with current ingestion writes (so Agent 2's IngestionPipeline still works).
 
@@ -5152,16 +4408,16 @@ Result: `1291 tests collected`, exit code `0`.
 - `src/agent_os/jobs/models.py` (general `Job` table, Agent 1)
 - `src/agent_os/notifications/models.py` (Agent 2)
 - `src/agent_os/sources/models.py` (Agent 2)
-- `src/agent_os/kb/models.py` (Folder, Document, Chunk — Agent 2)
-- `src/agent_os/ai/models.py` (AIConversation, AIMessage — Agent 3)
-- `src/agent_os/skills/models.py` (already exists for shape; SkillRun added — Agent 3)
+- `src/agent_os/kb/models.py` (Folder, Document, Chunk 鈥?Agent 2)
+- `src/agent_os/ai/models.py` (AIConversation, AIMessage 鈥?Agent 3)
+- `src/agent_os/skills/models.py` (already exists for shape; SkillRun added 鈥?Agent 3)
 - Modifications: `knowledge/models.py` (Card fields), `stage3/models.py` (Skill fields), `tasks/models.py` (PRD10 task table), `search_engine/models.py` (SearchIndex extension).
 
-**Status**: Agent 1 task 5 → `done`. Decisions referenced by every downstream slice.
+**Status**: Agent 1 task 5 鈫?`done`. Decisions referenced by every downstream slice.
 
 ---
 
-## Milestone 2 · Test collection unblocked (Agent 1 task 4) — DONE
+## Milestone 2 路 Test collection unblocked (Agent 1 task 4) 鈥?DONE
 
 **When**: After Milestone 1.
 
@@ -5216,11 +4472,11 @@ python -m pytest --collect-only -q -p no:cacheprovider
 - `tests/test_app.py` (created)
 - `tests/unit/auth/test_verification.py` (added `patch` import)
 
-**Status**: Agent 1 task 4 → `done`.
+**Status**: Agent 1 task 4 鈫?`done`.
 
 ---
 
-## Milestone 1 · Shared API utility layer (Agent 1 task 3) — DONE
+## Milestone 1 路 Shared API utility layer (Agent 1 task 3) 鈥?DONE
 
 **When**: Initial pass.
 
@@ -5266,4 +4522,58 @@ Result: 18 passed in ~0.15s.
 - `src/agent_os/common/__init__.py` (rewritten)
 - `tests/unit/common/test_response_envelope.py` (created)
 
-**Status**: Agent 1 task 3 → `done` in `agent-1-todo.md`.
+**Status**: Agent 1 task 3 鈫?`done` in `agent-1-todo.md`.
+
+## Milestone 82 - 2026-05-09 10:17 (UTC+8) - Codex
+- Completed §18.4 Mydow AI personalization dropdown modernization.
+- Replaced the AI personalization modal's exposed native selects with modern keyboard-operable listbox panels while keeping native select values synchronized.
+- Fixed persistence to write real PRD10 `/me/preferences` fields: `ai_response_style`, `ai_detail_level`, `language`, and `cite_knowledge_by_default`; backend whitelist and GET projection now include the new AI personalization keys.
+- Verified in Chrome MCP @8035: selected `更具创意` + `详细`, clicked save, observed `PATCH /api/v1/me/preferences` 200 and response settings persisted `ai_response_style=detailed`, `ai_detail_level=deep`.
+- Automated checks: `node --check static\mydow\biz_v14\bridge_v14.js` PASS; 4 targeted pytest cases PASS.
+
+## Milestone 83 - 2026-05-09 10:28 (UTC+8) - Codex
+- Completed §18.5 document editor focus/autosave repair.
+- Added real document hydration from `GET /kb/documents/{id}` when opening folder documents, then autosaves title/body edits with debounced `PATCH /kb/documents/{id}`.
+- Replaced the abrupt default contenteditable focus outline with a subtle editor-shell focus ring and status chip states.
+- Chrome MCP @8035 verified: opened a real KB document, inserted text into the body, observed `PATCH /api/v1/kb/documents/0c545f0b-34fa-4d8b-b2d3-777a27852900` 200 with persisted content; computed style reports `outline-style: none` on the focused editor body.
+- Automated checks: `node --check static\mydow\biz_v14\bridge_v14.js` PASS; `pytest tests\integration\api\test_prd10_frontend_binding.py::test_biz_v14_doc_editor_autosaves_without_black_focus_frame -q` PASS.
+
+## Milestone 84 - 2026-05-09 10:40 (UTC+8) - Codex
+- Completed Section 18.6 Skills run modal KB picker modernization.
+- Added `.skill-doc-picker-v18` with a real searchable document input, modern listbox results, selected state, and output mode controls; the native select remains visually hidden only as the form state read by the existing real run handler.
+- Chrome MCP @8035 verified: opened Skills plaza, searched `status code` / `鐘舵€佺爜`, selected the real KB document, then ran the competitor analysis Skill.
+- Network evidence: `POST /api/v1/skills/66278223-748e-48c4-914b-b008c5cbed69/run` returned 202 with request body containing `document_id=0c545f0b-34fa-4d8b-b2d3-777a27852900` and `output_mode=generate`; polling completed and saved generated KB document `075c70ff-c1af-410b-a4cf-3e8cd42ed7d7`.
+- Automated checks: `node --check static\mydow\biz_v14\bridge_v14.js` PASS; `pytest tests\integration\api\test_prd10_frontend_binding.py::test_biz_v14_skill_run_picker_is_searchable_and_modern -q` PASS.
+## Milestone 85 - 2026-05-09 10:52 (UTC+8) - Codex
+- Completed Section 18.7 Skills sidebar recommendation/recent layout repair.
+- Root cause: `.skills-drawer .insight-panel` had content taller than the viewport but `overflow-y: hidden`, so recent usage and topics were clipped.
+- Changed sidebar recommendations to a default-collapsed `.skill-side-rec-list-v18` details panel and restored branded vertical scrolling on the Skills side rail.
+- Chrome MCP @8035 verified: default state shows recent usage in view with `overflowY=auto`; expanded state shows all 5 recommendation rows and remains scrollable instead of clipped.
+- Automated checks: `node --check static\mydow\biz_v14\bridge_v14.js` PASS; `pytest tests\integration\api\test_prd10_frontend_binding.py::test_biz_v14_skills_sidebar_recommendations_do_not_clip_recent_usage -q` PASS.
+## Milestone 86 - 2026-05-09 11:08 (UTC+8) - Codex
+- Completed Section 18.8 Skills category filter repair.
+- Root cause: the filter code read `V14.allSkills` but `/skills` results were never cached, and `bindSkillsCategoryFilterV40()` was not called during boot.
+- Fixed real filter state: cache `/skills?page_size=50`, bind chips in capture phase, filter by real category/tags/name/description, sort hot by usage/favorites, sort new by timestamps, render empty state, and sync `#skills?filter=...`.
+- Added hash recovery: reloading `#skills?filter=new` opens the Skills page and restores the pressed filter.
+- Chrome MCP @8035 verified content filter -> 5 real Skills, hot filter -> usage counts descending, and hash reload -> Skills page with Latest pressed.
+- Automated checks: `node --check static\mydow\biz_v14\bridge_v14.js` PASS; `pytest tests\integration\api\test_prd10_frontend_binding.py::test_biz_v14_skill_category_filters_use_real_cached_data_and_url_state -q` PASS.
+### Milestone 87 - 2026-05-09 11:24 (UTC+8) - 搂18.10 璇煶杈撳叆鐪熷疄钀藉簱闂幆
+- 鎺ユ墜 搂18.9 瀹¤鎷嗗嚭鐨?搂18.10锛歚voiceInput` 涓嶅啀璧扳€滄紨绀?鍗犱綅鈥漷oast锛屾敼涓烘祻瑙堝櫒 SpeechRecognition + 鎵嬪姩杞啓 textarea锛涙殏鍋?淇濆瓨鍧囩敱 capture-phase 涓撶敤澶勭悊鎺ョ銆?- 鍓嶇锛歚static/mydow/biz_v14/bridge_v14.js` 鏂板 `hydrateVoiceInputModalV18()` / `handleVoiceInputModal()` / `bindVoiceInputModalV18()`锛屼繚瀛樻椂鐪熷疄 `POST /capture/text`锛宐ody 鍖呭惈鍘熷杞啓銆佸姩鎬佹爣棰樸€乣tags:["璇煶"]`銆乣type:"voice"`銆乣auto_process:true`锛沗bridge_v14_ext.js` 鍘婚櫎鈥滃綍闊冲凡鏆傚仠锛堟紨绀猴級鈥濄€?- 鍚庣锛歚src/agent_os/capture/router.py` 璁?`_normalize_inbox_type()` 鎺ュ彈 `voice` UI 鍒悕骞舵槧灏勫埌 text 绠＄嚎锛屼繚璇佽闊宠浆鍐欏悓鏃剁敓鎴?inbox銆乯ob銆乨ocument/card/KB asset銆?- Chrome MCP @8035锛氭彁浜ゃ€岃闊宠仈璋冮獙璇佷笁...銆嶅悗 `POST /api/v1/capture/text` 200锛岃繑鍥?inbox `2d00a6e2-f65f-455a-948f-31e7c7a68f0a`銆乯ob `d2804f02-abea-4bdf-9ec5-cc2d2c8c15d1`銆乨ocument_id `64953a5b-c88e-4bcc-9f65-f206078c7b56`锛涢殢鍚?`/feed?page_size=5` 涓?`/kb/documents?page_size=10` 鍧囧懡涓璁板綍銆?- 楠岃瘉锛歚node --check static\mydow\biz_v14\bridge_v14.js` PASS锛沗node --check static\mydow\biz_v14\bridge_v14_ext.js` PASS锛沗pytest tests\integration\api\test_prd10_frontend_binding.py::test_biz_v14_voice_input_saves_real_transcript_as_voice_capture -q` PASS锛沗pytest tests\integration\api\prd10\test_prd10_capture_api.py::test_capture_text_accepts_voice_alias_and_persists_transcript -q` PASS銆?### Milestone 88 - 2026-05-09 11:39 (UTC+8) - 搂18.9 澶嶅鎵╁睍瀹¤鏀跺彛
+- 瀹屾垚涓氬姟鏂?v1.4 鎸夐挳/浜や簰澶嶅锛歚python scripts\audit_v14_buttons.py` 鏄剧ず 45 涓敮涓€ HTML `data-toast`銆?2 涓睘鎬с€?1 涓?modal submit 鍧囨湁 bridge/ext 闈欐€?wiring锛宍labels_with_no_static_wiring=[]`銆?- 淇杩囨椂 e2e锛歚tests/e2e/test_v14_buttons_real_api.py` 涓嶅啀鍚堟垚鏃犲脊绐?鏃犺浆鍐欐枃鏈殑鈥滆闊宠褰曞凡淇濆瓨鈥濇寜閽紝鏀逛负鐪熷疄鐐瑰嚮銆岀伒鎰熼噰闆嗐€嶁啋銆岃闊宠緭鍏ャ€嶁啋 濉?`data-v18-voice-transcript` 鈫掋€岀粨鏉熷苟淇濆瓨銆嶏紝鏇磋创杩戠敤鎴疯矾寰勫拰鈥滀笉 mock鈥濆師鍒欍€?- 鍥炲綊锛歚pytest tests\e2e\test_v14_buttons_real_api.py -q` PASS锛沗pytest tests\e2e\test_v14_walk.py -q` PASS锛沗pytest tests\integration\api\test_prd10_frontend_binding.py -q` 鈫?47 passed锛沗python scripts\audit_v14_buttons.py` PASS銆?- 鍞竴鎬?todo 琛ㄥ凡鏇存柊锛毬?8.9 done锛屄?8.10 done锛涘綋鍓?`open=0 / doing=0 / blocked=0`銆?### Milestone 89 - 2026-05-09 11:44 (UTC+8) - Mydow AI LLM/RAG 鎶介獙
+- Chrome MCP @8035 杩涘叆 Mydow AI锛屼娇鐢ㄥ凡闄勫姞鏂囨。銆孉I 瀵硅瘽寮曠敤寮曟搸璁捐銆嶅彂閫侀棶棰橈細銆岃鐢ㄤ竴鍙ヨ瘽璇存槑浣犳槸鍚﹁兘鍩轰簬褰撳墠鐭ヨ瘑搴撹繘琛岀湡瀹炲洖绛旓紝骞跺紩鐢ㄥ彲鐢ㄤ笂涓嬫枃銆傘€?- Network锛歚POST /api/v1/ai/conversations/1d5139b7-fd8c-463e-b6bb-82fcff08bfc1/messages/stream` 杩斿洖 200锛宺equest body 鍚?`context_scope.document_ids=[b8bc5f0e-b676-43e0-905f-c32d23b31414]`銆?- 鍙嶆煡 conversation锛歛ssistant 鏈€鏂版秷鎭?`model=litellm`銆乣status=completed`銆佸唴瀹瑰紩鐢ㄧ煡璇嗗簱涓婁笅鏂囧苟鍚紩鐢ㄦ爣璁?`[ #1 ]`锛宍citations=1`锛涙湭钀藉埌 placeholder 妯″瀷銆?## Milestone 80 鈥?2026-05-09 13:15 (UTC+8) 鈥?Codex
+
+- Closed `todo-tasks.md` 搂18.11-搂18.14: profile preferences, account security, Mydow AI visible RAG chat, and Skills real LLM execution.
+- Profile preferences now PATCH `/me/preferences` and immediately apply theme/language/default input mode/autosave state in the v1.4 UI.
+- Account security now uses real `/me/security` state plus email-verification and device-refresh endpoints; fake email/device toasts removed.
+- Mydow AI RAG was backend-correct but visually hidden; `ensureAiConversationVisibleV18()` now enters `.ai-open.ai-chat-open`, restores message opacity, and Chrome MCP sees `litellm` responses with KB citations.
+- Skills worker no longer produces placeholder output when LLM is disabled; it fails visibly with `LLM_DISABLED`. Real Chrome MCP Skill run completed through `litellm`, saved document `85532c86-175a-4da7-8f67-69aa2086f903`, and result output was non-placeholder.
+- Verification: `node --check static\mydow\biz_v14\bridge_v14.js`; `node --check static\mydow\biz_v14\bridge_v14_ext.js`; `python -m py_compile src\agent_os\auth\router.py src\agent_os\jobs\service.py`; `pytest tests\integration\api\test_prd10_frontend_binding.py tests\integration\api\test_prd10_me_password_and_preferences_get.py tests\integration\api\test_prd10_me_patch.py tests\integration\api\test_prd10_skills_api.py -q` -> 110 passed.
+
+## Milestone 90 鈥?2026-05-09 13:34 (UTC+8) 鈥?Codex
+
+- Closed `todo-tasks.md` 搂18.15 after Chrome MCP caught one remaining settings-page detail: the Preferences panel was active, but language hydration overwrote the first settings-card heading with `涓汉璧勬枡`.
+- Fixed `static/mydow/biz_v14/bridge_v14_ext.js::applyLanguagePreferenceV18()` to derive the active settings panel title and keep profile's secondary card as `鍩虹鍋忓ソ`.
+- Chrome MCP @8035 verified: account menu -> Preferences gives `active=preferences`, `h2s=["鍋忓ソ璁剧疆"]`, real preferences content, and autosave persists to `/me/preferences.auto_save=true`.
+- Restarted current test server at `http://127.0.0.1:8035/mydow/biz_v14/` with PID `50764`, `AGENTOS_AI_LLM=on`, DB `.tmp/user_test_8035.db`.
+- Re-ran RAG and Skills real paths in the browser after restart: AI stream completed with `model=litellm`, `citations=1`; Skill run `057387ba-e553-4b99-a55d-b7ad590bd169` completed with usage `116/414/530` and saved document `55e1854b-5b45-4ad1-90ad-1dd11c9b2836`.
+- Verification: `node --check static\mydow\biz_v14\bridge_v14.js`; `node --check static\mydow\biz_v14\bridge_v14_ext.js`; `python -m py_compile src\agent_os\auth\router.py src\agent_os\jobs\service.py`; `pytest tests\integration\api\test_prd10_frontend_binding.py tests\integration\api\test_prd10_me_password_and_preferences_get.py tests\integration\api\test_prd10_me_patch.py tests\integration\api\test_prd10_skills_api.py -q` -> 110 passed.

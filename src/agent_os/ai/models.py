@@ -130,6 +130,7 @@ class AIConversation(Base):
             "mode": self.mode,
             "last_message_preview": self.last_message_preview,
             "message_count": self.message_count,
+            "context_scope": self.context_scope or {},
             "pinned": bool(extra.get("pinned", False)),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

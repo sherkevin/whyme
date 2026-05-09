@@ -204,6 +204,10 @@ async def test_get_me_preferences_fresh_account_returns_full_default_shape(
         "locale",
         "timezone",
         "ai_response_style",
+        "ai_detail_level",
+        "cite_knowledge_by_default",
+        "ai_auto_suggest",
+        "ai_streaming",
         "default_ai_model",
         "daily_report_time",
         "notification_enabled",
@@ -222,6 +226,10 @@ async def test_get_me_preferences_fresh_account_returns_full_default_shape(
     assert body["locale"] == "zh-CN"
     assert body["timezone"] == "Asia/Shanghai"
     assert body["ai_response_style"] == "concise_structured"
+    assert body["ai_detail_level"] == "balanced"
+    assert body["cite_knowledge_by_default"] is True
+    assert body["ai_auto_suggest"] is True
+    assert body["ai_streaming"] is True
     assert body["default_ai_model"] == "auto"
     assert body["daily_report_time"] == "21:30"
     assert body["notification_enabled"] is True
@@ -242,6 +250,77 @@ async def test_get_me_preferences_fresh_account_returns_full_default_shape(
         assert required_channel in channels, (
             f"PRD10 §5.2 requires default channel {required_channel}"
         )
+
+
+@pytest.mark.asyncio
+async def test_me_security_hydrates_real_device_state(client, fresh_user):
+    token = await _login(client, username="prefs_fresh", password="orig_pass_456")
+
+    resp = await client.get(
+        "/api/v1/me/security",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0) Chrome/147.0",
+        },
+    )
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["email"] == "prefs_fresh@example.com"
+    assert body["email_verified"] is False
+    assert body["two_factor_enabled"] is False
+    assert body["login_devices"][0]["label"] == "Windows · Chrome"
+    assert body["login_devices"][0]["current"] is True
+
+
+@pytest.mark.asyncio
+async def test_me_security_email_verification_request_persists_state(
+    client, fresh_user
+):
+    token = await _login(client, username="prefs_fresh", password="orig_pass_456")
+
+    resp = await client.post(
+        "/api/v1/me/security/email-verification",
+        headers={"Authorization": f"Bearer {token}"},
+        json={},
+    )
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["email"] == "prefs_fresh@example.com"
+    assert body["email_verified"] is False
+    assert body["email_verification_requested_at"]
+    assert body["email_verification_delivery"] in {"local_outbox", "smtp"}
+    assert body["request_id"]
+
+    follow_up = await client.get(
+        "/api/v1/me/security",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert follow_up.status_code == 200, follow_up.text
+    assert follow_up.json()["email_verification_requested_at"] == body["email_verification_requested_at"]
+
+
+@pytest.mark.asyncio
+async def test_me_security_device_refresh_persists_current_session(
+    client, fresh_user
+):
+    token = await _login(client, username="prefs_fresh", password="orig_pass_456")
+
+    resp = await client.post(
+        "/api/v1/me/security/devices/refresh",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0) Chrome/147.0",
+        },
+        json={},
+    )
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["last_security_refresh_at"]
+    assert body["login_devices"][0]["label"] == "Windows · Chrome"
+    assert body["login_devices"][0]["last_seen_at"]
 
 
 @pytest.mark.asyncio
@@ -341,6 +420,9 @@ async def test_get_me_preferences_round_trip_after_patch(client, fresh_user):
             "theme": "dark",
             "two_factor_enabled": True,
             "auto_save": False,
+            "ai_response_style": "detailed",
+            "ai_detail_level": "brief",
+            "cite_knowledge_by_default": False,
         },
     )
     assert patch_resp.status_code == 200, patch_resp.text
@@ -351,6 +433,9 @@ async def test_get_me_preferences_round_trip_after_patch(client, fresh_user):
     assert body["theme"] == "dark"
     assert body["two_factor_enabled"] is True
     assert body["auto_save"] is False
+    assert body["ai_response_style"] == "detailed"
+    assert body["ai_detail_level"] == "brief"
+    assert body["cite_knowledge_by_default"] is False
 
 
 # --------------------------------------------------------------------------

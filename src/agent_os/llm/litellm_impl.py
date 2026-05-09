@@ -31,6 +31,7 @@ class LiteLLMProvider(LLMProvider):
         """
         self.model = (
             model
+            or os.getenv("AGENTOS_AI_MODEL")
             or os.getenv("LLM_MODEL")
             or os.getenv("MODEL")
             or os.getenv("DEEPSEEK_MODEL")

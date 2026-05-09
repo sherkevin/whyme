@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import StaticPool
 
 import agent_os.db.sqlite_compat  # noqa: F401
+from agent_os.ai import llm_provider
 from agent_os.auth.dependencies import get_current_user
 from agent_os.auth.models import User
 from agent_os.db.base import get_db
@@ -24,6 +25,14 @@ from agent_os.jobs.models import Job
 from agent_os.skills.router import router as skills_router
 from agent_os.skills.runs import SkillRun
 from agent_os.stage3.models import Skill
+
+
+class FakeSkillProvider:
+    async def complete(self, messages, tools=None, **kwargs):
+        return {
+            "content": "FAKE_SKILL_LLM_OUTPUT\n\n" + messages[-1]["content"][:200],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30},
+        }
 
 
 @pytest_asyncio.fixture
@@ -317,8 +326,13 @@ class TestSkillRunWorker:
             session.add(run)
             await session.commit()
             from agent_os.jobs.service import process_job_once
-            updated = await process_job_once(session, job.id)
-            await session.commit()
+            llm_provider.set_test_provider(FakeSkillProvider())
+            try:
+                updated = await process_job_once(session, job.id)
+                await session.commit()
+            finally:
+                llm_provider.set_test_provider(None)
+                llm_provider.reset_provider_for_test()
             assert updated is not None
             assert updated.status == JobStatus.COMPLETED.value
             await session.refresh(run)
@@ -397,8 +411,13 @@ class TestSkillRunWorker:
 
             from agent_os.jobs.service import process_job_once
 
-            updated = await process_job_once(session, job.id)
-            await session.commit()
+            llm_provider.set_test_provider(FakeSkillProvider())
+            try:
+                updated = await process_job_once(session, job.id)
+                await session.commit()
+            finally:
+                llm_provider.set_test_provider(None)
+                llm_provider.reset_provider_for_test()
             assert updated is not None
             assert updated.status == JobStatus.COMPLETED.value
             await session.refresh(run)
@@ -414,6 +433,57 @@ class TestSkillRunWorker:
                 )
             ).scalars().all()
             assert len(docs) == 1
+
+    async def test_worker_fails_skill_when_llm_is_disabled(
+        self, prd10_engine, fixture_user, monkeypatch
+    ):
+        from sqlalchemy.ext.asyncio import async_sessionmaker
+
+        factory = async_sessionmaker(
+            prd10_engine, class_=AsyncSession, expire_on_commit=False
+        )
+        async with factory() as session:
+            skill = await _make_skill(session, name="requires-real-llm")
+            from agent_os.jobs.models import Job, JobStatus, JobType
+
+            job = Job(
+                user_id=fixture_user.id,
+                job_type=JobType.SKILL_RUN.value,
+                status=JobStatus.QUEUED.value,
+                input={
+                    "skill_id": str(skill.id),
+                    "skill_name": skill.name,
+                    "input": {"text": "must not produce placeholder"},
+                    "save_output": False,
+                },
+            )
+            session.add(job)
+            await session.flush()
+            run = SkillRun(
+                user_id=fixture_user.id,
+                skill_id=skill.id,
+                job_id=job.id,
+                status="queued",
+                input=job.input["input"],
+            )
+            session.add(run)
+            await session.commit()
+
+            monkeypatch.delenv("AGENTOS_AI_LLM", raising=False)
+            llm_provider.set_test_provider(None)
+            llm_provider.reset_provider_for_test()
+            from agent_os.jobs.service import process_job_once
+
+            updated = await process_job_once(session, job.id)
+            await session.commit()
+
+            assert updated is not None
+            assert updated.status == JobStatus.FAILED.value
+            assert updated.error["code"] == "LLM_DISABLED"
+            await session.refresh(run)
+            assert run.status == "failed"
+            assert run.error["code"] == "LLM_DISABLED"
+            assert not run.output
 # §16.7 — GET /api/v1/skills/{skill_id}/runs (run history for the detail drawer)
 # §16.5 — _AGENT_ACTION_PROMPTS coverage + _build_skill_prompt deterministic
 # ---------------------------------------------------------------------------

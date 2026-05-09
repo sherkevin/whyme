@@ -36,7 +36,7 @@ from agent_os.inbox.prd10_models import (
 )
 from agent_os.insights.models import InsightStatus, InsightType, Prd10Insight
 from agent_os.jobs.models import Job, JobStatus, JobType
-from agent_os.kb.models import Document
+from agent_os.kb.models import Document, DocumentStatus, DocumentType
 from agent_os.knowledge.models import Card
 
 router = APIRouter(prefix="/api/v1", tags=["Insights & Reports"])
@@ -75,6 +75,14 @@ class GenerateReportRequest(BaseModel):
     time_range: TimeRange | None = None
     include_sources: bool = True
     save_to_kb: bool = False
+
+
+class DeepResearchRequest(BaseModel):
+    topic: str = Field(..., min_length=1, max_length=500)
+    scope: str | None = Field(default=None, max_length=2000)
+    output: str | None = Field(default=None, max_length=4000)
+    include_sources: bool = True
+    save_to_kb: bool = True
 
 
 # ---------------------------------------------------------------------------
@@ -884,6 +892,218 @@ async def generate_report(
             "job_id": str(job.id),
             "report_id": str(insight.id),
             "status": job.status,
+        },
+        request=request,
+    )
+
+
+@router.post("/research/tasks", status_code=status.HTTP_202_ACCEPTED)
+async def create_deep_research_task(
+    payload: DeepResearchRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """Create a real deep-research report from the user's knowledge assets.
+
+    This endpoint is intentionally synchronous for PRD10 acceptance: the
+    returned job is already completed, and both an insight row and a KB
+    markdown document are persisted. When a real LLM provider is enabled, it
+    writes the report from retrieved cards/documents; otherwise the response is
+    an explicit fallback over the same real retrieved data.
+    """
+
+    topic = payload.topic.strip()
+    scope = (payload.scope or "").strip()
+    output_hint = (payload.output or "").strip()
+
+    cards_q = await db.execute(
+        select(Card)
+        .where(Card.user_id == current_user.id, Card.deleted_at.is_(None))
+        .order_by(Card.updated_at.desc())
+        .limit(40)
+    )
+    cards = list(cards_q.scalars().all())
+
+    docs_q = await db.execute(
+        select(Document)
+        .where(Document.user_id == current_user.id)
+        .order_by(Document.updated_at.desc())
+        .limit(40)
+    )
+    documents = list(docs_q.scalars().all())
+
+    needle = topic.lower()
+
+    def _matches(value: str | None) -> bool:
+        if not needle:
+            return True
+        return needle in (value or "").lower()
+
+    matched_cards = [
+        c for c in cards
+        if _matches(c.title) or _matches(c.summary) or _matches(c.content)
+    ]
+    matched_docs = [
+        d for d in documents
+        if _matches(d.title) or _matches(d.summary) or _matches(d.content)
+    ]
+    if not matched_cards:
+        matched_cards = cards[:8]
+    if not matched_docs:
+        matched_docs = documents[:8]
+
+    source_lines: list[str] = []
+    for c in matched_cards[:8]:
+        source_lines.append(
+            f"- [card:{c.id}] {c.title or 'Untitled'}: {(c.summary or c.content or '')[:260]}"
+        )
+    for d in matched_docs[:8]:
+        source_lines.append(
+            f"- [doc:{d.id}] {d.title or 'Untitled'}: {(d.summary or d.content or '')[:260]}"
+        )
+    source_block = "\n".join(source_lines) or "- No matching knowledge assets yet."
+
+    body_text = (
+        f"# Deep Research: {topic}\n\n"
+        f"## Scope\n{scope or 'No explicit scope provided.'}\n\n"
+        "## Findings\n"
+        "Current knowledge assets are limited for this topic. Add more sources "
+        "or enable the LLM provider to synthesize a richer research report.\n\n"
+        f"## Retrieved Sources\n{source_block}\n"
+    )
+    summary_text = f"Deep research report for {topic} based on {len(matched_cards)} cards and {len(matched_docs)} documents."
+    used_llm = False
+    llm_model = ""
+
+    try:
+        from agent_os.ai.llm_provider import get_provider, is_llm_enabled
+
+        if is_llm_enabled():
+            system_prompt = (
+                "You are Mydow's deep research analyst. Write a concise, "
+                "source-grounded Chinese Markdown report. Do not invent facts; "
+                "only use the retrieved cards/documents and clearly state gaps."
+            )
+            user_prompt = (
+                f"研究主题: {topic}\n"
+                f"研究范围: {scope or '未限定'}\n"
+                f"期望输出: {output_hint or '结构化研究报告'}\n\n"
+                f"真实检索素材:\n{source_block}\n\n"
+                "请输出 Markdown，包含：结论摘要、关键发现、证据来源、风险/空白、下一步建议。"
+            )
+            import asyncio as _asyncio
+
+            completion = await _asyncio.wait_for(
+                get_provider().complete(
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    temperature=0.35,
+                    max_tokens=1600,
+                ),
+                timeout=60.0,
+            )
+            content_str = None
+            if isinstance(completion, dict):
+                content_str = completion.get("content")
+                if not content_str and isinstance(completion.get("message"), dict):
+                    content_str = completion["message"].get("content")
+            if isinstance(content_str, str) and content_str.strip():
+                body_text = content_str.strip()
+                used_llm = True
+                llm_model = str(completion.get("model") or "") if isinstance(completion, dict) else ""
+                summary_text = next(
+                    (line.strip("# ").strip() for line in body_text.splitlines() if line.strip()),
+                    summary_text,
+                )[:240]
+    except Exception:
+        used_llm = False
+
+    insight = Prd10Insight(
+        user_id=current_user.id,
+        insight_type=InsightType.KNOWLEDGE_GAP.value,
+        title=f"深度研究：{topic}",
+        summary=summary_text,
+        body=body_text,
+        status=InsightStatus.READY.value,
+        extra={
+            "report_type": "deep_research",
+            "topic": topic,
+            "scope": scope,
+            "output": output_hint,
+            "used_llm": used_llm,
+            "model": llm_model,
+            "source_cards": [str(c.id) for c in matched_cards[:8]],
+            "source_documents": [str(d.id) for d in matched_docs[:8]],
+        },
+    )
+    db.add(insight)
+    await db.flush()
+
+    document: Document | None = None
+    if payload.save_to_kb:
+        document = Document(
+            user_id=current_user.id,
+            title=f"深度研究：{topic}",
+            summary=summary_text,
+            content=body_text,
+            document_type=DocumentType.MARKDOWN.value,
+            status=DocumentStatus.READY.value,
+            tags=["深度研究", topic[:24]],
+            extra={
+                "kind": "deep_research",
+                "insight_id": str(insight.id),
+                "used_llm": used_llm,
+                "model": llm_model,
+            },
+        )
+        db.add(document)
+        await db.flush()
+
+    job = Job(
+        user_id=current_user.id,
+        job_type=JobType.GENERATE_REPORT.value,
+        status=JobStatus.COMPLETED.value,
+        progress=100,
+        input={
+            "kind": "deep_research",
+            "topic": topic,
+            "scope": scope,
+            "output": output_hint,
+        },
+        output={
+            "insight_id": str(insight.id),
+            "document_id": str(document.id) if document else None,
+            "used_llm": used_llm,
+        },
+        started_at=datetime.now(UTC),
+        completed_at=datetime.now(UTC),
+    )
+    db.add(job)
+    await db.commit()
+    await db.refresh(insight)
+    if document is not None:
+        await db.refresh(document)
+    await db.refresh(job)
+
+    return success_response(
+        {
+            "task_id": str(job.id),
+            "job_id": str(job.id),
+            "status": job.status,
+            "report_id": str(insight.id),
+            "document_id": str(document.id) if document else None,
+            "title": insight.title,
+            "summary": insight.summary,
+            "body": insight.body,
+            "used_llm": used_llm,
+            "model": llm_model,
+            "source_counts": {
+                "cards": len(matched_cards),
+                "documents": len(matched_docs),
+            },
         },
         request=request,
     )
