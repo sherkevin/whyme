@@ -81,6 +81,31 @@ async def test_create_card_then_get_and_patch(prd10_client):
     assert patch.json()["data"]["title"] == "改名"
 
 
+async def test_feed_tag_facets_are_real_counts(prd10_client):
+    await prd10_client.post(
+        "/api/v1/cards",
+        json={"title": "Product note", "content": "A", "tags": ["product", "research"]},
+    )
+    await prd10_client.post(
+        "/api/v1/cards",
+        json={"title": "Product memo", "content": "B", "tags": ["product"]},
+    )
+
+    feed = await prd10_client.get("/api/v1/feed")
+    assert feed.status_code == 200
+    tag_facets = {
+        facet["value"]: facet["count"]
+        for facet in feed.json()["data"]["facets"]["tags"]
+    }
+    assert tag_facets["product"] == 2
+    assert tag_facets["research"] == 1
+
+    filtered = await prd10_client.get("/api/v1/feed", params={"tag": "research"})
+    assert filtered.status_code == 200
+    assert filtered.json()["data"]["pagination"]["total"] == 1
+    assert filtered.json()["data"]["items"][0]["title"] == "Product note"
+
+
 async def test_favorite_and_unfavorite(prd10_client):
     captured = await _capture_text(prd10_client, "需要收藏")
     feed = await prd10_client.get("/api/v1/feed")

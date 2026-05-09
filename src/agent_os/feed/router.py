@@ -305,7 +305,29 @@ async def _compute_facets(db: AsyncSession, user_id: uuid.UUID) -> dict:
         {"value": row[0] or "note", "label": row[0] or "note", "count": int(row[1])}
         for row in type_rows
     ]
-    return {"types": type_facets, "tags": []}
+    tag_rows = (
+        await db.execute(
+            select(Card.tags).where(
+                Card.user_id == user_id,
+                Card.is_archived.is_(False),
+                Card.deleted_at.is_(None),
+            )
+        )
+    ).scalars().all()
+    tag_counts: dict[str, int] = {}
+    for tags in tag_rows:
+        tags_iter = [tags] if isinstance(tags, str) else list(tags or [])
+        for raw_tag in tags_iter:
+            tag = str(raw_tag or "").strip()
+            if not tag:
+                continue
+            tag_counts[tag] = tag_counts.get(tag, 0) + 1
+
+    tag_facets = [
+        {"value": tag, "label": tag, "count": count}
+        for tag, count in sorted(tag_counts.items(), key=lambda item: (-item[1], item[0]))
+    ]
+    return {"types": type_facets, "tags": tag_facets}
 
 
 def _date_range_to_cutoff(value: str) -> datetime:
