@@ -16,7 +16,7 @@ The launcher does the full local delivery path:
    `docker-compose.prd10.yml`.
 5. Waits for `http://localhost:8000/health`.
 6. Seeds demo data into the persisted app database.
-7. Opens `http://localhost:8000/mydow/`.
+7. Opens `http://localhost:8000/mydow/biz_v14/`.
 
 Useful variants:
 

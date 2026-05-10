@@ -10,7 +10,7 @@ $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $EnvFile = Join-Path $Root ".env.docker.local"
 $ComposeFile = Join-Path $Root "docker-compose.prd10.yml"
-$FrontendUrl = "http://localhost:$Port/mydow/"
+$FrontendUrl = "http://localhost:$Port/mydow/biz_v14/"
 $HealthUrl = "http://localhost:$Port/health"
 
 function Get-ProjectEnvValue {
