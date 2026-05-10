@@ -154,6 +154,7 @@ async def generate_card_ai_summary(
     return a visible failure instead of fabricating a fallback summary.
     """
 
+    card = await _load_owned_card(db, card_id, current_user.id)
     if not is_llm_enabled():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -163,7 +164,6 @@ async def generate_card_ai_summary(
             },
         )
 
-    card = await _load_owned_card(db, card_id, current_user.id)
     enrichment = await enrich_capture_with_llm(
         db,
         user_id=current_user.id,

@@ -590,9 +590,14 @@ async def get_skill_run(
 
     rid = _parse_uuid(run_id, "run_id")
     run_obj = (
-        await db.execute(select(SkillRun).where(SkillRun.id == rid))
+        await db.execute(
+            select(SkillRun).where(
+                SkillRun.id == rid,
+                SkillRun.user_id == current_user.id,
+            )
+        )
     ).scalar_one_or_none()
-    if run_obj is None or run_obj.user_id != current_user.id:
+    if run_obj is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "NOT_FOUND", "message": "Skill run not found"},

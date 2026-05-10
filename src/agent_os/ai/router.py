@@ -1304,7 +1304,10 @@ async def get_conversation_detail(
 
     msg_stmt = (
         select(AIMessage)
-        .where(AIMessage.conversation_id == conv.id)
+        .where(
+            AIMessage.conversation_id == conv.id,
+            AIMessage.user_id == current_user.id,
+        )
         .order_by(AIMessage.created_at.asc())
     )
     messages = (await db.execute(msg_stmt)).scalars().all()
@@ -1961,7 +1964,12 @@ async def cancel_message(
     job_obj: Job | None = None
     if msg.job_id is not None:
         job_obj = (
-            await db.execute(select(Job).where(Job.id == msg.job_id))
+            await db.execute(
+                select(Job).where(
+                    Job.id == msg.job_id,
+                    Job.user_id == current_user.id,
+                )
+            )
         ).scalar_one_or_none()
 
     cancellable = (
