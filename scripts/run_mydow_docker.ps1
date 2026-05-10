@@ -142,13 +142,17 @@ function Ensure-DockerEnv {
 
     $apiKey = Get-ProjectEnvValue "DEEPSEEK_API_KEY"
     if (-not $apiKey) { $apiKey = Get-ProjectEnvValue "API_KEY" }
-    $apiBase = Get-ProjectEnvValue "DEEPSEEK_OPENAI_BASE_URL"
+    $apiBase = Get-ProjectEnvValue "LLM_BASE_URL"
+    if (-not $apiBase) { $apiBase = Get-ProjectEnvValue "DEEPSEEK_OPENAI_BASE_URL" }
     if (-not $apiBase) { $apiBase = Get-ProjectEnvValue "API_BASE" }
     if (-not $apiBase) { $apiBase = "https://api.deepseek.com" }
-    $model = Get-ProjectEnvValue "MODEL"
+    $model = Get-ProjectEnvValue "LLM_MODEL"
+    if (-not $model) { $model = Get-ProjectEnvValue "MODEL" }
+    if (-not $model) { $model = Get-ProjectEnvValue "DEEPSEEK_MODEL" }
     if (-not $model) { $model = "deepseek-v4-flash" }
-    $modelFallback = Get-ProjectEnvValue "MODEL_FALLBACK"
-    if (-not $modelFallback) { $modelFallback = "deepseek-v4-flash" }
+    $modelFallback = Get-ProjectEnvValue "LLM_MODEL_FALLBACK"
+    if (-not $modelFallback) { $modelFallback = Get-ProjectEnvValue "MODEL_FALLBACK" }
+    if (-not $modelFallback) { $modelFallback = "deepseek-v4-pro" }
     $databaseUrl = Get-ProjectEnvValue "DATABASE_URL"
     if (-not $databaseUrl) {
         $databaseUrl = Get-DockerDefaultDatabaseUrl
@@ -167,9 +171,11 @@ function Ensure-DockerEnv {
         "AGENTOS_AI_TEMPERATURE=0.3",
         "AGENTOS_AI_MAX_TOKENS=2000",
         "API_KEY=$apiKey",
-        "API_BASE=$apiBase",
-        "MODEL=$model",
-        "MODEL_FALLBACK=$modelFallback",
+        "LLM_BASE_URL=$apiBase",
+        "LLM_MODEL=$model",
+        "LLM_MODEL_FALLBACK=$modelFallback",
+        "DEEPSEEK_OPENAI_BASE_URL=$apiBase",
+        "DEEPSEEK_MODEL=$model",
         "CAPTURE_ENRICH_MODEL=",
         "APP_PORT=$Port",
         "BASE_URL=http://localhost:$Port",

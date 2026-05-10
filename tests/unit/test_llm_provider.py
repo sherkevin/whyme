@@ -5,16 +5,38 @@ import os
 import pytest
 
 from agent_os.llm import LiteLLMProvider
+from agent_os.llm.config import (
+    DEFAULT_BASE_URL,
+    DEFAULT_MODEL,
+    OPENAI_BASE_URL,
+    resolve_model,
+)
 
 
 class TestLiteLLMProvider:
     """Test suite for LiteLLMProvider."""
 
-    def test_init_with_defaults(self) -> None:
+    def test_init_with_defaults(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test initialization with default values."""
+        for name in (
+            "AGENTOS_AI_MODEL",
+            "LLM_MODEL",
+            "MODEL",
+            "DEEPSEEK_MODEL",
+            "LLM_BASE_URL",
+            "API_BASE",
+            "DEEPSEEK_OPENAI_BASE_URL",
+            "LITELLM_API_BASE",
+            "OPENAI_API_BASE",
+            "BASE_URL",
+            "LLM_PROVIDER",
+            "AGENTOS_LLM_ALLOW_BASE_URL",
+        ):
+            monkeypatch.delenv(name, raising=False)
         provider = LiteLLMProvider()
 
-        assert provider.model == os.getenv("MODEL", "deepseek-v4-flash")
+        assert provider.model == DEFAULT_MODEL
+        assert provider.api_base == DEFAULT_BASE_URL
         assert provider.temperature == 0.7
         assert provider.max_tokens == 4096
 
@@ -45,6 +67,9 @@ class TestLiteLLMProvider:
 
     def test_api_key_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test getting API key from environment."""
+        monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        monkeypatch.delenv("LITELLM_API_KEY", raising=False)
         monkeypatch.setenv("API_KEY", "test-key-123")
 
         provider = LiteLLMProvider()
@@ -80,7 +105,12 @@ class TestLiteLLMProvider:
     async def test_complete_with_real_api(self) -> None:
         """Test completion with real API (requires API_KEY)."""
         provider = LiteLLMProvider(
-            api_base=os.getenv("BASE_URL"),
+            api_base=(
+                os.getenv("LLM_BASE_URL")
+                or os.getenv("API_BASE")
+                or os.getenv("DEEPSEEK_OPENAI_BASE_URL")
+                or DEFAULT_BASE_URL
+            ),
             api_key=os.getenv("API_KEY"),
         )
 
@@ -96,10 +126,63 @@ class TestLiteLLMProvider:
         assert "usage" in response
         assert len(response["content"]) > 0
 
-    def test_api_base_none_uses_environment_default(self) -> None:
-        """Test None falls back to configured environment base URL."""
+    def test_api_base_none_uses_llm_specific_environment(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test None falls back to configured LLM endpoint, not app BASE_URL."""
+        monkeypatch.setenv("BASE_URL", "http://localhost:8000")
+        monkeypatch.setenv("DEEPSEEK_OPENAI_BASE_URL", "https://api.deepseek.com/")
         provider = LiteLLMProvider(api_base=None)
-        assert provider.api_base == os.getenv("BASE_URL")
+        assert provider.api_base == "https://api.deepseek.com"
+
+    def test_base_url_requires_explicit_legacy_opt_in(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """BASE_URL is the application URL unless explicitly opted in."""
+        for name in (
+            "API_KEY",
+            "LITELLM_API_KEY",
+            "LLM_BASE_URL",
+            "API_BASE",
+            "DEEPSEEK_OPENAI_BASE_URL",
+            "LITELLM_API_BASE",
+            "OPENAI_API_BASE",
+        ):
+            monkeypatch.delenv(name, raising=False)
+        monkeypatch.setenv("BASE_URL", "https://legacy-llm.example.com/v1")
+
+        provider = LiteLLMProvider(api_base=None)
+        assert provider.api_base == DEFAULT_BASE_URL
+
+        monkeypatch.setenv("AGENTOS_LLM_ALLOW_BASE_URL", "on")
+        legacy = LiteLLMProvider(api_base=None)
+        assert legacy.api_base == "https://legacy-llm.example.com/v1"
+
+    def test_resolve_model_purpose_override(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("AGENTOS_AI_MODEL", "deepseek-v4-flash")
+        monkeypatch.setenv("CAPTURE_ENRICH_MODEL", "deepseek-v4-pro")
+
+        assert resolve_model("ai") == "deepseek-v4-flash"
+        assert resolve_model("capture") == "deepseek-v4-pro"
+
+    def test_openai_provider_gets_openai_defaults(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        for name in (
+            "LLM_BASE_URL",
+            "API_BASE",
+            "DEEPSEEK_OPENAI_BASE_URL",
+            "LITELLM_API_BASE",
+            "OPENAI_API_BASE",
+        ):
+            monkeypatch.delenv(name, raising=False)
+        monkeypatch.setenv("LLM_PROVIDER", "openai")
+        monkeypatch.setenv("OPENAI_API_KEY", "openai-key")
+        monkeypatch.setenv("DEEPSEEK_API_KEY", "deepseek-key")
+
+        provider = LiteLLMProvider()
+        assert provider.api_base == OPENAI_BASE_URL
+        assert provider.api_key == "openai-key"
 
     def test_normalize_api_base_trailing_slash(self) -> None:
         """Test normalization removes trailing slash."""

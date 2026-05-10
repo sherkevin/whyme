@@ -817,6 +817,7 @@ async def _materialize_skill_run(db: AsyncSession, job: Job) -> Job:
     system_prompt, user_prompt = _build_skill_prompt(skill, user_input)
 
     from agent_os.ai.llm_provider import get_provider, is_llm_enabled
+    from agent_os.llm.config import resolve_model
 
     if not is_llm_enabled():
         error_payload = {
@@ -840,7 +841,8 @@ async def _materialize_skill_run(db: AsyncSession, job: Job) -> Job:
                 [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
-                ]
+                ],
+                model=resolve_model("skill"),
             ),
             timeout=_skill_llm_timeout_seconds(),
         )

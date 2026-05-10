@@ -5,7 +5,6 @@ This module uses LiteLLM to call LLM APIs for intelligent content processing.
 
 import json
 import logging
-import os
 from typing import Any, Dict, List
 
 from agent_os.llm.litellm_impl import LiteLLMProvider
@@ -18,27 +17,10 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 def get_llm_provider() -> LiteLLMProvider:
-    """Get configured LLM provider from environment variables."""
-    api_key = os.getenv("DEEPSEEK_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("API_KEY")
-    base_url = (
-        os.getenv("BASE_URL")
-        or os.getenv("API_BASE")
-        or os.getenv("DEEPSEEK_OPENAI_BASE_URL")
-        or "https://api.deepseek.com"
-    )
-
-    model = (
-        os.getenv("LLM_MODEL")
-        or os.getenv("MODEL")
-        or os.getenv("DEEPSEEK_MODEL")
-        or "deepseek-v4-flash"
-    )
+    """Get the centrally configured LLM provider."""
 
     return LiteLLMProvider(
-        model=model,
-        api_base=base_url,
-        api_key=api_key,
-        temperature=0.3,  # Lower temperature for more consistent output
+        temperature=0.3,
         max_tokens=1000,
     )
 

@@ -39,6 +39,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_os.ai.llm_provider import get_provider, is_llm_enabled
 from agent_os.kb.models import Folder
+from agent_os.llm.config import resolve_model
 
 log = logging.getLogger(__name__)
 
@@ -378,15 +379,7 @@ async def enrich_capture_with_llm(
 
     provider = get_provider()
     completion: dict[str, Any] | None = None
-    # Prefer the app-wide LLM model unless capture explicitly overrides it.
-    enrich_model = (
-        (os.environ.get("CAPTURE_ENRICH_MODEL") or "").strip()
-        or (os.environ.get("MODEL_FALLBACK") or "").strip()
-        or (os.environ.get("MODEL") or "").strip()
-        or (os.environ.get("AGENTOS_AI_MODEL") or "").strip()
-        or (os.environ.get("DEEPSEEK_MODEL") or "").strip()
-        or "deepseek-v4-flash"
-    )
+    enrich_model = resolve_model("capture")
     complete_kwargs: dict[str, Any] = {
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -498,8 +491,7 @@ async def enrich_capture_with_llm(
         entities=parsed_entities,
         model=str(
             completion.get("model")
-            or os.environ.get("MODEL")
-            or os.environ.get("LLM_MODEL")
+            or enrich_model
             or ""
         ),
         used_llm=True,

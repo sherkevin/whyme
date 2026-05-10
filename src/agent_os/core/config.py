@@ -11,6 +11,8 @@ import yaml
 from dotenv import load_dotenv
 from pydantic import BaseModel
 
+from agent_os.llm.config import resolve_api_base, resolve_api_key
+
 # Load environment variables from .env first, then allow local developer
 # overrides from .env.local. The latter is gitignored and may contain secrets.
 load_dotenv()
@@ -31,22 +33,11 @@ class LLMConfig(BaseModel):
 
     def get_api_key(self) -> str | None:
         """Get API key from environment or config."""
-        return (
-            os.getenv("API_KEY")
-            or os.getenv("LITELLM_API_KEY")
-            or os.getenv("DEEPSEEK_API_KEY")
-            or os.getenv("OPENAI_API_KEY")
-            or self.config.get("api_key")
-        )
+        return resolve_api_key(self.config.get("api_key"))
 
     def get_api_base(self) -> str | None:
         """Get API base URL from environment or config."""
-        return (
-            os.getenv("BASE_URL")
-            or os.getenv("API_BASE")
-            or os.getenv("DEEPSEEK_OPENAI_BASE_URL")
-            or self.config.get("api_base")
-        )
+        return resolve_api_base(self.config.get("api_base"))
 
 
 class MemoryConfig(BaseModel):

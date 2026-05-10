@@ -37,6 +37,8 @@ from collections import OrderedDict
 from collections.abc import AsyncIterator
 from typing import Any, Optional, Protocol
 
+from agent_os.llm.config import resolve_llm_config, resolve_model
+
 _provider_singleton: LLMProviderLike | None = None
 _test_provider: LLMProviderLike | None = None
 
@@ -187,9 +189,7 @@ class _CachingProvider:
         if not _ai_cache_enabled():
             return await self._upstream.complete(messages, tools=tools, **kwargs)
 
-        model = str(
-            kwargs.get("model") or os.environ.get("AGENTOS_AI_MODEL") or "default"
-        )
+        model = str(kwargs.get("model") or resolve_model("ai"))
         temperature = kwargs.get("temperature")
         if temperature is None:
             try:
@@ -262,9 +262,13 @@ def get_provider() -> LLMProviderLike:
         # Local import keeps the module light when the LLM is disabled.
         from agent_os.llm.litellm_impl import LiteLLMProvider
 
+        cfg = resolve_llm_config(purpose="ai")
         upstream = LiteLLMProvider(
-            temperature=float(os.environ.get("AGENTOS_AI_TEMPERATURE", "0.3")),
-            max_tokens=int(os.environ.get("AGENTOS_AI_MAX_TOKENS", "1000")),
+            model=cfg.model,
+            api_base=cfg.api_base,
+            api_key=cfg.api_key,
+            temperature=cfg.temperature,
+            max_tokens=cfg.max_tokens,
         )
         _provider_singleton = _CachingProvider(upstream)
     return _provider_singleton
