@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+import uuid
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +16,7 @@ class ConversationRepository:
     async def add_message(
         self,
         session: AsyncSession,
-        user_id: int,
+        user_id: uuid.UUID,
         session_id: str,
         role: str,
         content: str,
@@ -56,7 +56,7 @@ class ConversationRepository:
     async def get_conversation_history(
         self,
         session: AsyncSession,
-        user_id: int,
+        user_id: uuid.UUID,
         session_id: str,
         limit: int | None = None,
         before_id: int | None = None,
@@ -133,7 +133,7 @@ class ConversationRepository:
     async def get_token_count(
         self,
         session: AsyncSession,
-        user_id: int,
+        user_id: uuid.UUID,
         session_id: str,
     ) -> int:
         """Get total token count for a session.
@@ -159,7 +159,7 @@ class ConversationRepository:
     async def create_summary(
         self,
         session: AsyncSession,
-        user_id: int,
+        user_id: uuid.UUID,
         session_id: str,
         summary_text: str,
         message_ids: list[int],
@@ -197,7 +197,7 @@ class ConversationRepository:
     async def get_recent_sessions(
         self,
         session: AsyncSession,
-        user_id: int,
+        user_id: uuid.UUID,
         limit: int = 10,
     ) -> list[str]:
         """Get recent session IDs for a user.

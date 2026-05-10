@@ -93,10 +93,21 @@
       .replace(/"/g, "&quot;");
   }
 
+  function parseServerDateV14(value) {
+    if (!value) return null;
+    if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+    const raw = String(value).trim();
+    if (!raw) return null;
+    const normalized = /^\d{4}-\d{2}-\d{2}T/.test(raw) && !/(Z|[+-]\d{2}:?\d{2})$/.test(raw)
+      ? raw + "Z"
+      : raw;
+    const d = new Date(normalized);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
   function formatReportDateV14(iso) {
-    if (!iso) return "";
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return "";
+    const d = parseServerDateV14(iso);
+    if (!d) return "";
     return d.toLocaleDateString("zh-CN", { month: "long", day: "numeric" });
   }
 
@@ -2290,7 +2301,8 @@
   function relTime(ts) {
     if (!ts) return "";
     try {
-      const d = new Date(ts);
+      const d = parseServerDateV14(ts);
+      if (!d) return "";
       return d.toLocaleString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
     } catch {
       return "";
@@ -3828,8 +3840,8 @@
         const when = run.completed_at || run.created_at || "";
         let whenLabel = "—";
         if (when) {
-          const dt = new Date(when);
-          whenLabel = Number.isNaN(dt.getTime())
+          const dt = parseServerDateV14(when);
+          whenLabel = !dt
             ? when
             : dt.toLocaleString("zh-CN", {
                 month: "numeric",
@@ -3998,8 +4010,8 @@
       (Number(b.usage_count || 0) + Number(b.favorite_count || 0)) -
       (Number(a.usage_count || 0) + Number(a.favorite_count || 0)),
     "最新": (a, b) => {
-      const at = Date.parse(a.created_at || a.updated_at || a.last_used_at || "") || 0;
-      const bt = Date.parse(b.created_at || b.updated_at || b.last_used_at || "") || 0;
+      const at = parseServerDateV14(a.created_at || a.updated_at || a.last_used_at || "")?.getTime() || 0;
+      const bt = parseServerDateV14(b.created_at || b.updated_at || b.last_used_at || "")?.getTime() || 0;
       return bt - at;
     },
   };
@@ -6485,7 +6497,7 @@
     if (!footer) return;
     const text = String(doc.content || "").trim();
     const words = doc.word_count || (text ? text.length : 0);
-    const updated = doc.updated_at ? new Date(doc.updated_at).toLocaleString("zh-CN") : "刚刚";
+    const updated = doc.updated_at ? (parseServerDateV14(doc.updated_at)?.toLocaleString("zh-CN") || "刚刚") : "刚刚";
     footer.innerHTML =
       `<span>${Number(words || 0).toLocaleString("zh-CN")} 字</span>` +
       `<span>最后更新 ${escapeHtmlV14(updated)}</span>`;
@@ -7490,8 +7502,8 @@
   function formatSecurityTimeV18(value) {
     if (!value) return "尚未记录";
     try {
-      const d = new Date(value);
-      if (Number.isNaN(d.getTime())) return String(value);
+      const d = parseServerDateV14(value);
+      if (!d) return String(value);
       return d.toLocaleString("zh-CN", { hour12: false });
     } catch (_e) {
       return String(value);
@@ -9106,8 +9118,8 @@ a:focus-visible,
 
   function _formatRelMonth(iso) {
     if (!iso) return "";
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return "";
+    const d = parseServerDateV14(iso);
+    if (!d) return "";
     const now = new Date();
     const ms = now - d;
     const min = Math.floor(ms / 60000);
@@ -9359,7 +9371,7 @@ a:focus-visible,
       const model = (dd.extra || {}).model || "";
       overlay.querySelector("[data-v14-feed-list-meta]").textContent =
         (usedLlm ? "AI 真实生成" + (model ? " · " + model : "") : "已聚合统计") +
-        " · " + (dd.created_at ? new Date(dd.created_at).toLocaleString("zh-CN") : "");
+        " · " + (dd.created_at ? (parseServerDateV14(dd.created_at)?.toLocaleString("zh-CN") || "") : "");
       const bodyText = dd.body || dd.content || "";
       const bodyHtml = bodyText
         .split(/\n+/)

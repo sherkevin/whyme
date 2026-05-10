@@ -111,7 +111,12 @@ class Task(Base):
     id = Column(Integer, primary_key=True, index=True)
     # TODO: Add organizations table and uncomment this
     # organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     title = Column(String(200), nullable=False)
     description = Column(Text)
     type = Column(String(50), default="task")  # task, habit, goal

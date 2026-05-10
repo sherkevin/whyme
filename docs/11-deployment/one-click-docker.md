@@ -34,6 +34,9 @@ Stop the stack:
 docker compose --env-file .env.docker.local -f docker-compose.prd10.yml down
 ```
 
-Data is persisted in Docker volumes. The default app database is a real
-persistent SQLite database at `/app/data/mydow.db`; Postgres and Redis are
-started with the stack for deployment parity and services that need them.
+Data is persisted in Docker volumes. The default app database is the real
+Postgres service in the stack
+(`postgresql+asyncpg://agentos:agentos@postgres:5432/agentos_db`), and Redis is
+used by the backend services that need it. SQLite is now only a deliberate
+local-development override when `DATABASE_URL` is explicitly set to a sqlite
+URL.

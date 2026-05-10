@@ -44,7 +44,7 @@ services:
       # 之前（§2.22 / §6.9 类似工作未完成），临时使用 SQLite 落库；持久化到
       # ``app-sqlite`` named volume。可通过传入 ``DATABASE_URL`` 覆盖到真
       # Postgres（FK 修好后）。
-      DATABASE_URL: ${DATABASE_URL:-sqlite+aiosqlite:////app/data/mydow.db}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-agentos}:${POSTGRES_PASSWORD:-agentos}@postgres:5432/${POSTGRES_DB:-agentos_db}}
       # Redis：限流/SSE/验证码
       REDIS_URL: redis://:${REDIS_PASSWORD:-redis123}@redis:6379/0
       REDIS_HOST: redis

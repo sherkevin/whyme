@@ -7,6 +7,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from agent_os.db.base import Base
@@ -23,7 +24,12 @@ class AgentProcessEvent(Base):
     event_id = Column(String(36), unique=True, default=lambda: str(uuid.uuid4()), index=True)
 
     # 关联的 Item
-    item_id = Column(String(36), ForeignKey("items.id"), nullable=False, index=True)
+    item_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("items.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
 
     # 状态转换
     from_status = Column(String(50), nullable=False)  # 处理前状态
