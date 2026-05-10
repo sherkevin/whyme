@@ -10,8 +10,9 @@ The launcher does the full local delivery path:
 
 1. Checks Docker Desktop is running.
 2. Generates `.env.docker.local` with local secrets when the file does not exist.
-3. Copies LLM settings from process environment or `.env` when `API_KEY`,
-   `API_BASE`, `MODEL`, or `MODEL_FALLBACK` are present.
+3. Copies LLM settings from process environment or `.env`, preferring
+   `DEEPSEEK_API_KEY` / `DEEPSEEK_OPENAI_BASE_URL` and defaulting the model to
+   `deepseek-v4-flash`.
 4. Builds and starts `app`, `postgres`, and `redis` from
    `docker-compose.prd10.yml`.
 5. Waits for `http://localhost:8000/health`.

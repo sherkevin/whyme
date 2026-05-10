@@ -141,26 +141,15 @@ class LiteLLMProvider(LLMProvider):
 
         # Parse response
         choice = response.choices[0]
-        # Reasoning-mode models (DeepSeek v4-pro/v4-flash in reasoner mode,
-        # GLM-Z1, etc.) put their visible answer in `reasoning_content` and
-        # leave `content` empty when `max_tokens` is exhausted by the
-        # chain-of-thought. Fall back to reasoning_content so the Mydow AI
-        # workspace always shows the user something rather than a blank
-        # bubble. Strip surrounding whitespace; if both are empty we keep
-        # an empty string so the caller can show the configured fallback
-        # placeholder.
+        # Reasoning-mode models can return private reasoning_content before
+        # the final answer. Never expose reasoning_content as user-facing
+        # text; callers treat reasoning-only output as a real provider
+        # failure and ask for more budget / a valid non-reasoning response.
         primary_content = (choice.message.content or "").strip()
         reasoning_content = (
             getattr(choice.message, "reasoning_content", None) or ""
         ).strip()
-        if primary_content:
-            content = primary_content
-        elif reasoning_content:
-            # Prefix so it's clear this is the reasoning trace; non-reasoning
-            # models never reach this branch so production demos stay clean.
-            content = "（思考过程）" + reasoning_content
-        else:
-            content = ""
+        content = primary_content
 
         result = {
             "content": content,
@@ -172,8 +161,10 @@ class LiteLLMProvider(LLMProvider):
                 "total_tokens": response.usage.total_tokens if response.usage else 0,
             },
         }
-        if reasoning_content and primary_content:
+        if reasoning_content:
             result["reasoning"] = reasoning_content
+            if not primary_content:
+                result["reasoning_only"] = True
 
         # Add tool calls if present
         if hasattr(choice.message, "tool_calls") and choice.message.tool_calls:
@@ -218,34 +209,17 @@ class LiteLLMProvider(LLMProvider):
 
         response = await litellm.acompletion(**params)
 
-        # Same content/reasoning_content fallback logic as ``complete``.
-        # Reasoning-mode SSE streams emit `reasoning_content` deltas first,
-        # then switch to `content` deltas once the model finalizes its
-        # answer. We surface BOTH to the caller so the AI workspace can
-        # show "正在思考…" for reasoning chunks and append the actual
-        # answer naturally as it arrives. Non-reasoning models never emit
-        # ``reasoning_content`` and behave exactly as before.
-        seen_real_content = False
+        # Reasoning-mode SSE streams may emit `reasoning_content` deltas
+        # before final `content` deltas. Do not surface private reasoning to
+        # the UI; only yield final answer content.
         async for chunk in response:
             if not chunk.choices:
                 continue
             delta = chunk.choices[0].delta
             content = getattr(delta, "content", None) or ""
-            reasoning_delta = getattr(delta, "reasoning_content", None) or ""
             finish_reason = chunk.choices[0].finish_reason
             if content:
-                seen_real_content = True
                 yield {"content": content, "finish_reason": finish_reason}
-                continue
-            # Only forward reasoning chunks if the model never emitted
-            # any visible content — this prevents reasoning text from
-            # contaminating the final answer when both are present.
-            if reasoning_delta and not seen_real_content:
-                yield {
-                    "content": reasoning_delta,
-                    "kind": "reasoning",
-                    "finish_reason": finish_reason,
-                }
 
 
 __all__ = ["LiteLLMProvider"]

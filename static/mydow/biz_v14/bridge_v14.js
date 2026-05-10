@@ -29,6 +29,7 @@
    *   },
    *   contextDocsCache: Record<string, { id: string, title: string, folder_id?: string }>,
    *   contextFoldersCache: Record<string, { id: string, title: string }>,
+   *   aiContextDraft: { document_ids: string[], folder_ids: string[] },
    *   skillRunDoneIds: Record<string, string>,
    *   allSkills: any[],
    *   activeSkillFilter: string,
@@ -43,14 +44,16 @@
     gardenZoom: 1,
     /** Assistant message UUID from SSE ``event: meta`` (save-to-kb). */
     lastAssistantMessageId: "",
-    /** §15.37 selected AI model name (Mydow Auto / Opus 4.6 / Gemini 2.5 Flash / GPT-5.2). */
-    aiModel: "Mydow Auto",
+    /** §18.30 selected AI model. Product policy: all v14 AI calls use DeepSeek v4 flash. */
+    aiModel: "deepseek-v4-flash",
     /** §16.4 — current conversation's pinned context (mirrors backend conv.context_scope). */
     contextScope: { document_ids: [], folder_ids: [], sources: [], notes: [] },
     /** §16.4 — cached doc summaries for chip rendering ({id → {id,title,folder_id}}). */
     contextDocsCache: {},
     /** §18.3 — cached folder summaries for AI context chips. */
     contextFoldersCache: {},
+    /** §18.30 — modal-local draft selection so hidden/search-filtered picks are not lost. */
+    aiContextDraft: { document_ids: [], folder_ids: [] },
     /** §16.6 — skill id → saved document id (or "1" if none) after a completed run. */
     skillRunDoneIds: {},
     /** §18.8 — full real `/skills` cache used by the category chips. */
@@ -1430,14 +1433,17 @@
     }
   }
 
-  async function _pollSkillRunUntilDone(runId, jobId, maxIterations) {
+  async function _pollSkillRunUntilDone(runId, jobId, maxIterations, onTick) {
     const max = maxIterations || 30;
+    const startedAt = Date.now();
     for (let i = 0; i < max; i += 1) {
       await new Promise((r) => setTimeout(r, 1500));
+      const elapsed = Math.round((Date.now() - startedAt) / 1000);
       try {
         const r = await apiFetch(`/skills/runs/${runId}`);
         const data = unwrapData(r) || r || {};
         const status = data.status;
+        if (typeof onTick === "function") onTick({ source: "run", status, elapsed, data });
         if (
           status === "completed" || status === "failed" || status === "canceled"
         ) {
@@ -1448,6 +1454,7 @@
         try {
           const j = await apiFetch(`/jobs/${jobId}`);
           const jd = unwrapData(j) || j || {};
+          if (typeof onTick === "function") onTick({ source: "job", status: jd.status, elapsed, data: jd });
           if (
             jd.status === "completed" || jd.status === "failed" || jd.status === "canceled"
           ) {
@@ -1460,7 +1467,13 @@
         } catch (_e2) { /* keep polling */ }
       }
     }
-    return null;
+    return {
+      status: "timeout",
+      error: {
+        code: "CLIENT_POLL_TIMEOUT",
+        message: "等待 Skill 运行结果超时。任务可能仍在后台运行，或 LLM 模型无权限/无响应。",
+      },
+    };
   }
 
   function _renderSkillResultDrawer(skillName, runResult) {
@@ -1649,7 +1662,14 @@
         "info",
       );
 
-      const finalRun = await _pollSkillRunUntilDone(runId, jobId, 80);
+      const finalRun = await _pollSkillRunUntilDone(runId, jobId, 60, (tick) => {
+        const label = tick.status === "running" ? "LLM 正在生成" : tick.status || "排队中";
+        _setSkillRunLiveStatusV18(
+          layer,
+          `${label} · 已等待 ${tick.elapsed}s` + (jobId ? ` · job ${String(jobId).slice(0, 8)}` : ""),
+          "info",
+        );
+      });
       if (!finalRun) {
         _setSkillRunLiveStatusV18(layer, "运行仍在处理中，可稍后从通知中心打开结果。", "error");
         toast("Skill 运行超时，请到通知中心查看", "warning");
@@ -4629,7 +4649,7 @@
       return;
     }
     toast(`引用：${c.title || "知识库文档"}`);
-    window.location.hash = `#kb/doc/${oid}`;
+    window.location.hash = `#/kb/doc/${oid}`;
     if (window.MydowBridgeV14Ext && typeof window.MydowBridgeV14Ext.openDocDrawer === "function") {
       window.MydowBridgeV14Ext.openDocDrawer(oid);
     }
@@ -4732,6 +4752,53 @@
     content.appendChild(host);
   }
 
+  const DEEPSEEK_V4_FLASH_MODEL_V18 = "deepseek-v4-flash";
+  const DEEPSEEK_V4_FLASH_LABEL_V18 = "DeepSeek V4 Flash";
+
+  function enforceDeepSeekV4FlashModelV18() {
+    V14.aiModel = DEEPSEEK_V4_FLASH_MODEL_V18;
+    document.querySelectorAll('[data-inline-menu="aiModel"] [data-inline-label]').forEach((label) => {
+      label.textContent = DEEPSEEK_V4_FLASH_LABEL_V18;
+    });
+    try { window.localStorage.setItem("mydow_v14_ai_model", DEEPSEEK_V4_FLASH_MODEL_V18); } catch (_e) {}
+  }
+
+  function sanitizeAiModelMenuV18() {
+    const popovers = document.querySelectorAll(".inline-popover, .v37-bridge-popover");
+    popovers.forEach((popover) => {
+      const buttons = Array.from(popover.querySelectorAll("button[data-menu-value]"));
+      if (!buttons.length) return;
+      const modelLike = buttons.some((btn) => /Opus|Gemini|GPT|Mydow Auto|DeepSeek/i.test(btn.textContent || ""));
+      if (!modelLike) return;
+      buttons.forEach((btn, index) => {
+        if (index === 0) {
+          btn.dataset.menuValue = DEEPSEEK_V4_FLASH_MODEL_V18;
+          btn.textContent = DEEPSEEK_V4_FLASH_LABEL_V18;
+          btn.setAttribute("aria-pressed", "true");
+          btn.classList.add("active");
+          btn.title = "所有 AI 对话、RAG、灵感和 Skills 统一使用 DeepSeek v4 flash";
+        } else {
+          btn.remove();
+        }
+      });
+    });
+  }
+
+  function bindDeepSeekModelEnforcementV18() {
+    enforceDeepSeekV4FlashModelV18();
+    document.addEventListener(
+      "click",
+      (event) => {
+        if (!event.target.closest('[data-inline-menu="aiModel"], .inline-popover button[data-menu-value]')) return;
+        window.setTimeout(() => {
+          enforceDeepSeekV4FlashModelV18();
+          sanitizeAiModelMenuV18();
+        }, 0);
+      },
+      true,
+    );
+  }
+
   async function streamV14AiReply(conversationId, content) {
     if (V14.streamAbort) {
       try {
@@ -4741,23 +4808,12 @@
     V14.streamAbort = new AbortController();
     const streamEl = appendAiAssistantPlaceholder();
     const streamPath = `/ai/conversations/${conversationId}/messages/stream`;
-    /** §15.37.f — propagate selected AI model + mode to backend.
-     * Read label live from the IIFE-controlled DOM so we always pick up the
-     * latest user choice (the IIFE manages aiModel state via uiMemory). */
-    const labelEl = document.querySelector(
-      '[data-inline-menu="aiModel"] [data-inline-label]',
-    );
-    const liveModel = (labelEl && labelEl.textContent.trim()) || V14.aiModel;
-    if (liveModel && liveModel !== V14.aiModel) {
-      V14.aiModel = liveModel;
-      try {
-        window.localStorage.setItem("mydow_v14_ai_model", liveModel);
-      } catch (_e) { /* ignore quota */ }
-    }
+    /** §18.30 — product policy: all AI/RAG calls use DeepSeek v4 flash.
+     * The original prototype menu still exists visually, but the bridge no
+     * longer forwards prototype model labels to the backend. */
+    enforceDeepSeekV4FlashModelV18();
     const body = { content, attachments: [] };
-    if (liveModel && liveModel !== "Mydow Auto") {
-      body.model = liveModel;
-    }
+    body.model = DEEPSEEK_V4_FLASH_MODEL_V18;
     const modeBtn = document.querySelector(".ai-mode-button.active[data-ai-mode]");
     if (modeBtn) body.mode = modeBtn.dataset.aiMode || "efficient";
     /** §16.4 — 显式传 context_scope（与 PATCH 会话一致）；避免会话对象未刷新时 RAG 漏上下文。 */
@@ -4772,91 +4828,117 @@
           : ["doc"],
       };
     }
-    const resp = await fetchAiStreamWithSession(streamPath, body, V14.streamAbort.signal);
-    if (!resp.ok || !resp.body) {
-      if (streamEl) streamEl.textContent = "（生成失败 " + resp.status + "）";
-      toast(resp.status === 401 ? "登录已刷新，请再试一次" : "AI 请求失败", "error");
-      return;
-    }
-    const parent = streamEl && streamEl.closest(".ai-chat-message");
-    if (parent) {
-      parent.classList.remove("is-thinking");
-      const indicator = parent.querySelector(".ai-thinking-indicator");
-      if (indicator) indicator.remove();
-    }
+    const aiTimeoutId = window.setTimeout(() => {
+      try {
+        V14.streamAbort?.abort("AI_STREAM_TIMEOUT");
+      } catch (_e) { /* ignore */ }
+    }, 90000);
+    try {
+      const resp = await fetchAiStreamWithSession(streamPath, body, V14.streamAbort.signal);
+      if (!resp.ok || !resp.body) {
+        if (streamEl) streamEl.textContent = "（生成失败 " + resp.status + "）";
+        toast(resp.status === 401 ? "登录已刷新，请再试一次" : "AI 请求失败", "error");
+        return;
+      }
+      const parent = streamEl && streamEl.closest(".ai-chat-message");
+      if (parent) {
+        parent.classList.remove("is-thinking");
+        const indicator = parent.querySelector(".ai-thinking-indicator");
+        if (indicator) indicator.remove();
+      }
 
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder("utf-8");
-    let buffer = "";
-    let first = true;
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const blocks = buffer.split(/\r?\n\r?\n/);
-      buffer = blocks.pop() || "";
-      for (const block of blocks) {
-        const lines = block.split(/\r?\n/);
-        const eventLine = lines.find((l) => l.startsWith("event:"));
-        const dataLine = lines.find((l) => l.startsWith("data:"));
-        if (!eventLine || !dataLine) continue;
-        const eventType = eventLine.slice(eventLine.indexOf(":") + 1).trim();
-        const raw = dataLine.slice(dataLine.indexOf(":") + 1).trim();
-        let payload = null;
-        try {
-          payload = JSON.parse(raw);
-        } catch {
-          payload = { _raw: raw };
-        }
-        if (eventType === "meta" && payload && payload.assistant_message_id) {
-          V14.lastAssistantMessageId = String(payload.assistant_message_id);
-          if (streamEl) {
-            const article = streamEl.closest(".ai-chat-message");
-            if (article) {
-              article.dataset.messageId = V14.lastAssistantMessageId;
-              if (payload.agent_enabled) article.dataset.agentMode = "true";
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let buffer = "";
+      let first = true;
+      let streamHadError = false;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split(/\r?\n\r?\n/);
+        buffer = blocks.pop() || "";
+        for (const block of blocks) {
+          const lines = block.split(/\r?\n/);
+          const eventLine = lines.find((l) => l.startsWith("event:"));
+          const dataLine = lines.find((l) => l.startsWith("data:"));
+          if (!eventLine || !dataLine) continue;
+          const eventType = eventLine.slice(eventLine.indexOf(":") + 1).trim();
+          const raw = dataLine.slice(dataLine.indexOf(":") + 1).trim();
+          let payload = null;
+          try {
+            payload = JSON.parse(raw);
+          } catch {
+            payload = { _raw: raw };
+          }
+          if (eventType === "meta" && payload && payload.assistant_message_id) {
+            V14.lastAssistantMessageId = String(payload.assistant_message_id);
+            if (streamEl) {
+              const article = streamEl.closest(".ai-chat-message");
+              if (article) {
+                article.dataset.messageId = V14.lastAssistantMessageId;
+                if (payload.agent_enabled) article.dataset.agentMode = "true";
+              }
             }
-          }
-        } else if (eventType === "agent_step" && payload && streamEl) {
-          // §15.49 — render visible plan/retrieve/synthesize chips above the bubble.
-          const article = streamEl.closest(".ai-chat-message");
-          _appendAgentStep(article, payload);
-        } else if (eventType === "token" && payload && payload.delta && streamEl) {
-          if (first) {
-            streamEl.textContent = "";
+          } else if (eventType === "agent_step" && payload && streamEl) {
+            // §15.49 — render visible plan/retrieve/synthesize chips above the bubble.
+            const article = streamEl.closest(".ai-chat-message");
+            _appendAgentStep(article, payload);
+          } else if (eventType === "token" && payload && payload.delta && streamEl) {
+            if (first) {
+              streamEl.textContent = "";
+              first = false;
+            }
+            streamEl.textContent += payload.delta;
+            const list = aiMessageListHost();
+            if (list) list.scrollTop = list.scrollHeight;
+          } else if (eventType === "error" && streamEl) {
+            streamHadError = true;
             first = false;
-          }
-          streamEl.textContent += payload.delta;
-          const list = aiMessageListHost();
-          if (list) list.scrollTop = list.scrollHeight;
-        } else if (eventType === "error" && streamEl) {
-          streamEl.textContent = (payload && payload.message) || "错误";
-        } else if (eventType === "replace" && streamEl) {
-          streamEl.textContent = (payload && payload.content) || "";
-          streamEl.dataset.inlineCitationsDecorated = "";
-        } else if (eventType === "done" && streamEl) {
-          if (first) streamEl.textContent = "模型没有返回内容，请检查 LLM 配置或稍后重试。";
-          const article = streamEl.closest(".ai-chat-message");
-          _showAssistantActions(article, V14.lastAssistantMessageId);
-          if (payload && Array.isArray(payload.citations) && article) {
-            _renderCitationChipsFromPayload(article, payload.citations);
-            _decorateAiStreamInlineCitations(streamEl, payload.citations);
+            streamEl.textContent = (payload && payload.message) || "错误";
+          } else if (eventType === "replace" && streamEl) {
+            streamEl.textContent = (payload && payload.content) || "";
+            streamEl.dataset.inlineCitationsDecorated = "";
+          } else if (eventType === "done" && streamEl) {
+            if (first && !streamHadError) streamEl.textContent = "模型没有返回内容，请检查 LLM 配置或稍后重试。";
+            const article = streamEl.closest(".ai-chat-message");
+            _showAssistantActions(article, V14.lastAssistantMessageId);
+            if (payload && Array.isArray(payload.citations) && article) {
+              _renderCitationChipsFromPayload(article, payload.citations);
+              _decorateAiStreamInlineCitations(streamEl, payload.citations);
+            }
           }
         }
       }
+      /** Final safety: even if upstream never sent `event: done`, surface
+       *  the action toolbar so the user can copy/regenerate/feedback. */
+      if (streamEl) {
+        const article = streamEl.closest(".ai-chat-message");
+        _showAssistantActions(article, V14.lastAssistantMessageId);
+        // §15.43 — pull citations from the persisted assistant message and
+        // render real KB chips below the bubble. Hidden on errors / no hits.
+        _renderCitationsForArticle(article, conversationId, V14.lastAssistantMessageId).catch(
+          (err) => console.warn("[Mydow v1.4] citation render failed", err),
+        );
+      }
+    } catch (e) {
+      const parent = streamEl && streamEl.closest(".ai-chat-message");
+      if (parent) {
+        parent.classList.remove("is-thinking");
+        const indicator = parent.querySelector(".ai-thinking-indicator");
+        if (indicator) indicator.remove();
+      }
+      if (streamEl) {
+        const isAbort = e && (e.name === "AbortError" || String(e.message || e).includes("aborted"));
+        streamEl.textContent = isAbort
+          ? "AI 请求超过 90 秒未返回，已停止等待。请检查 DeepSeek v4 flash 模型权限或稍后重试。"
+          : "AI 请求失败：" + (e && e.message ? e.message : String(e));
+      }
+      toast("AI 生成失败，请检查模型权限或稍后重试", "error");
+    } finally {
+      window.clearTimeout(aiTimeoutId);
+      V14.streamAbort = null;
     }
-    /** Final safety: even if upstream never sent `event: done`, surface
-     *  the action toolbar so the user can copy/regenerate/feedback. */
-    if (streamEl) {
-      const article = streamEl.closest(".ai-chat-message");
-      _showAssistantActions(article, V14.lastAssistantMessageId);
-      // §15.43 — pull citations from the persisted assistant message and
-      // render real KB chips below the bubble. Hidden on errors / no hits.
-      _renderCitationsForArticle(article, conversationId, V14.lastAssistantMessageId).catch(
-        (err) => console.warn("[Mydow v1.4] citation render failed", err),
-      );
-    }
-    V14.streamAbort = null;
   }
 
   /** §15.49 — Append a visible agent-step badge above the assistant bubble
@@ -5818,26 +5900,20 @@
           '[data-inline-menu="aiModel"][aria-expanded="true"]',
         );
         if (!trigger) return;
-        const value = item.dataset.menuValue || "";
-        if (!value) return;
-        V14.aiModel = value;
-        try { window.localStorage.setItem("mydow_v14_ai_model", value); } catch (_e) {}
+        item.dataset.menuValue = DEEPSEEK_V4_FLASH_MODEL_V18;
+        V14.aiModel = DEEPSEEK_V4_FLASH_MODEL_V18;
+        try { window.localStorage.setItem("mydow_v14_ai_model", DEEPSEEK_V4_FLASH_MODEL_V18); } catch (_e) {}
+        window.setTimeout(() => {
+          enforceDeepSeekV4FlashModelV18();
+          sanitizeAiModelMenuV18();
+        }, 0);
       },
       false,
     );
   }
 
   function _restoreAiModelV37() {
-    try {
-      const saved = window.localStorage.getItem("mydow_v14_ai_model");
-      if (saved) {
-        V14.aiModel = saved;
-        const triggerLabel = document.querySelector(
-          '[data-inline-menu="aiModel"] [data-inline-label]',
-        );
-        if (triggerLabel) triggerLabel.textContent = saved;
-      }
-    } catch (_e) { /* ignore */ }
+    enforceDeepSeekV4FlashModelV18();
   }
 
   // §15.37.d — Card share link copy
@@ -6150,6 +6226,85 @@
       .doc-body[contenteditable="true"]:focus {
         background: linear-gradient(180deg, rgba(248,250,255,.72), rgba(255,255,255,.32));
       }
+      .doc-body.markdown-rendered-v18 {
+        min-height: 360px;
+        border-radius: 18px;
+        padding: 8px 4px 2px;
+        color: #25324a;
+        line-height: 1.8;
+        font-size: 15px;
+      }
+      .doc-body.markdown-rendered-v18 > *:first-child { margin-top: 0; }
+      .doc-body.markdown-rendered-v18 h1,
+      .doc-body.markdown-rendered-v18 h2,
+      .doc-body.markdown-rendered-v18 h3 {
+        color: #14213a;
+        line-height: 1.32;
+        margin: 1.15em 0 .55em;
+        letter-spacing: 0;
+      }
+      .doc-body.markdown-rendered-v18 h1 { font-size: 28px; }
+      .doc-body.markdown-rendered-v18 h2 { font-size: 21px; }
+      .doc-body.markdown-rendered-v18 h3 { font-size: 17px; }
+      .doc-body.markdown-rendered-v18 p { margin: .55em 0; }
+      .doc-body.markdown-rendered-v18 ul,
+      .doc-body.markdown-rendered-v18 ol { padding-left: 1.45em; margin: .6em 0 1em; }
+      .doc-body.markdown-rendered-v18 li { margin: .28em 0; }
+      .doc-body.markdown-rendered-v18 strong { color: #111c32; font-weight: 800; }
+      .doc-body.markdown-rendered-v18 blockquote {
+        margin: 1em 0;
+        padding: 10px 14px;
+        border-left: 3px solid #8ea2ff;
+        border-radius: 12px;
+        background: rgba(91,120,255,.08);
+        color: #44536f;
+      }
+      .doc-body.markdown-rendered-v18 code {
+        padding: 2px 6px;
+        border-radius: 7px;
+        background: rgba(30,42,70,.08);
+        color: #3346a8;
+        font-size: .92em;
+      }
+      .doc-body.markdown-rendered-v18 pre {
+        overflow: auto;
+        padding: 14px 16px;
+        border-radius: 14px;
+        background: #111827;
+        color: #e5e7eb;
+      }
+      .doc-body.markdown-rendered-v18 pre code {
+        padding: 0;
+        background: transparent;
+        color: inherit;
+      }
+      .doc-body.markdown-rendered-v18 table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1em 0;
+        overflow: hidden;
+        border-radius: 12px;
+      }
+      .doc-body.markdown-rendered-v18 th,
+      .doc-body.markdown-rendered-v18 td {
+        border: 1px solid rgba(108,124,153,.18);
+        padding: 9px 11px;
+        text-align: left;
+      }
+      .doc-body.markdown-rendered-v18 th { background: rgba(91,120,255,.08); }
+      .doc-md-toggle-v18 {
+        min-width: 98px;
+        font-weight: 760;
+      }
+      body.theme-dark .doc-body.markdown-rendered-v18 {
+        color: #d8deea;
+      }
+      body.theme-dark .doc-body.markdown-rendered-v18 h1,
+      body.theme-dark .doc-body.markdown-rendered-v18 h2,
+      body.theme-dark .doc-body.markdown-rendered-v18 h3,
+      body.theme-dark .doc-body.markdown-rendered-v18 strong {
+        color: #f2f5fb;
+      }
       .doc-status[data-v18-state="saving"] { color: #5b78ff; background: rgba(91,120,255,.10); }
       .doc-status[data-v18-state="error"] { color: #c44646; background: rgba(216,72,74,.10); }
       .doc-status[data-v18-state="saved"] { color: #158c72; background: rgba(112,200,170,.13); }
@@ -6157,13 +6312,74 @@
     document.head.appendChild(style);
   }
 
+  let _markdownItV18 = null;
+
+  function markdownRendererV18() {
+    if (_markdownItV18) return _markdownItV18;
+    if (typeof window.markdownit === "function") {
+      _markdownItV18 = window.markdownit({
+        html: false,
+        linkify: true,
+        breaks: true,
+        typographer: true,
+      });
+      return _markdownItV18;
+    }
+    return null;
+  }
+
   function docTextToHtmlV18(text) {
     const raw = String(text || "").trim();
     if (!raw) return "<p></p>";
+    const renderer = markdownRendererV18();
+    if (renderer) return renderer.render(raw);
     return raw
       .split(/\n{2,}/)
       .map((para) => `<p>${escapeHtmlV14(para).replace(/\n/g, "<br>")}</p>`)
       .join("");
+  }
+
+  function renderDocBodyPreviewV18(body, rawText) {
+    if (!body) return;
+    const raw = String(rawText || "");
+    body.dataset.v18MarkdownRaw = raw;
+    body.dataset.v18PreviewMode = "rendered";
+    body.classList.add("markdown-rendered-v18");
+    body.setAttribute("contenteditable", "false");
+    body.innerHTML = docTextToHtmlV18(raw);
+    const toggle = getDocEditorMainV18()?.querySelector("[data-v18-md-toggle]");
+    if (toggle) {
+      toggle.textContent = "编辑 Markdown";
+      toggle.setAttribute("aria-pressed", "false");
+    }
+  }
+
+  function enterDocMarkdownEditModeV18(body) {
+    if (!body) return;
+    const raw = body.dataset.v18MarkdownRaw || body.dataset.v18SavedValue || body.innerText || body.textContent || "";
+    body.dataset.v18PreviewMode = "editing";
+    body.classList.remove("markdown-rendered-v18");
+    body.setAttribute("contenteditable", "true");
+    body.textContent = raw;
+    const toggle = getDocEditorMainV18()?.querySelector("[data-v18-md-toggle]");
+    if (toggle) {
+      toggle.textContent = "预览 Markdown";
+      toggle.setAttribute("aria-pressed", "true");
+    }
+    body.focus({ preventScroll: true });
+  }
+
+  function ensureDocMarkdownToggleV18(main) {
+    const toolbar = main && main.querySelector(".editor-toolbar");
+    if (!toolbar || toolbar.querySelector("[data-v18-md-toggle]")) return;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "doc-md-toggle-v18";
+    btn.dataset.v18MdToggle = "true";
+    btn.textContent = "编辑 Markdown";
+    btn.title = "切换 Markdown 预览/源码编辑";
+    btn.setAttribute("aria-pressed", "false");
+    toolbar.appendChild(btn);
   }
 
   function getDocEditorMainV18() {
@@ -6199,6 +6415,7 @@
     injectDocEditorPolishCssV18();
     const main = getDocEditorMainV18();
     if (!main) return;
+    ensureDocMarkdownToggleV18(main);
     main.dataset.documentId = id;
     setDocEditorStatusV18("saving", "正在读取文档");
     try {
@@ -6212,8 +6429,9 @@
         title.dataset.v18SavedValue = title.value;
       }
       if (body) {
-        body.innerHTML = docTextToHtmlV18(doc.content || doc.summary || "");
-        body.dataset.v18SavedValue = body.innerText || body.textContent || "";
+        const raw = doc.content || doc.summary || "";
+        body.dataset.v18SavedValue = raw;
+        renderDocBodyPreviewV18(body, raw);
       }
       hydrateDocEditorFooterV18(doc);
       setDocEditorStatusV18("saved", "已同步到知识库");
@@ -6230,7 +6448,14 @@
     const title = main.querySelector(".doc-title-input");
     const body = main.querySelector(".doc-body");
     const nextTitle = (title && title.value.trim()) || "未命名文档";
-    const nextContent = (body && (body.innerText || body.textContent || "").trim()) || "";
+    const bodyEditing = body && body.dataset.v18PreviewMode === "editing";
+    const nextContent = (
+      body
+        ? (bodyEditing
+            ? (body.innerText || body.textContent || "")
+            : (body.dataset.v18MarkdownRaw || ""))
+        : ""
+    ).trim();
     const patch = {};
     if (title && nextTitle !== (title.dataset.v18SavedValue || "")) patch.title = nextTitle;
     if (body && nextContent !== (body.dataset.v18SavedValue || "")) patch.content = nextContent;
@@ -6243,7 +6468,13 @@
       });
       const doc = unwrapData(resp) || resp || {};
       if (title) title.dataset.v18SavedValue = nextTitle;
-      if (body) body.dataset.v18SavedValue = nextContent;
+      if (body) {
+        body.dataset.v18SavedValue = nextContent;
+        body.dataset.v18MarkdownRaw = nextContent;
+        if (bodyEditing && document.activeElement !== body) {
+          renderDocBodyPreviewV18(body, nextContent);
+        }
+      }
       hydrateDocEditorFooterV18(doc);
       setDocEditorStatusV18("saved", "已自动保存");
     } catch (e) {
@@ -6262,9 +6493,28 @@
 
   function bindDocEditorHydrateAndAutosaveV18() {
     injectDocEditorPolishCssV18();
+    const main = getDocEditorMainV18();
+    if (main) ensureDocMarkdownToggleV18(main);
     document.addEventListener(
       "click",
       (event) => {
+        const toggle = event.target.closest("[data-v18-md-toggle]");
+        if (toggle) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          const host = toggle.closest(".doc-editor-main");
+          const body = host && host.querySelector(".doc-body");
+          if (!body) return;
+          if (body.dataset.v18PreviewMode === "editing") {
+            const raw = (body.innerText || body.textContent || "").trim();
+            body.dataset.v18MarkdownRaw = raw;
+            renderDocBodyPreviewV18(body, raw);
+            saveDocEditorNowV18().catch(() => {});
+          } else {
+            enterDocMarkdownEditModeV18(body);
+          }
+          return;
+        }
         const row = event.target.closest(".doc-row[data-document-id], [data-open-drawer='docDetail'][data-doc-id], .kb-list-row[data-doc-id]");
         if (!row) return;
         const id = row.dataset.documentId || row.dataset.docId || "";
@@ -6335,6 +6585,31 @@
       main.scrollIntoView({ block: "start", behavior: "smooth" });
     }
     return main;
+  }
+
+  function readKbDocIdFromHashV18() {
+    const hash = String(window.location.hash || "");
+    const m = hash.match(/^#\/?kb\/doc\/([^/?#]+)/i);
+    return m ? decodeURIComponent(m[1]) : "";
+  }
+
+  function openKbDocumentFromHashV18(options = {}) {
+    const id = readKbDocIdFromHashV18();
+    if (!id) return false;
+    const current = getDocEditorMainV18()?.dataset.documentId || "";
+    if (!options.force && current === id) return true;
+    window.setTimeout(() => {
+      openKbDocumentEditorV20(id, { updateHash: false }).catch((e) => {
+        toast("打开文档失败: " + e.message, "error");
+      });
+    }, options.delayMs || 80);
+    return true;
+  }
+
+  function bindKbDocHashRouteV18() {
+    window.addEventListener("hashchange", () => {
+      openKbDocumentFromHashV18({ force: true, delayMs: 20 });
+    });
   }
 
   // §15.37.g — Doc AI actions: 5 buttons in doc-editor toolbar
@@ -7702,8 +7977,22 @@
         outline: 0;
       }
       .notice-row.context-source-v18.active {
-        border-color: rgba(91,120,255,.52);
-        background: rgba(239,244,255,.95);
+        border-color: rgba(91,120,255,.72);
+        background: linear-gradient(135deg, rgba(232,238,255,.98), rgba(245,248,255,.96));
+        box-shadow: 0 12px 30px rgba(91,120,255,.16);
+      }
+      .notice-row.context-source-v18.active .notice-body h2::before {
+        content: "✓";
+        display: inline-grid;
+        place-items: center;
+        width: 18px;
+        height: 18px;
+        margin-right: 7px;
+        border-radius: 999px;
+        background: #5b78ff;
+        color: #fff;
+        font-size: 11px;
+        vertical-align: 1px;
       }
       .notice-row.context-source-v18 .notice-action {
         border: 0;
@@ -7713,11 +8002,55 @@
         font-weight: 780;
       }
       .notice-row.context-source-v18.active .notice-action {
-        background: #5b78ff;
+        background: #24315f;
         color: #fff;
       }
     `;
     document.head.appendChild(style);
+  }
+
+  function seedAiContextDraftV18(scope) {
+    const s = scope || V14.contextScope || {};
+    V14.aiContextDraft = {
+      document_ids: [...new Set((s.document_ids || []).map(String).filter(Boolean))],
+      folder_ids: [...new Set((s.folder_ids || []).map(String).filter(Boolean))],
+    };
+  }
+
+  function aiContextDraftHasV18(type, id) {
+    const key = type === "folder" ? "folder_ids" : "document_ids";
+    return (V14.aiContextDraft[key] || []).map(String).includes(String(id));
+  }
+
+  function aiContextDraftToggleV18(type, id, title, folderId) {
+    const key = type === "folder" ? "folder_ids" : "document_ids";
+    const value = String(id || "");
+    if (!value) return false;
+    const cur = (V14.aiContextDraft[key] || []).map(String);
+    const exists = cur.includes(value);
+    V14.aiContextDraft[key] = exists ? cur.filter((x) => x !== value) : [...cur, value];
+    if (type === "folder") {
+      if (exists) delete V14.contextFoldersCache[value];
+      else V14.contextFoldersCache[value] = { id: value, title: title || "知识库文件夹" };
+    } else if (exists) {
+      delete V14.contextDocsCache[value];
+    } else {
+      V14.contextDocsCache[value] = { id: value, title: title || "未命名文档", folder_id: folderId || null, kind: "doc" };
+    }
+    return !exists;
+  }
+
+  function syncAiContextRowStateV18(row, selected) {
+    if (!row) return;
+    row.classList.toggle("active", selected);
+    row.setAttribute("aria-selected", selected ? "true" : "false");
+    const btn = row.querySelector("[data-context-toggle]");
+    if (btn) {
+      btn.textContent = selected ? "取消选择" : "选择";
+      btn.setAttribute("aria-pressed", selected ? "true" : "false");
+    }
+    const icon = row.querySelector(".notice-icon");
+    if (icon) icon.classList.toggle("green", selected);
   }
 
   function bindAiContextDrawerHydrateV14() {
@@ -7754,34 +8087,39 @@
       const queryText = String(
         keyword != null ? keyword : (search && search.value) || "",
       ).trim();
-      // On AI surface, resolve conversation first so "已选" matches this chat's context_scope.
-      if (isAiWorkspaceActive()) {
-        try {
-          await ensureAiConversationId();
-        } catch (_e) {
-          /* drawer still works; highlights stay empty until a conv exists */
-        }
+      // Resolve the active conversation even if the user opened this modal
+      // from a KB doc route; otherwise selected chips cannot be highlighted or
+      // canceled while the AI composer lives in a hidden part of the prototype.
+      try {
+        await ensureAiConversationId();
+      } catch (_e) {
+        /* drawer still works; highlights fall back to local scope */
       }
-      // Ask the user's current AI conversation so we can highlight already-pinned docs.
-      let alreadyPinned = new Set();
       if (V14.aiConvId) {
         try {
           const detail = unwrapData(
             await apiFetch("/ai/conversations/" + V14.aiConvId),
           );
           const scope = detail?.conversation?.context_scope || {};
-          (scope.document_ids || []).forEach((id) => alreadyPinned.add(String(id)));
+          if (!layer.dataset.aiContextDraftSeeded) {
+            seedAiContextDraftV18(scope);
+            layer.dataset.aiContextDraftSeeded = "true";
+          }
         } catch (_e) {
           /* ignore — drawer still works with empty selection */
         }
+      }
+      if (!layer.dataset.aiContextDraftSeeded) {
+        seedAiContextDraftV18();
+        layer.dataset.aiContextDraftSeeded = "true";
       }
 
       // Pull both folders and recent docs so the user has something to pick.
       let docs = [];
       let folders = [];
       try {
-        const docPath = "/kb/documents?page_size=30" + (queryText ? "&keyword=" + encodeURIComponent(queryText) : "");
-        const folderPath = "/kb/folders?include_counts=true" + (queryText ? "&keyword=" + encodeURIComponent(queryText) : "");
+        const docPath = "/kb/documents?page_size=100" + (queryText ? "&keyword=" + encodeURIComponent(queryText) : "");
+        const folderPath = "/kb/folders?include_counts=true&page_size=100" + (queryText ? "&keyword=" + encodeURIComponent(queryText) : "");
         const [docsResp, foldersResp] = await Promise.all([
           apiFetch(docPath),
           apiFetch(folderPath),
@@ -7799,24 +8137,24 @@
       const rows = [];
       folders.slice(0, 8).forEach((f) => {
         const id = String(f.id);
-        const isOn = (V14.contextScope.folder_ids || []).map(String).includes(id);
+        const isOn = aiContextDraftHasV18("folder", id);
         rows.push(`
           <article class="notice-row context-source context-source-v18 ${isOn ? "active" : ""}" role="option" tabindex="0" aria-selected="${isOn ? "true" : "false"}" data-source-id="${id}" data-source-type="folder" data-source-title="${escapeHtmlV14(f.name || "未命名文件夹")}" style="grid-template-columns: 48px minmax(0,1fr) 80px;cursor:pointer;">
             <span class="notice-icon ${isOn ? "green" : ""}"><svg class="icon"><use href="#icon-folder" /></svg></span>
             <div class="notice-body"><h2>${escapeHtmlV14(f.name || "未命名文件夹")}</h2><p>${escapeHtmlV14(String(f.document_count ?? 0))} 篇文档 · 文件夹</p></div>
-            <button class="notice-action" type="button" data-context-toggle>${isOn ? "已选" : "选择"}</button>
+            <button class="notice-action" type="button" data-context-toggle aria-pressed="${isOn ? "true" : "false"}">${isOn ? "取消选择" : "选择"}</button>
           </article>`);
       });
       docs.slice(0, 20).forEach((d) => {
         const id = String(d.id);
         const fold = folderById[String(d.folder_id || "")] || "";
         const summary = (d.summary || (d.content || "").slice(0, 80) || "未填写摘要").trim();
-        const isOn = alreadyPinned.has(id);
+        const isOn = aiContextDraftHasV18("document", id);
         rows.push(`
           <article class="notice-row context-source context-source-v18 ${isOn ? "active" : ""}" role="option" tabindex="0" aria-selected="${isOn ? "true" : "false"}" data-source-id="${id}" data-source-type="document" data-source-title="${escapeHtmlV14(d.title || "未命名文档")}" data-folder-id="${escapeHtmlV14(String(d.folder_id || ""))}" style="grid-template-columns: 48px minmax(0,1fr) 80px;cursor:pointer;">
             <span class="notice-icon ${isOn ? "green" : ""}"><svg class="icon"><use href="#icon-file-text" /></svg></span>
             <div class="notice-body"><h2>${escapeHtmlV14(d.title || "未命名文档")}</h2><p>${escapeHtmlV14(summary)}${fold ? " · " + escapeHtmlV14(fold) : ""}</p></div>
-            <button class="notice-action" type="button" data-context-toggle>${isOn ? "已选" : "选择"}</button>
+            <button class="notice-action" type="button" data-context-toggle aria-pressed="${isOn ? "true" : "false"}">${isOn ? "取消选择" : "选择"}</button>
           </article>`);
       });
       if (rows.length === 0) {
@@ -7840,12 +8178,13 @@
         if (!row) return;
         ev.preventDefault();
         ev.stopPropagation();
-        const wasOn = row.classList.toggle("active");
-        row.setAttribute("aria-selected", wasOn ? "true" : "false");
-        const btn = row.querySelector("[data-context-toggle]");
-        if (btn) btn.textContent = wasOn ? "已选" : "选择";
-        const icon = row.querySelector(".notice-icon");
-        if (icon) icon.classList.toggle("green", wasOn);
+        const selected = aiContextDraftToggleV18(
+          row.dataset.sourceType || "document",
+          row.dataset.sourceId || "",
+          row.dataset.sourceTitle || row.querySelector(".notice-body h2")?.textContent?.trim() || "",
+          row.dataset.folderId || "",
+        );
+        syncAiContextRowStateV18(row, selected);
       });
       layer.addEventListener("keydown", (ev) => {
         const input = ev.target.closest("[data-ai-context-search]");
@@ -7891,6 +8230,7 @@
         if (!layer.hidden && layer.classList.contains("is-open")) {
           // Hydrate in the next tick so the IIFE finishes its open animation.
           window.setTimeout(() => {
+            delete layer.dataset.aiContextDraftSeeded;
             hydrate().catch((e) =>
               console.warn("[Mydow v1.4] aiContext hydrate failed", e),
             );
@@ -7924,8 +8264,8 @@
           return;
         }
         const layer = btn.closest('.surface-layer[data-modal="aiContext"]');
-        const documentIds = [];
-        const folderIds = [];
+        const documentIds = (V14.aiContextDraft.document_ids || []).map(String).filter(Boolean);
+        const folderIds = (V14.aiContextDraft.folder_ids || []).map(String).filter(Boolean);
         const sources = [];
         if (layer) {
           layer.querySelectorAll(".context-source[data-source-id].active").forEach((el) => {
@@ -7952,6 +8292,16 @@
             }
           });
         }
+        documentIds.forEach((id) => {
+          if (sources.some((s) => s && s.ref === id)) return;
+          const meta = V14.contextDocsCache[id] || { title: id.slice(0, 8) };
+          sources.push({ type: "doc", label: meta.title || "未命名文档", ref: id });
+        });
+        folderIds.forEach((id) => {
+          if (sources.some((s) => s && s.ref === id)) return;
+          const meta = V14.contextFoldersCache[id] || { title: id.slice(0, 8) };
+          sources.push({ type: "folder", label: meta.title || "知识库文件夹", ref: id });
+        });
         if (documentIds.length === 0 && folderIds.length === 0) {
           toast("请先选择至少一个文档或文件夹", "warning");
           return;
@@ -9061,14 +9411,17 @@ a:focus-visible,
     bindAiChatRenameV37();
     bindAiChatMoreV37();
     trackAiModelV37();
+    bindDeepSeekModelEnforcementV18();
     bindAiPersonalizeModernControlsV18();
     bindCardShareV37();
     bindFolderFavoriteV37();
     bindSkillFavoriteV37();
     bindDocEditorHydrateAndAutosaveV18();
+    bindKbDocHashRouteV18();
     bindDocAiActionsV37();
     bindInsightActionsV37();
     _restoreAiModelV37();
+    openKbDocumentFromHashV18();
     // §15.40 — Skill run result drawer (close + open-doc)
     bindSkillResultDrawerCloseV14();
 
@@ -9133,6 +9486,8 @@ a:focus-visible,
     attachGardenInlineMenuV17,
     openGardenNodeDetailV17,
     openKbDocumentEditorV20,
+    openKbDocumentFromHashV18,
+    bindKbDocHashRouteV18,
     saveAiConversationToKbV20,
     loadSkillRecommendationsV17,
     navigateToSearchHitV17,

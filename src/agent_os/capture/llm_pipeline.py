@@ -5,7 +5,7 @@ text verbatim and stamped a 200-char prefix as the "summary". That made the
 home feed look mock-y: every card shared the same first sentence as both
 title and summary, and there were no useful tags / folder routing.
 
-This module fixes that by calling the **real LLM** (DeepSeek / GLM / etc.,
+This module fixes that by calling the **real LLM** (DeepSeek v4 flash by default,
 the same provider the AI workspace uses) once per capture to generate:
 
 - ``title``         — punchy 8-20 char Chinese title
@@ -49,7 +49,7 @@ _MAX_INPUT_CHARS = 6000
 _MAX_TITLE_CHARS = 80
 _MAX_SUMMARY_CHARS = 240
 _MAX_TAGS = 8
-# §16.1 — paratera GLM-4.5-Flash p99 round-trip on a 6k-char Chinese
+# §16.1 — DeepSeek v4 flash p99 round-trip on a 6k-char Chinese
 # prompt is ~15-25s, the heuristic 12s timeout was firing too often.
 # Bumped to 30s default so real LLM enrichment actually finishes.
 # Override via ``AGENTOS_CAPTURE_ENRICH_TIMEOUT`` for slower models.
@@ -385,7 +385,7 @@ async def enrich_capture_with_llm(
         or (os.environ.get("MODEL") or "").strip()
         or (os.environ.get("AGENTOS_AI_MODEL") or "").strip()
         or (os.environ.get("DEEPSEEK_MODEL") or "").strip()
-        or "GLM-4-Flash"
+        or "deepseek-v4-flash"
     )
     complete_kwargs: dict[str, Any] = {
         "messages": [

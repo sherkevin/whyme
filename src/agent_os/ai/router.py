@@ -180,8 +180,8 @@ class MessageSend(BaseModel):
     """PRD10 §11.4 request body (streaming opt-in is a separate endpoint).
 
     v1.4 also threads two optional fields through:
-    * ``model`` — display name like ``"Opus 4.6"`` (audit-only; routed to
-      provider through the cache key, no per-call rerouting yet).
+    * ``model`` — audit-only display value. Product policy currently routes
+      every v1.4 AI call to the configured DeepSeek v4 flash provider.
     * ``mode``  — ``"efficient"`` (default) or ``"all"``/``"agent"`` to
       activate the §15.49 ReAct agent loop with multi-step retrieval +
       progress events streamed as ``event: agent_step``.
@@ -443,6 +443,21 @@ def _sanitize_assistant_content(content: str) -> str:
     return cleaned or text
 
 
+def _format_llm_provider_error(exc: Exception | str) -> str:
+    """Return a clear user-facing error for real provider failures."""
+
+    raw = str(exc or "").strip()
+    lower = raw.lower()
+    if "team not allowed to access model" in lower and "deepseek-v4-flash" in lower:
+        return (
+            "DeepSeek v4 flash 调用失败：当前 API Key 或团队没有 "
+            "deepseek-v4-flash 访问权限，请更换具备该模型权限的 DeepSeek API Key。"
+        )
+    if "authenticationerror" in lower or "invalid api key" in lower or "unauthorized" in lower:
+        return "LLM 调用鉴权失败：请检查 DeepSeek API Key 和 API Base 配置。"
+    return raw or "LLM provider failed"
+
+
 def _highlight_snippet(text: str, query: str, *, max_chars: int = 280) -> str:
     """Find the most-relevant slice of ``text`` for ``query`` and mark hits.
 
@@ -676,12 +691,18 @@ async def _invoke_llm_complete(
         result = await provider.complete(messages)
         content = _sanitize_assistant_content(str((result or {}).get("content") or "").strip())
         if not content:
+            if (result or {}).get("reasoning_only"):
+                return (
+                    "",
+                    (result or {}).get("usage"),
+                    "LLM 只返回了推理内容，没有返回可展示的最终回答；请增加 max_tokens 或检查模型输出配置。",
+                )
             return "", (result or {}).get("usage"), "LLM provider returned empty content"
         usage = (result or {}).get("usage")
         return content, usage, None
     except Exception as exc:  # pragma: no cover - defensive
         logger.warning("LLM provider failed: %s", exc)
-        return "", None, str(exc)
+        return "", None, _format_llm_provider_error(exc)
 
 
 def _uuid_values(values: list[Any] | None) -> list[uuid.UUID]:
@@ -1787,7 +1808,10 @@ async def post_message_stream(
                     accumulated.append(piece)
                     yield _sse_event("token", {"delta": piece})
         except Exception as exc:  # pragma: no cover - defensive
-            error_payload = {"code": "AI_PROVIDER_ERROR", "message": str(exc)}
+            error_payload = {
+                "code": "AI_PROVIDER_ERROR",
+                "message": _format_llm_provider_error(exc),
+            }
             yield _sse_event("error", error_payload)
 
         elapsed_ms = int((time.perf_counter() - started) * 1000)
@@ -2441,46 +2465,21 @@ async def delete_conversation(
 
 
 # ---------------------------------------------------------------------------
-# v1.4 §3.6 — GET /ai/models — model menu (Opus / Gemini / GPT / Mydow Auto)
+# v1.4 §3.6 — GET /ai/models — model menu (DeepSeek v4 flash only)
 # ---------------------------------------------------------------------------
 
 
-# Static catalog — driven by ``Mydow_Web_AI工作台优化说明_v1.3.md`` and
-# ``API_Contract_v1.4.md §3.6``. The list is intentionally hard-coded for
-# V1: the business owner committed to a 4-model menu and we don't yet have
-# a runtime model registry.
+# Static catalog. The selector remains visible, but all production AI/RAG/
+# capture enrichment/Skills routing is pinned to DeepSeek v4 flash until
+# the business explicitly re-opens multi-model routing.
 _AI_MODEL_CATALOG: list[dict[str, Any]] = [
     {
-        "id": "mydow-auto",
-        "label": "Mydow Auto",
-        "vendor": "Mydow",
-        "tier": "auto",
-        "default": True,
-        "description": "智能选择最佳模型 (推荐)",
-    },
-    {
-        "id": "opus-4.6",
-        "label": "Opus 4.6",
-        "vendor": "Anthropic",
-        "tier": "premium",
-        "default": False,
-        "description": "复杂推理 / 深度研究 (慢但准)",
-    },
-    {
-        "id": "gemini-2.5-flash",
-        "label": "Gemini 2.5 Flash",
-        "vendor": "Google",
+        "id": "deepseek-v4-flash",
+        "label": "DeepSeek V4 Flash",
+        "vendor": "DeepSeek",
         "tier": "fast",
-        "default": False,
-        "description": "高速生成 (响应快)",
-    },
-    {
-        "id": "gpt-5.2",
-        "label": "GPT-5.2",
-        "vendor": "OpenAI",
-        "tier": "balanced",
-        "default": False,
-        "description": "平衡推理与速度",
+        "default": True,
+        "description": "统一用于 Mydow AI 对话、RAG、灵感采集与 Skills。",
     },
 ]
 
@@ -2496,7 +2495,7 @@ async def list_ai_models(request: Request) -> dict:
         {
             "items": _AI_MODEL_CATALOG,
             "default": next(
-                (m["id"] for m in _AI_MODEL_CATALOG if m.get("default")), "mydow-auto"
+                (m["id"] for m in _AI_MODEL_CATALOG if m.get("default")), "deepseek-v4-flash"
             ),
         },
         request=request,

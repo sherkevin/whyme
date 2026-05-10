@@ -1073,12 +1073,17 @@ async def test_biz_v14_html_injects_bridge_v14_script(client):
     body = r.text
     assert 'data-mydow-bridge-v14="true"' in body
     assert 'data-mydow-darkreader="true"' in body
+    assert 'data-mydow-markdown-it="true"' in body
     assert 'src="/mydow/biz_v14/vendor/darkreader.min.js"' in body
+    assert 'src="/mydow/biz_v14/vendor/markdown-it.min.js"' in body
     assert 'src="/mydow/biz_v14/bridge_v14.js"' in body
 
     darkreader = await client.get("/mydow/biz_v14/vendor/darkreader.min.js")
     assert darkreader.status_code == 200
     assert "DarkReader" in darkreader.text
+    markdown_it = await client.get("/mydow/biz_v14/vendor/markdown-it.min.js")
+    assert markdown_it.status_code == 200
+    assert "markdownit" in markdown_it.text
 
 
 def test_biz_v14_ext_exposes_six_state_runtime():
@@ -1283,6 +1288,99 @@ def test_biz_v14_doc_editor_autosaves_without_black_focus_frame():
     ]
     missing = [token for token in tokens if token not in bridge]
     assert not missing, f"biz_v14 bridge missing Section 18.5 doc editor tokens: {missing}"
+
+
+def test_biz_v14_doc_editor_renders_markdown_preview():
+    """Section 18.30: KB documents render Markdown while preserving raw edit mode."""
+
+    bridge = (MYDOW_DIR / "biz_v14" / "bridge_v14.js").read_text(encoding="utf-8")
+    app = (PROJECT_ROOT / "src" / "agent_os" / "server" / "app.py").read_text(encoding="utf-8")
+    tokens = [
+        "vendor/markdown-it.min.js",
+        "function markdownRendererV18",
+        "window.markdownit",
+        "markdown-rendered-v18",
+        "function renderDocBodyPreviewV18",
+        "function enterDocMarkdownEditModeV18",
+        "data-v18-md-toggle",
+        "function openKbDocumentFromHashV18",
+        "function bindKbDocHashRouteV18",
+        "#/kb/doc/",
+        "编辑 Markdown",
+        "预览 Markdown",
+    ]
+    haystack = bridge + "\n" + app
+    missing = [token for token in tokens if token not in haystack]
+    assert not missing, f"biz_v14 Markdown document preview wiring missing: {missing}"
+
+
+def test_biz_v14_long_running_ai_and_skill_errors_are_visible():
+    """Section 18.30: AI/Skill runs expose timeout/provider failures instead of spinning forever."""
+
+    bridge = (MYDOW_DIR / "biz_v14" / "bridge_v14.js").read_text(encoding="utf-8")
+    service = (PROJECT_ROOT / "src" / "agent_os" / "jobs" / "service.py").read_text(encoding="utf-8")
+    tokens = [
+        "CLIENT_POLL_TIMEOUT",
+        "已等待 ${tick.elapsed}s",
+        "_pollSkillRunUntilDone(runId, jobId, 60",
+        "AI_STREAM_TIMEOUT",
+        "AI 请求超过 90 秒未返回",
+        "streamHadError = true",
+        "AI_PROVIDER_TIMEOUT",
+        "asyncio.wait_for",
+        "AGENTOS_SKILL_LLM_TIMEOUT_SECONDS",
+    ]
+    haystack = bridge + "\n" + service
+    missing = [token for token in tokens if token not in haystack]
+    assert not missing, f"v14 AI/Skill timeout visibility tokens missing: {missing}"
+
+
+def test_biz_v14_ai_context_picker_has_draft_selection_and_cancel():
+    """Section 18.30: context picker keeps selected state visible and cancellable across searches."""
+
+    bridge = (MYDOW_DIR / "biz_v14" / "bridge_v14.js").read_text(encoding="utf-8")
+    tokens = [
+        "aiContextDraft",
+        "function seedAiContextDraftV18",
+        "function aiContextDraftToggleV18",
+        "function syncAiContextRowStateV18",
+        "取消选择",
+        "aria-pressed",
+        "page_size=100",
+        "documentIds = (V14.aiContextDraft.document_ids || [])",
+    ]
+    missing = [token for token in tokens if token not in bridge]
+    assert not missing, f"v14 AI context picker selection/cancel tokens missing: {missing}"
+
+
+def test_biz_v14_uses_deepseek_v4_flash_only_for_ai_model_surface():
+    """Section 18.30: remove GLM/multi-model leakage and pin v14 to DeepSeek v4 flash."""
+
+    bridge = (MYDOW_DIR / "biz_v14" / "bridge_v14.js").read_text(encoding="utf-8")
+    ext = (MYDOW_DIR / "biz_v14" / "bridge_v14_ext.js").read_text(encoding="utf-8")
+    router = (PROJECT_ROOT / "src" / "agent_os" / "ai" / "router.py").read_text(encoding="utf-8")
+    tokens = [
+        "DEEPSEEK_V4_FLASH_MODEL_V18",
+        "body.model = DEEPSEEK_V4_FLASH_MODEL_V18",
+        "function bindDeepSeekModelEnforcementV18",
+        "def _format_llm_provider_error",
+        "DeepSeek v4 flash 调用失败",
+        '"id": "deepseek-v4-flash"',
+        '"default": True',
+        '{ value: "deepseek-v4-flash", label: "DeepSeek V4 Flash"',
+    ]
+    haystack = bridge + "\n" + ext + "\n" + router
+    missing = [token for token in tokens if token not in haystack]
+    assert not missing, f"v14 DeepSeek-only model surface missing: {missing}"
+    forbidden = [
+        '"id": "opus-4.6"',
+        '"id": "gemini-2.5-flash"',
+        '"id": "gpt-5.2"',
+        'value: "glm-4-flash"',
+        "GLM-4 Flash",
+    ]
+    leaked = [token for token in forbidden if token in haystack]
+    assert not leaked, f"v14 still leaks non-DeepSeek model choices: {leaked}"
 
 
 def test_biz_v14_skill_run_picker_is_searchable_and_modern():

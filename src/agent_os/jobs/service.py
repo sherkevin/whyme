@@ -24,6 +24,7 @@ import json
 import logging
 import os
 import uuid
+import asyncio
 from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
 
@@ -56,6 +57,14 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_MAX_RETRIES = 3
 _DEFAULT_BACKOFF_BASE_SECONDS = 5  # 5s, 25s, 125s by default (5 ** retry_count)
+
+
+def _skill_llm_timeout_seconds() -> float:
+    raw = os.environ.get("AGENTOS_SKILL_LLM_TIMEOUT_SECONDS", "75")
+    try:
+        return max(10.0, float(raw))
+    except (TypeError, ValueError):
+        return 75.0
 
 
 def _max_retries() -> int:
@@ -826,11 +835,30 @@ async def _materialize_skill_run(db: AsyncSession, job: Job) -> Job:
         )
     provider = get_provider()
     try:
-        result = await provider.complete(
-            [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ]
+        result = await asyncio.wait_for(
+            provider.complete(
+                [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ]
+            ),
+            timeout=_skill_llm_timeout_seconds(),
+        )
+    except TimeoutError as exc:
+        logger.exception("[jobs] skill_run LLM call timed out")
+        error_payload = {
+            "code": "AI_PROVIDER_TIMEOUT",
+            "message": f"LLM 调用超过 {_skill_llm_timeout_seconds():.0f} 秒未返回，请检查模型权限或稍后重试。",
+        }
+        if skill_run is not None:
+            skill_run.status = SkillRunStatus.FAILED.value
+            skill_run.error = error_payload
+            skill_run.completed_at = datetime.now(UTC)
+        return await mark_job_failed(
+            db,
+            job.id,
+            error=error_payload,
+            retryable=False,
         )
     except Exception as exc:  # noqa: BLE001
         logger.exception("[jobs] skill_run LLM call failed")

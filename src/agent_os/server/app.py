@@ -1241,6 +1241,8 @@ async def get_mydow_biz_v14() -> HTMLResponse:
     bridge_tag = (
         '<script defer src="/mydow/biz_v14/vendor/darkreader.min.js" '
         'data-mydow-darkreader="true"></script>\n'
+        '<script defer src="/mydow/biz_v14/vendor/markdown-it.min.js" '
+        'data-mydow-markdown-it="true"></script>\n'
         '<script defer src="/mydow/biz_v14/bridge_v14.js" '
         'data-mydow-bridge-v14="true"></script>\n'
         '  <script defer src="/mydow/biz_v14/bridge_v14_ext.js" '

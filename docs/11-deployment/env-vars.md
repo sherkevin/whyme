@@ -62,8 +62,8 @@ model:    LLM_MODEL → MODEL → DEEPSEEK_MODEL
 | 变量 | 必填 | 默认 | 说明 |
 |---|---|---|---|
 | `DEEPSEEK_API_KEY` | 是（用 DeepSeek 时） | — | 推荐：默认 LLM，性价比最高 |
-| `DEEPSEEK_OPENAI_BASE_URL` | 否 | `https://api.deepseek.com/v1` | DeepSeek 官方 OpenAI-兼容端点 |
-| `DEEPSEEK_MODEL` | 否 | `deepseek-chat` | — |
+| `DEEPSEEK_OPENAI_BASE_URL` | 否 | `https://api.deepseek.com` | DeepSeek 官方 OpenAI-兼容端点 |
+| `DEEPSEEK_MODEL` | 否 | `deepseek-v4-flash` | — |
 | `OPENAI_API_KEY` | 是（用 OpenAI 时） | — | — |
 | `OPENAI_API_BASE` | 否 | `https://api.openai.com/v1` | — |
 | `ANTHROPIC_API_KEY` | 是（用 Claude 时） | — | — |
@@ -76,7 +76,7 @@ model:    LLM_MODEL → MODEL → DEEPSEEK_MODEL
 | `AGENTOS_DEMO_MODE` | **是**（演示环境） | 关 | `on/1/true/enabled` 时启用 `/api/v1/demo/login` 一键登录 |
 | `AGENTOS_AI_LLM` | **是**（生产 / 演示） | 关 | `on/1/true/enabled` 走真 LLM；其它值或不设走 placeholder 回复 |
 | `AGENTOS_AI_TEMPERATURE` | 否 | `0.3` | 0.0–1.0 |
-| `AGENTOS_AI_MAX_TOKENS` | 否 | `1000` | — |
+| `AGENTOS_AI_MAX_TOKENS` | 否 | `2000` | — |
 | `AGENTOS_PRD10_WORKER` | **是**（生产） | 关 | `on/1/true/enabled` 时 FastAPI startup 起 Job 消费 worker（消化 ai_chat / parse_file / generate_report / skill_run）|
 | `AGENTOS_PRD10_WORKER_INTERVAL` | 否 | `2` | worker 轮询间隔，秒 |
 | `AGENTOS_SANDBOX` | 否 | （docker） | `local` 在宿主机直跑命令（开发用），其它值走 docker sandbox |
