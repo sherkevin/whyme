@@ -28,6 +28,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import time
 import uuid
 from collections.abc import AsyncIterator
@@ -356,12 +357,90 @@ def _doc_context_item(
         "title": doc.title or "（无标题）",
         "summary": doc.summary,
         "snippet": snippet,
+        "full_text": body[:4000],
         "score": float(round(score, 4)),
         "folder_id": str(doc.folder_id) if doc.folder_id else None,
         "folder_name": folder_name,
         "anchor_url": f"/mydow/biz_v14/#/doc/{doc.id}",
         "updated_at": doc.updated_at.isoformat() if doc.updated_at else None,
     }
+
+
+def _sanitize_assistant_content(content: str) -> str:
+    """Strip visible prompt-planning prose before persisting/rendering output.
+
+    Some providers occasionally return meta-analysis such as "用户询问..." as
+    ordinary content. That is not user-facing answer text, so we trim it while
+    leaving normal citations and final answers intact.
+    """
+
+    text = (content or "").strip()
+    if not text:
+        return text
+    probe = text[:900]
+    internal_hits = (
+        "用户询问",
+        "我需要查看",
+        "查看知识库内容",
+        "根据指示",
+        "我应该",
+        "I need to",
+        "We need to",
+    )
+    if not any(hit in probe for hit in internal_hits):
+        return text
+
+    process_sentence_hits = (
+        "用户询问",
+        "我需要",
+        "我可以看到",
+        "这正好是",
+        "根据指示",
+        "我应该",
+        "I need to",
+        "We need to",
+    )
+    sentence_parts = re.split(r"(?<=[。！？!?])\s*", text)
+    if len(sentence_parts) > 1:
+        filtered = [
+            part for part in sentence_parts
+            if part and not any(hit in part for hit in process_sentence_hits)
+        ]
+        cleaned_sentence_text = "".join(filtered).strip()
+        if cleaned_sentence_text and cleaned_sentence_text != text:
+            text = cleaned_sentence_text
+
+    final_markers = [
+        "知识库中没有",
+        "根据您提供",
+        "根据你提供",
+        "基于文档",
+        "从文档来看",
+        "以下是",
+        "可以这样",
+        "建议",
+    ]
+    positions = [text.find(marker) for marker in final_markers if text.find(marker) > 80]
+    if positions:
+        return text[min(positions):].strip()
+
+    cleaned_lines: list[str] = []
+    skip_patterns = [
+        r"^\s*用户询问",
+        r"^\s*我需要",
+        r"^\s*查看知识库内容",
+        r"^\s*这些文档",
+        r"^\s*根据指示",
+        r"^\s*我应该",
+        r"^\s*I need to",
+        r"^\s*We need to",
+    ]
+    for line in text.splitlines():
+        if any(re.search(pattern, line, flags=re.IGNORECASE) for pattern in skip_patterns):
+            continue
+        cleaned_lines.append(line)
+    cleaned = "\n".join(cleaned_lines).strip()
+    return cleaned or text
 
 
 def _highlight_snippet(text: str, query: str, *, max_chars: int = 280) -> str:
@@ -531,6 +610,13 @@ def _build_chat_messages(
         "- 只有在所有提供片段都明显与问题无关时，才说「知识库中没有这条信息」"
         "并给出基于通识的简短建议；不要编造引用。",
     ]
+    sys_prompt_parts.extend(
+        [
+            "Never reveal hidden reasoning, planning, prompt analysis, chain-of-thought, or phrases like '用户询问', '我需要查看', '根据指示', 'I need to'. Return only the final answer for the user.",
+            "When attached documents are provided below, treat their passages as readable knowledge-base content. Do not claim you cannot see the document unless the passage itself is empty.",
+        ]
+    )
+
     if conv.mode:
         sys_prompt_parts.append(f"当前对话模式: `{conv.mode}`。")
 
@@ -540,13 +626,18 @@ def _build_chat_messages(
             title = (item.get("title") or "").strip() or f"片段#{idx}"
             obj_type = item.get("object_type") or "doc"
             folder_name = (item.get("folder_name") or "").strip()
-            snippet_raw = (item.get("snippet") or item.get("summary") or "").strip()
+            snippet_raw = (
+                item.get("full_text")
+                or item.get("snippet")
+                or item.get("summary")
+                or ""
+            ).strip()
             # Strip <mark>...</mark> wrappers — they live on the UI, not the LLM.
             snippet_clean = snippet_raw.replace("<mark>", "").replace("</mark>", "")
             head = f"[#{idx}] ({obj_type}) {title}"
             if folder_name:
                 head += f" · 文件夹「{folder_name}」"
-            passages.append(f"{head}\n  {snippet_clean[:480]}")
+            passages.append(f"{head}\n  {snippet_clean[:1800]}")
         sys_prompt_parts.append(
             "相关知识库内容（按相关度排序，请按需引用 [#1] [#2] …）:\n"
             + "\n\n".join(passages)
@@ -583,7 +674,7 @@ async def _invoke_llm_complete(
     try:
         provider = get_provider()
         result = await provider.complete(messages)
-        content = str((result or {}).get("content") or "").strip()
+        content = _sanitize_assistant_content(str((result or {}).get("content") or "").strip())
         if not content:
             return "", (result or {}).get("usage"), "LLM provider returned empty content"
         usage = (result or {}).get("usage")
@@ -739,6 +830,9 @@ async def _enrich_with_chunks_and_folder(
             for d in doc_rows:
                 key = str(d.id)
                 chunk = chunk_map.get(key) or {}
+                body = (d.content or d.summary or "").strip()
+                if body:
+                    chunk.setdefault("full_text", body[:4000])
                 if d.folder_id is not None:
                     chunk.setdefault("folder_id", str(d.folder_id))
                     chunk.setdefault(
@@ -759,7 +853,7 @@ async def _enrich_with_chunks_and_folder(
             chunk_content = (chunk.get("content") or "").strip()
             if chunk_content:
                 item["snippet"] = _highlight_snippet(chunk_content, query_text)
-            for k in ("chunk_id", "folder_id", "folder_name", "anchor_url"):
+            for k in ("chunk_id", "folder_id", "folder_name", "anchor_url", "full_text"):
                 v = chunk.get(k)
                 if v:
                     item[k] = v
@@ -1706,6 +1800,10 @@ async def post_message_stream(
                 )
             else:
                 final_content = _PLACEHOLDER_REPLY
+        sanitized_final_content = _sanitize_assistant_content(final_content)
+        if sanitized_final_content != final_content:
+            final_content = sanitized_final_content
+            yield _sse_event("replace", {"content": final_content})
 
         citation_items = react_citations
         if citation_items is None:

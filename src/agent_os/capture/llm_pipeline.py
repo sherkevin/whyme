@@ -381,9 +381,11 @@ async def enrich_capture_with_llm(
     # Prefer the app-wide LLM model unless capture explicitly overrides it.
     enrich_model = (
         (os.environ.get("CAPTURE_ENRICH_MODEL") or "").strip()
+        or (os.environ.get("MODEL_FALLBACK") or "").strip()
+        or (os.environ.get("MODEL") or "").strip()
         or (os.environ.get("AGENTOS_AI_MODEL") or "").strip()
         or (os.environ.get("DEEPSEEK_MODEL") or "").strip()
-        or "deepseek-v4-flash"
+        or "GLM-4-Flash"
     )
     complete_kwargs: dict[str, Any] = {
         "messages": [

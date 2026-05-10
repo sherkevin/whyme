@@ -14,11 +14,15 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from agent_os.ai.llm_provider import is_llm_enabled
 from agent_os.auth.dependencies import get_current_user
 from agent_os.auth.models import User
+from agent_os.capture.llm_pipeline import enrich_capture_with_llm
 from agent_os.common import ApiErrorCode, paginated_response, success_response
 from agent_os.db.base import get_db
+from agent_os.kb.models import Document
 from agent_os.knowledge.models import Card
+from agent_os.search_engine.models import SearchIndex
 
 router = APIRouter(prefix="/api/v1", tags=["Feed"])
 
@@ -132,6 +136,101 @@ async def get_card(
     card = await _load_owned_card(db, card_id, current_user.id)
     payload = card.to_prd10_dict()
     payload["content"] = card.content
+    payload["ai_summary"] = await _card_ai_summary_meta(db, card)
+    return success_response(payload, request=request)
+
+
+@router.post("/cards/{card_id}/ai-summary")
+async def generate_card_ai_summary(
+    card_id: uuid.UUID,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Regenerate a card title/summary/tags through the real LLM path.
+
+    This endpoint exists specifically to prevent the UI from presenting a
+    copied raw-content prefix as an "AI summary". When LLM is unavailable we
+    return a visible failure instead of fabricating a fallback summary.
+    """
+
+    if not is_llm_enabled():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "LLM_DISABLED",
+                "message": "LLM API is not configured; cannot generate a real AI summary.",
+            },
+        )
+
+    card = await _load_owned_card(db, card_id, current_user.id)
+    enrichment = await enrich_capture_with_llm(
+        db,
+        user_id=current_user.id,
+        content=card.content or card.summary or card.title,
+        fallback_title=card.title,
+        hint_tags=list(card.tags or []),
+        target_folder_id=card.folder_id,
+    )
+    if not getattr(enrichment, "used_llm", False):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "LLM_UNAVAILABLE",
+                "message": "LLM provider did not return a real summary.",
+            },
+        )
+
+    card.title = enrichment.title or card.title
+    card.summary = enrichment.summary or card.summary
+    card.tags = enrichment.tags or card.tags
+    card.entities = enrichment.entities or card.entities
+    if enrichment.folder_id is not None:
+        card.folder_id = enrichment.folder_id
+    if enrichment.content_type in {"note", "task", "question", "decision", "insight"}:
+        card.content_type = enrichment.content_type
+
+    for doc in await _find_card_documents(db, card):
+        doc.title = enrichment.title or doc.title
+        doc.summary = enrichment.summary or doc.summary
+        doc.tags = enrichment.tags or doc.tags
+        if enrichment.folder_id is not None:
+            doc.folder_id = enrichment.folder_id
+        extra = dict(doc.extra or {})
+        extra.update(
+            {
+                "llm_used": True,
+                "model": getattr(enrichment, "model", "") or "",
+                "summary_source": "llm",
+            }
+        )
+        doc.extra = extra
+
+    index_rows = (
+        await db.execute(
+            select(SearchIndex).where(
+                SearchIndex.user_id == current_user.id,
+                SearchIndex.item_type.in_(["card", "document"]),
+            )
+        )
+    ).scalars().all()
+    doc_ids = {str(d.id) for d in await _find_card_documents(db, card)}
+    for row in index_rows:
+        if str(row.item_id) == str(card.id) or str(row.item_id) in doc_ids:
+            row.title = card.title
+            row.summary = card.summary
+            row.tags = list(card.tags or [])
+
+    await db.commit()
+    await db.refresh(card)
+    payload = card.to_prd10_dict()
+    payload["content"] = card.content
+    payload["ai_summary"] = {
+        "used_llm": True,
+        "model": getattr(enrichment, "model", "") or "",
+        "source": "llm",
+        "generated_at": datetime.now(UTC).isoformat(),
+    }
     return success_response(payload, request=request)
 
 
@@ -284,6 +383,44 @@ async def _load_owned_card(
             },
         )
     return card
+
+
+async def _find_card_documents(db: AsyncSession, card: Card) -> list[Document]:
+    """Best-effort mirror lookup for KB documents created from a feed card."""
+
+    rows = (
+        await db.execute(
+            select(Document).where(
+                Document.user_id == card.user_id,
+                Document.deleted_at.is_(None),
+            )
+        )
+    ).scalars().all()
+    matches: list[Document] = []
+    card_content = (card.content or "").strip()
+    for doc in rows:
+        extra = doc.extra or {}
+        by_inbox = card.inbox_item_id and str(extra.get("inbox_item_id") or "") == str(card.inbox_item_id)
+        by_source = card.source_id and doc.source_id == card.source_id
+        by_content = card_content and (doc.content or "").strip() == card_content
+        if by_inbox or by_source or by_content:
+            matches.append(doc)
+    return matches
+
+
+async def _card_ai_summary_meta(db: AsyncSession, card: Card) -> dict:
+    docs = await _find_card_documents(db, card)
+    used_llm = False
+    model = ""
+    source = "unknown"
+    for doc in docs:
+        extra = doc.extra or {}
+        if bool(extra.get("llm_used")) or extra.get("summary_source") == "llm":
+            used_llm = True
+            model = str(extra.get("model") or "")
+            source = "llm"
+            break
+    return {"used_llm": used_llm, "model": model, "source": source}
 
 
 async def _compute_facets(db: AsyncSession, user_id: uuid.UUID) -> dict:

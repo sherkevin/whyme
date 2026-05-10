@@ -57,6 +57,8 @@
     allSkills: [],
     /** §18.8 — current Skills filter label, synced to the URL hash. */
     activeSkillFilter: "",
+    /** §18.29 — card id -> true while a real AI summary refresh is running. */
+    aiSummaryRefreshInflight: {},
   };
 
   const INSIGHT_TAG_LABELS_V14 = {
@@ -707,31 +709,42 @@
         display: grid !important;
         grid-template-columns: auto 1fr !important;
         grid-template-areas:
+          "context context"
           "tools tools"
           "actions input" !important;
         align-items: end !important;
-        gap: 8px 10px !important;
-        padding: 10px 12px 10px !important;
-        width: min(760px, calc(100% - 48px)) !important;
+        gap: 10px 12px !important;
+        padding: 12px 14px 12px !important;
+        width: min(980px, calc(100% - 64px)) !important;
         border-radius: 20px !important;
       }
-      .page.ai-chat-open .ai-chat-composer [data-v16-context-strip],
       .page.ai-chat-open .ai-chat-composer .ai-chat-inline-tools {
         grid-area: tools !important;
         display: flex !important;
         width: 100%;
         min-width: 0;
         max-width: 100%;
-        overflow-x: auto;
-        overflow-y: hidden;
-        flex-wrap: nowrap !important;
+        overflow: visible;
+        flex-wrap: wrap !important;
         padding-bottom: 2px;
         scrollbar-width: none;
       }
       .page.ai-chat-open .ai-chat-composer [data-v16-context-strip] {
-        margin-bottom: 0;
+        grid-area: context !important;
+        display: flex !important;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        max-height: 108px;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        flex-wrap: wrap !important;
+        gap: 6px;
+        margin-bottom: 0 !important;
+        padding: 2px 0 8px !important;
+        border-bottom: 1px dashed rgba(108,124,153,0.16);
+        scrollbar-width: thin;
       }
-      .page.ai-chat-open .ai-chat-composer [data-v16-context-strip]::-webkit-scrollbar,
       .page.ai-chat-open .ai-chat-composer .ai-chat-inline-tools::-webkit-scrollbar {
         display: none;
       }
@@ -750,9 +763,9 @@
       }
       .page.ai-chat-open .ai-chat-composer textarea.ai-input {
         grid-area: input !important;
-        min-height: 44px !important;
+        min-height: 72px !important;
         height: auto !important;
-        padding: 10px 8px !important;
+        padding: 12px 10px !important;
         line-height: 1.45 !important;
         resize: none;
         align-self: center !important;
@@ -1533,6 +1546,35 @@
     );
   }
 
+  function _setSkillRunLiveStatusV18(layer, text, kind) {
+    if (!layer) return null;
+    let status = layer.querySelector("[data-skill-run-live-status]");
+    if (!status) {
+      status = document.createElement("div");
+      status.dataset.skillRunLiveStatus = "true";
+      status.setAttribute("aria-live", "polite");
+      status.style.cssText =
+        "display:flex;align-items:center;gap:10px;margin:12px 0 0;padding:12px 14px;" +
+        "border-radius:14px;background:rgba(91,120,255,0.08);" +
+        "border:1px solid rgba(91,120,255,0.18);color:#415278;font-size:13px;font-weight:600;";
+      const footer = layer.querySelector(".modal-foot-actions");
+      if (footer && footer.parentElement) footer.parentElement.insertBefore(status, footer);
+      else layer.appendChild(status);
+    }
+    const dot =
+      kind === "error"
+        ? "!"
+        : kind === "success"
+          ? "✓"
+          : "●";
+    status.innerHTML =
+      `<span style="display:inline-grid;place-items:center;width:24px;height:24px;border-radius:999px;` +
+      `background:${kind === "error" ? "rgba(216,72,74,0.12)" : "rgba(91,120,255,0.14)"};` +
+      `color:${kind === "error" ? "#a4373a" : "#5b78ff"};">${dot}</span>` +
+      `<span>${escapeHtmlV14(text)}</span>`;
+    return status;
+  }
+
   async function handleSkillRunModal(button, layer) {
     const sid = V14.activeSkillId;
     if (!sid) {
@@ -1583,7 +1625,10 @@
 
     button.disabled = true;
     button.classList.add("is-loading");
+    const oldButtonText = button.textContent;
     try {
+      button.textContent = "运行中…";
+      _setSkillRunLiveStatusV18(layer, "正在提交 Skill 运行任务，请保持窗口打开…", "info");
       const r = await apiFetch(`/skills/${sid}/run`, {
         method: "POST",
         body: {
@@ -1598,37 +1643,54 @@
         "Skill 运行中…" + (jobId ? "（job " + String(jobId).slice(0, 8) + "）" : ""),
         "info",
       );
-      closeV14Layers();
+      _setSkillRunLiveStatusV18(
+        layer,
+        "已进入真实 LLM 任务队列，正在等待生成结果…",
+        "info",
+      );
 
-      // 异步轮询，结果到了再开抽屉。
-      _pollSkillRunUntilDone(runId, jobId).then((finalRun) => {
-        if (!finalRun) {
-          toast("Skill 运行超时，请到通知中心查看", "warning");
-          return;
-        }
-        if (finalRun.status === "completed") {
-          toast(`Skill「${skillName}」运行完成`, "success");
-          const docId =
-            finalRun.output &&
-            (finalRun.output.document_id || finalRun.output.saved_object_id);
-          rememberSkillRunCompletedV16(sid, docId);
-          paintSkillRunDoneChipsV16();
-          _renderSkillResultDrawer(skillName, finalRun);
-          // 异步刷新通知 + KB 文件夹列表
-          refreshNotificationBadge().catch(() => {});
-          loadKbLibraryGrid().catch(() => {});
+      const finalRun = await _pollSkillRunUntilDone(runId, jobId, 80);
+      if (!finalRun) {
+        _setSkillRunLiveStatusV18(layer, "运行仍在处理中，可稍后从通知中心打开结果。", "error");
+        toast("Skill 运行超时，请到通知中心查看", "warning");
+        return;
+      }
+      if (finalRun.status === "completed") {
+        const docId =
+          finalRun.output &&
+          (finalRun.output.document_id || finalRun.output.saved_object_id);
+        rememberSkillRunCompletedV16(sid, docId);
+        paintSkillRunDoneChipsV16();
+        _setSkillRunLiveStatusV18(layer, "生成完成，正在打开产出文档…", "success");
+        refreshNotificationBadge().catch(() => {});
+        loadKbLibraryGrid().catch(() => {});
+        toast(`Skill「${skillName}」运行完成`, "success");
+        closeV14Layers();
+        if (output_mode === "generate" && docId) {
+          await openKbDocumentEditorV20(docId);
+        } else if (docId) {
+          await openKbDocumentEditorV20(docId);
         } else {
-          toast(
-            `Skill「${skillName}」运行失败：${(finalRun.error && finalRun.error.message) || finalRun.status}`,
-            "error",
-          );
+          _renderSkillResultDrawer(skillName, finalRun);
         }
-      });
+      } else {
+        _setSkillRunLiveStatusV18(
+          layer,
+          `运行失败：${(finalRun.error && finalRun.error.message) || finalRun.status}`,
+          "error",
+        );
+        toast(
+          `Skill「${skillName}」运行失败：${(finalRun.error && finalRun.error.message) || finalRun.status}`,
+          "error",
+        );
+      }
     } catch (e) {
+      _setSkillRunLiveStatusV18(layer, "运行失败: " + e.message, "error");
       toast("运行失败: " + e.message, "error");
     } finally {
       button.disabled = false;
       button.classList.remove("is-loading");
+      button.textContent = oldButtonText || "运行 Skill";
     }
   }
 
@@ -2632,6 +2694,53 @@
     return document.querySelector('[data-drawer="itemDetail"]');
   }
 
+  function _summaryLooksLikeRawContentV18(payload) {
+    if (!payload || !payload.id) return false;
+    const summary = String(payload.summary || "").trim();
+    const content = String(payload.content || payload.raw_content || "").trim();
+    if (!summary) return true;
+    if (summary.length > 360) return true;
+    if (content && content.length > 240) {
+      const normSummary = summary.replace(/\s+/g, " ").trim();
+      const normContent = content.replace(/\s+/g, " ").trim();
+      const head = content.slice(0, Math.min(160, content.length));
+      if (summary.slice(0, head.length) === head) return true;
+      if (
+        normSummary.length > 120 &&
+        normContent.startsWith(normSummary.slice(0, Math.min(180, normSummary.length)))
+      ) return true;
+      if (content.includes(summary) && summary.length > 180) return true;
+    }
+    const meta = payload.ai_summary || {};
+    if (meta.used_llm || payload.summary_source === "llm" || payload.llm_used) return false;
+    return false;
+  }
+
+  async function refreshCardAiSummaryV18(drawer, payload) {
+    if (!drawer || !payload || !payload.id) return;
+    const id = String(payload.id);
+    if (V14.aiSummaryRefreshInflight[id]) return;
+    V14.aiSummaryRefreshInflight[id] = true;
+    const summary =
+      drawer.querySelector(".drawer-summary") ||
+      drawer.querySelector(".drawer-section p, article p, .panel-text");
+    if (summary) summary.textContent = "正在调用 LLM 生成真实 AI 摘要…";
+    try {
+      const res = await apiFetch(`/cards/${id}/ai-summary`, { method: "POST", body: {} });
+      const data = unwrapData(res) || res || {};
+      hydrateItemDetailDrawer(drawer, data);
+      toast("AI 摘要已重新生成", "success");
+    } catch (e) {
+      if (summary) {
+        summary.textContent =
+          "AI 摘要生成失败：请检查真实 LLM API 配置后重试，当前不会展示伪摘要。";
+      }
+      toast("AI 摘要生成失败: " + e.message, "error");
+    } finally {
+      delete V14.aiSummaryRefreshInflight[id];
+    }
+  }
+
   function hydrateItemDetailDrawer(drawer, payload) {
     if (!drawer || !payload) return;
     const title = drawer.querySelector("h2");
@@ -2706,6 +2815,11 @@
     drawer.dataset.cardId = payload.id || "";
     drawer.dataset.cardFavorite = String(Boolean(payload.is_favorite));
     drawer.__bridgeCard = payload;
+    if (_summaryLooksLikeRawContentV18(payload)) {
+      refreshCardAiSummaryV18(drawer, payload).catch((e) =>
+        console.warn("[Mydow v1.4] refresh card AI summary failed", e),
+      );
+    }
   }
 
   function revealItemDetailDrawerV18(payload) {
@@ -4477,11 +4591,15 @@
     if (messageId) article.dataset.messageId = String(messageId);
     const actions = article.querySelector(".ai-message-actions");
     if (actions) {
-      actions.style.display = "flex";
+      actions.style.cssText =
+        "display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px;";
       actions.querySelectorAll("button").forEach((b) => {
+        const longLabel = String(b.textContent || "").trim().length > 2;
         b.style.cssText =
-          "padding:5px 10px;border-radius:8px;border:1px solid rgba(108,124,153,0.18);" +
-          "background:rgba(255,255,255,0.6);color:#5a6b86;font-size:12px;cursor:pointer;";
+          `min-width:${longLabel ? "76px" : "42px"};min-height:32px;` +
+          "display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;" +
+          "padding:6px 12px;border-radius:10px;border:1px solid rgba(108,124,153,0.18);" +
+          "background:rgba(255,255,255,0.72);color:#5a6b86;font-size:12px;line-height:1;cursor:pointer;";
       });
     }
   }
@@ -4713,6 +4831,9 @@
           if (list) list.scrollTop = list.scrollHeight;
         } else if (eventType === "error" && streamEl) {
           streamEl.textContent = (payload && payload.message) || "错误";
+        } else if (eventType === "replace" && streamEl) {
+          streamEl.textContent = (payload && payload.content) || "";
+          streamEl.dataset.inlineCitationsDecorated = "";
         } else if (eventType === "done" && streamEl) {
           if (first) streamEl.textContent = "模型没有返回内容，请检查 LLM 配置或稍后重试。";
           const article = streamEl.closest(".ai-chat-message");
