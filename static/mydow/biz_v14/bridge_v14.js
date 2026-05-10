@@ -2714,6 +2714,91 @@
     return document.querySelector('[data-drawer="itemDetail"]');
   }
 
+  function _openItemDetailLayerV18(layer) {
+    if (!layer) return;
+    document.querySelectorAll(".drawer-layer").forEach((candidate) => {
+      if (candidate === layer) {
+        candidate.hidden = false;
+        candidate.classList.remove("is-leaving");
+        document.body.classList.add("layer-lock");
+        requestAnimationFrame(() => candidate.classList.add("is-open"));
+      } else if (candidate.dataset.drawer) {
+        candidate.classList.remove("is-open");
+        candidate.hidden = true;
+      }
+    });
+  }
+
+  function contentTypeLabelV18(payload) {
+    const raw = String(payload?.document_type || payload?.content_type || "note").toLowerCase();
+    if (/web|link|url|clip/.test(raw)) return "网页剪藏";
+    if (/file|upload|pdf|image/.test(raw)) return "文件采集";
+    if (/research/.test(raw)) return "深度研究";
+    if (/skill/.test(raw)) return "Skill 生成";
+    if (/conversation|chat/.test(raw)) return "AI 对话记录";
+    if (/task/.test(raw)) return "任务记录";
+    return "灵感记录";
+  }
+
+  function cardMetaLineV18(payload) {
+    const type = contentTypeLabelV18(payload);
+    const when = relTime(payload?.updated_at || payload?.created_at) || "刚刚";
+    const model = payload?.ai_summary?.model || payload?.enrichment_model || payload?.model || "";
+    const summarySource =
+      payload?.ai_summary?.used_llm || payload?.summary_source === "llm" || payload?.llm_used
+        ? "真实 AI 摘要"
+        : "真实数据库";
+    return [type, when, summarySource, model].filter(Boolean).join(" · ");
+  }
+
+  function setItemDetailStaticSectionsHiddenV18(drawer, hidden) {
+    if (!drawer) return;
+    Array.from(drawer.querySelectorAll(".drawer-section")).forEach((section) => {
+      if (section.dataset.bridgeCardSource || section.dataset.bridgeCardContent) return;
+      const label = section.querySelector("h3")?.textContent || "";
+      if (/来源|追溯|Source/i.test(label)) section.hidden = Boolean(hidden);
+    });
+  }
+
+  function showItemDetailLoadingV18(cardId, label) {
+    const drawer = _findItemDetailDrawer();
+    if (!drawer) return null;
+    const title = drawer.querySelector(".drawer-head h2") || drawer.querySelector("h2");
+    if (title) title.textContent = label || "正在读取真实内容";
+    const meta = drawer.querySelector(".drawer-head p");
+    if (meta) meta.textContent = "正在从数据库加载卡片详情…";
+    const summary =
+      drawer.querySelector(".drawer-summary") ||
+      drawer.querySelector(".drawer-section p, article p, .panel-text");
+    if (summary) summary.textContent = "正在读取真实数据，加载失败时不会展示原型假内容。";
+    const tags = drawer.querySelector(".tag-list, .source-chip-list");
+    if (tags) tags.innerHTML = '<span class="tag">loading</span>';
+    const bridgeContent = drawer.querySelector("[data-bridge-card-content]");
+    if (bridgeContent) bridgeContent.remove();
+    const bridgeSource = drawer.querySelector("[data-bridge-card-source]");
+    if (bridgeSource) bridgeSource.remove();
+    setItemDetailStaticSectionsHiddenV18(drawer, true);
+    drawer.dataset.cardId = cardId || "";
+    drawer.__bridgeCard = null;
+    _openItemDetailLayerV18(drawer);
+    return drawer;
+  }
+
+  function showItemDetailErrorV18(drawer, message) {
+    if (!drawer) return;
+    const title = drawer.querySelector(".drawer-head h2") || drawer.querySelector("h2");
+    if (title) title.textContent = "内容加载失败";
+    const meta = drawer.querySelector(".drawer-head p");
+    if (meta) meta.textContent = "未展示任何原型静态数据";
+    const summary =
+      drawer.querySelector(".drawer-summary") ||
+      drawer.querySelector(".drawer-section p, article p, .panel-text");
+    if (summary) summary.textContent = message || "无法读取这条真实记录，请刷新后重试。";
+    const tags = drawer.querySelector(".tag-list, .source-chip-list");
+    if (tags) tags.innerHTML = "";
+    setItemDetailStaticSectionsHiddenV18(drawer, true);
+  }
+
   function _summaryLooksLikeRawContentV18(payload) {
     if (!payload || !payload.id) return false;
     const summary = String(payload.summary || "").trim();
@@ -2763,11 +2848,13 @@
 
   function hydrateItemDetailDrawer(drawer, payload) {
     if (!drawer || !payload) return;
-    const title = drawer.querySelector("h2");
+    const title = drawer.querySelector(".drawer-head h2") || drawer.querySelector("h2");
     if (title) {
       title.textContent =
         payload.title || (payload.summary && payload.summary.slice(0, 60)) || "未命名";
     }
+    const meta = drawer.querySelector(".drawer-head p");
+    if (meta) meta.textContent = cardMetaLineV18(payload);
     const summary =
       drawer.querySelector(".drawer-summary") ||
       drawer.querySelector(".drawer-section p, article p, .panel-text");
@@ -2779,16 +2866,7 @@
         .map((t) => `<span class="tag">${escapeHtmlV14(String(t))}</span>`)
         .join("");
     }
-    Array.from(drawer.querySelectorAll(".drawer-section")).forEach((section) => {
-      const label = section.querySelector("h3")?.textContent || "";
-      if (
-        !section.dataset.bridgeCardSource &&
-        !section.dataset.bridgeCardContent &&
-        /来源|追溯|Source/i.test(label)
-      ) {
-        section.hidden = true;
-      }
-    });
+    setItemDetailStaticSectionsHiddenV18(drawer, true);
     const cardText = String(payload.content || payload.raw_content || "").trim();
     const sourceObj = payload.source && typeof payload.source === "object" ? payload.source : null;
     const sourceLabel =
@@ -2798,7 +2876,7 @@
       sourceObj?.url ||
       sourceObj?.name ||
       "手动输入";
-    const sourceKind = payload.document_type || (sourceLabel.startsWith("http") ? "网页剪藏" : payload.content_type || "灵感记录");
+    const sourceKind = sourceLabel.startsWith("http") ? "网页剪藏" : contentTypeLabelV18(payload);
     let contentSection = drawer.querySelector("[data-bridge-card-content]");
     if (!contentSection) {
       contentSection = document.createElement("div");
@@ -2846,17 +2924,7 @@
     const drawer = _findItemDetailDrawer();
     if (!drawer) return;
     hydrateItemDetailDrawer(drawer, payload);
-    document.querySelectorAll(".drawer-layer").forEach((layer) => {
-      if (layer === drawer) {
-        layer.hidden = false;
-        layer.classList.remove("is-leaving");
-        document.body.classList.add("layer-lock");
-        requestAnimationFrame(() => layer.classList.add("is-open"));
-      } else if (layer.dataset.drawer) {
-        layer.classList.remove("is-open");
-        layer.hidden = true;
-      }
-    });
+    _openItemDetailLayerV18(drawer);
   }
 
   function bindCardClickToDrawer() {
@@ -2864,17 +2932,31 @@
       "click",
       async (event) => {
         const el = event.target.closest(
-          ".idea-card[data-card-id], .record-card[data-card-id], .record-row[data-card-id], .recent-doc-row[data-card-id]",
+          ".idea-card, .record-card, .record-row:not(.record-head), .recent-doc-row",
         );
         if (!el) return;
+        if (el.closest(".drawer-layer, .surface-layer")) return;
+        if (event.target.closest(".save-icon, .favorite, button, a, input, textarea, select")) return;
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
         const cardId = el.dataset.cardId;
-        if (!cardId) return;
-        if (event.target.closest(".save-icon, .favorite, button, a")) return;
+        if (!cardId) {
+          toast("这条内容还没有真实记录 ID，已阻止打开原型假详情。请刷新数据后重试。", "warning");
+          return;
+        }
         const drawer = _findItemDetailDrawer();
         if (!drawer) return;
+        const label =
+          el.querySelector(".card-title, .record-title, strong, h2, h3")?.textContent?.trim() ||
+          "正在读取真实内容";
+        showItemDetailLoadingV18(cardId, label);
         const payload = await loadCardForDrawer(cardId);
-        if (payload) hydrateItemDetailDrawer(drawer, payload);
-        else toast("加载卡片详情失败", "error");
+        if (payload) revealItemDetailDrawerV18(payload);
+        else {
+          showItemDetailErrorV18(drawer, "真实卡片详情加载失败，已阻止展示原型静态内容。");
+          toast("加载卡片详情失败", "error");
+        }
       },
       true,
     );

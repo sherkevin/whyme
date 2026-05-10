@@ -1383,6 +1383,23 @@ def test_biz_v14_uses_deepseek_v4_flash_only_for_ai_model_surface():
     assert not leaked, f"v14 still leaks non-DeepSeek model choices: {leaked}"
 
 
+def test_biz_v14_item_detail_drawer_blocks_static_mock_content():
+    """Section 18.31: item detail drawers must wait for real card data, never static prototype content."""
+
+    bridge = (MYDOW_DIR / "biz_v14" / "bridge_v14.js").read_text(encoding="utf-8")
+    tokens = [
+        "function showItemDetailLoadingV18",
+        "加载失败时不会展示原型假内容",
+        "event.stopImmediatePropagation()",
+        "function cardMetaLineV18",
+        "真实 AI 摘要",
+        "已阻止打开原型假详情",
+        "revealItemDetailDrawerV18(payload)",
+    ]
+    missing = [token for token in tokens if token not in bridge]
+    assert not missing, f"v14 item detail drawer real-data guard missing: {missing}"
+
+
 def test_biz_v14_skill_run_picker_is_searchable_and_modern():
     """Section 18.6: Skill run modal uses a searchable KB document picker."""
 
