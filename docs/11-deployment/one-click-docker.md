@@ -40,3 +40,7 @@ Postgres service in the stack
 used by the backend services that need it. SQLite is now only a deliberate
 local-development override when `DATABASE_URL` is explicitly set to a sqlite
 URL.
+
+Before a 50-user internal beta, run the capacity gate in
+[`internal-beta-50.md`](internal-beta-50.md), especially
+`python scripts\prd10_beta_load_check.py --users 50 --concurrency 10 --include-ai --include-skills`.

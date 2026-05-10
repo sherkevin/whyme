@@ -1,0 +1,169 @@
+{
+  "started_at": "2026-05-10T12:17:55.920922+00:00",
+  "base_url": "http://localhost:8000",
+  "users": 3,
+  "concurrency": 3,
+  "include_ai": true,
+  "include_skills": true,
+  "include_link": false,
+  "elapsed_seconds": 65.44,
+  "total_requests": 167,
+  "failed_requests": 0,
+  "error_rate": 0.0,
+  "p95_ms": 4650.63,
+  "scenario_p95_ms": 65430.59,
+  "max_ms": 65430.59,
+  "thresholds": {
+    "fail_p95_ms": 30000.0,
+    "fail_error_rate": 0.02,
+    "fail_scenario_p95_seconds": 300.0
+  },
+  "passed": true,
+  "per_endpoint": {
+    "ai.conversation.create": {
+      "count": 3,
+      "ok": 3,
+      "failed": 0,
+      "p95_ms": 29.69,
+      "max_ms": 29.69,
+      "failure_samples": []
+    },
+    "ai.message": {
+      "count": 3,
+      "ok": 3,
+      "failed": 0,
+      "p95_ms": 6700.04,
+      "max_ms": 6700.04,
+      "failure_samples": []
+    },
+    "auth.register": {
+      "count": 3,
+      "ok": 3,
+      "failed": 0,
+      "p95_ms": 63.01,
+      "max_ms": 63.01,
+      "failure_samples": []
+    },
+    "capture.file.commit": {
+      "count": 3,
+      "ok": 3,
+      "failed": 0,
+      "p95_ms": 55.44,
+      "max_ms": 55.44,
+      "failure_samples": []
+    },
+    "capture.text": {
+      "count": 3,
+      "ok": 3,
+      "failed": 0,
+      "p95_ms": 15552.81,
+      "max_ms": 15552.81,
+      "failure_samples": []
+    },
+    "feed.get": {
+      "count": 3,
+      "ok": 3,
+      "failed": 0,
+      "p95_ms": 22.06,
+      "max_ms": 22.06,
+      "failure_samples": []
+    },
+    "health": {
+      "count": 3,
+      "ok": 3,
+      "failed": 0,
+      "p95_ms": 29.25,
+      "max_ms": 29.25,
+      "failure_samples": []
+    },
+    "kb.documents": {
+      "count": 3,
+      "ok": 3,
+      "failed": 0,
+      "p95_ms": 27.34,
+      "max_ms": 27.34,
+      "failure_samples": []
+    },
+    "kb.folders": {
+      "count": 3,
+      "ok": 3,
+      "failed": 0,
+      "p95_ms": 46.84,
+      "max_ms": 46.84,
+      "failure_samples": []
+    },
+    "scenario.total": {
+      "count": 3,
+      "ok": 3,
+      "failed": 0,
+      "p95_ms": 65430.59,
+      "max_ms": 65430.59,
+      "failure_samples": []
+    },
+    "search.query": {
+      "count": 3,
+      "ok": 3,
+      "failed": 0,
+      "p95_ms": 29.02,
+      "max_ms": 29.02,
+      "failure_samples": []
+    },
+    "search.suggestions": {
+      "count": 3,
+      "ok": 3,
+      "failed": 0,
+      "p95_ms": 33.19,
+      "max_ms": 33.19,
+      "failure_samples": []
+    },
+    "skills.list": {
+      "count": 3,
+      "ok": 3,
+      "failed": 0,
+      "p95_ms": 27.62,
+      "max_ms": 27.62,
+      "failure_samples": []
+    },
+    "skills.run": {
+      "count": 3,
+      "ok": 3,
+      "failed": 0,
+      "p95_ms": 40.94,
+      "max_ms": 40.94,
+      "failure_samples": []
+    },
+    "skills.run.detail": {
+      "count": 116,
+      "ok": 116,
+      "failed": 0,
+      "p95_ms": 30.05,
+      "max_ms": 261.96,
+      "failure_samples": []
+    },
+    "today.get": {
+      "count": 3,
+      "ok": 3,
+      "failed": 0,
+      "p95_ms": 49.64,
+      "max_ms": 49.64,
+      "failure_samples": []
+    },
+    "uploads.presign": {
+      "count": 3,
+      "ok": 3,
+      "failed": 0,
+      "p95_ms": 18.24,
+      "max_ms": 18.24,
+      "failure_samples": []
+    },
+    "uploads.put": {
+      "count": 3,
+      "ok": 3,
+      "failed": 0,
+      "p95_ms": 33.42,
+      "max_ms": 33.42,
+      "failure_samples": []
+    }
+  },
+  "failures": []
+}

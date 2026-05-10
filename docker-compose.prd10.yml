@@ -45,6 +45,10 @@ services:
       # ``app-sqlite`` named volume。可通过传入 ``DATABASE_URL`` 覆盖到真
       # Postgres（FK 修好后）。
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-agentos}:${POSTGRES_PASSWORD:-agentos}@postgres:5432/${POSTGRES_DB:-agentos_db}}
+      AGENTOS_DB_POOL_SIZE: ${AGENTOS_DB_POOL_SIZE:-20}
+      AGENTOS_DB_MAX_OVERFLOW: ${AGENTOS_DB_MAX_OVERFLOW:-40}
+      AGENTOS_DB_POOL_TIMEOUT: ${AGENTOS_DB_POOL_TIMEOUT:-30}
+      AGENTOS_DB_POOL_RECYCLE: ${AGENTOS_DB_POOL_RECYCLE:-1800}
       # Redis：限流/SSE/验证码
       REDIS_URL: redis://:${REDIS_PASSWORD:-redis123}@redis:6379/0
       REDIS_HOST: redis
@@ -53,6 +57,7 @@ services:
       # PRD10 行为开关
       AGENTOS_PRD10_WORKER: ${AGENTOS_PRD10_WORKER:-on}
       AGENTOS_PRD10_WORKER_INTERVAL: ${AGENTOS_PRD10_WORKER_INTERVAL:-2}
+      AGENTOS_PRD10_WORKER_BATCH_LIMIT: ${AGENTOS_PRD10_WORKER_BATCH_LIMIT:-25}
       AGENTOS_DEMO_MODE: ${AGENTOS_DEMO_MODE:-on}
       # 默认 on：与业务「真实 LLM 落库」一致；CI / 离线 pytest 请显式设 off。
       AGENTOS_AI_LLM: ${AGENTOS_AI_LLM:-on}
@@ -60,10 +65,11 @@ services:
       AGENTOS_AI_MAX_TOKENS: ${AGENTOS_AI_MAX_TOKENS:-2000}
       # LLM provider — paratera OpenAI-compatible endpoint by default
       # (litellm_impl reads API_KEY + API_BASE + MODEL).
+      LLM_PROVIDER: ${LLM_PROVIDER:-deepseek}
       API_KEY: ${API_KEY:-}
-      API_BASE: ${API_BASE:-}
-      MODEL: ${MODEL:-}
-      MODEL_FALLBACK: ${MODEL_FALLBACK:-deepseek-v4-flash}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_MODEL_FALLBACK: ${LLM_MODEL_FALLBACK:-deepseek-v4-pro}
       # §16.1 — capture 结构化整理默认用非 reasoning 模型（见 llm_pipeline 兜底）
       CAPTURE_ENRICH_MODEL: ${CAPTURE_ENRICH_MODEL:-}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}

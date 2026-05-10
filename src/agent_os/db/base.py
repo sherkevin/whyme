@@ -25,6 +25,19 @@ _engine = None
 _AsyncSessionLocal = None
 
 
+def _env_int(name: str, default: int, *, minimum: int | None = None) -> int:
+    raw = (os.getenv(name) or "").strip()
+    if not raw:
+        return default
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return default
+    if minimum is not None:
+        return max(minimum, value)
+    return value
+
+
 class _LazyAsyncSessionMaker:
     """Callable proxy so direct imports stay valid before engine init."""
 
@@ -55,8 +68,10 @@ def get_engine():
         if not DATABASE_URL.startswith("sqlite"):
             engine_kwargs.update(
                 {
-                    "pool_size": 20,  # Support ~1000 users
-                    "max_overflow": 40,
+                    "pool_size": _env_int("AGENTOS_DB_POOL_SIZE", 20, minimum=1),
+                    "max_overflow": _env_int("AGENTOS_DB_MAX_OVERFLOW", 40, minimum=0),
+                    "pool_timeout": _env_int("AGENTOS_DB_POOL_TIMEOUT", 30, minimum=1),
+                    "pool_recycle": _env_int("AGENTOS_DB_POOL_RECYCLE", 1800, minimum=60),
                 }
             )
 

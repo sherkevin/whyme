@@ -30,6 +30,7 @@ _DEFAULT_INTERVAL_SECONDS = 30.0
 _DEFAULT_BATCH_LIMIT = 25
 _ENV_DISABLE = "AGENTOS_PRD10_WORKER"
 _ENV_INTERVAL = "AGENTOS_PRD10_WORKER_INTERVAL"
+_ENV_BATCH_LIMIT = "AGENTOS_PRD10_WORKER_BATCH_LIMIT"
 
 _task: asyncio.Task | None = None
 _stop_event: asyncio.Event | None = None
@@ -59,11 +60,22 @@ def _resolve_interval() -> float:
     return value
 
 
+def _resolve_batch_limit() -> int:
+    raw = os.environ.get(_ENV_BATCH_LIMIT)
+    if not raw:
+        return _DEFAULT_BATCH_LIMIT
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return _DEFAULT_BATCH_LIMIT
+    return max(1, min(200, value))
+
+
 async def _run_once() -> None:
     sessionmaker = get_sessionmaker()
     async with sessionmaker() as session:
         try:
-            processed = await process_pending_jobs(session, limit=_DEFAULT_BATCH_LIMIT)
+            processed = await process_pending_jobs(session, limit=_resolve_batch_limit())
         except Exception:
             logger.exception("PRD10 worker tick failed")
             return

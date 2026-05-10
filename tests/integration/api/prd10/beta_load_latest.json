@@ -1,0 +1,129 @@
+{
+  "started_at": "2026-05-10T12:16:22.052161+00:00",
+  "base_url": "http://localhost:8000",
+  "users": 50,
+  "concurrency": 10,
+  "include_ai": false,
+  "include_skills": false,
+  "include_link": false,
+  "elapsed_seconds": 59.05,
+  "total_requests": 650,
+  "failed_requests": 0,
+  "error_rate": 0.0,
+  "p95_ms": 10984.82,
+  "scenario_p95_ms": 19763.49,
+  "max_ms": 22782.32,
+  "thresholds": {
+    "fail_p95_ms": 30000.0,
+    "fail_error_rate": 0.02,
+    "fail_scenario_p95_seconds": 300.0
+  },
+  "passed": true,
+  "per_endpoint": {
+    "auth.register": {
+      "count": 50,
+      "ok": 50,
+      "failed": 0,
+      "p95_ms": 146.28,
+      "max_ms": 154.29,
+      "failure_samples": []
+    },
+    "capture.file.commit": {
+      "count": 50,
+      "ok": 50,
+      "failed": 0,
+      "p95_ms": 74.67,
+      "max_ms": 132.17,
+      "failure_samples": []
+    },
+    "capture.text": {
+      "count": 50,
+      "ok": 50,
+      "failed": 0,
+      "p95_ms": 19389.79,
+      "max_ms": 22505.34,
+      "failure_samples": []
+    },
+    "feed.get": {
+      "count": 50,
+      "ok": 50,
+      "failed": 0,
+      "p95_ms": 36.8,
+      "max_ms": 47.91,
+      "failure_samples": []
+    },
+    "health": {
+      "count": 50,
+      "ok": 50,
+      "failed": 0,
+      "p95_ms": 84.04,
+      "max_ms": 89.64,
+      "failure_samples": []
+    },
+    "kb.documents": {
+      "count": 50,
+      "ok": 50,
+      "failed": 0,
+      "p95_ms": 34.51,
+      "max_ms": 38.38,
+      "failure_samples": []
+    },
+    "kb.folders": {
+      "count": 50,
+      "ok": 50,
+      "failed": 0,
+      "p95_ms": 119.41,
+      "max_ms": 268.68,
+      "failure_samples": []
+    },
+    "scenario.total": {
+      "count": 50,
+      "ok": 50,
+      "failed": 0,
+      "p95_ms": 19763.49,
+      "max_ms": 22782.32,
+      "failure_samples": []
+    },
+    "search.query": {
+      "count": 50,
+      "ok": 50,
+      "failed": 0,
+      "p95_ms": 35.97,
+      "max_ms": 185.38,
+      "failure_samples": []
+    },
+    "search.suggestions": {
+      "count": 50,
+      "ok": 50,
+      "failed": 0,
+      "p95_ms": 34.68,
+      "max_ms": 36.85,
+      "failure_samples": []
+    },
+    "today.get": {
+      "count": 50,
+      "ok": 50,
+      "failed": 0,
+      "p95_ms": 159.94,
+      "max_ms": 163.51,
+      "failure_samples": []
+    },
+    "uploads.presign": {
+      "count": 50,
+      "ok": 50,
+      "failed": 0,
+      "p95_ms": 29.5,
+      "max_ms": 46.01,
+      "failure_samples": []
+    },
+    "uploads.put": {
+      "count": 50,
+      "ok": 50,
+      "failed": 0,
+      "p95_ms": 43.53,
+      "max_ms": 88.34,
+      "failure_samples": []
+    }
+  },
+  "failures": []
+}
