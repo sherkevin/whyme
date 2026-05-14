@@ -20,6 +20,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
+from agent_os.common.public_text import sanitize_public_text
 from agent_os.db.base import Base
 
 
@@ -110,7 +111,7 @@ class Folder(Base):
             "user_id": str(self.user_id),
             "parent_id": str(self.parent_id) if self.parent_id else None,
             "name": self.name,
-            "description": self.description,
+            "description": sanitize_public_text(self.description),
             "color": self.color,
             "icon": self.icon,
             "sort_order": self.sort_order,
@@ -201,8 +202,8 @@ class Document(Base):
             "user_id": str(self.user_id),
             "folder_id": str(self.folder_id) if self.folder_id else None,
             "source_id": str(self.source_id) if self.source_id else None,
-            "title": self.title,
-            "summary": self.summary,
+            "title": sanitize_public_text(self.title),
+            "summary": sanitize_public_text(self.summary),
             "document_type": self.document_type,
             "status": self.status,
             "tags": list(self.tags or []),
@@ -212,7 +213,7 @@ class Document(Base):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
         if include_content:
-            payload["content"] = self.content
+            payload["content"] = sanitize_public_text(self.content)
         return payload
 
 

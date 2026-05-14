@@ -42,6 +42,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from agent_os.auth.dependencies import get_current_user
 from agent_os.auth.models import User
 from agent_os.common import paginated_response, success_response
+from agent_os.common.public_text import sanitize_public_text
 from agent_os.db.base import get_db
 from agent_os.search_engine.embeddings import (
     cosine_similarity,
@@ -80,7 +81,7 @@ def _make_snippet(content: str | None, summary: str | None, query: str) -> str:
     ``content`` and bold the first occurrence of ``query`` if present.
     """
 
-    base = (summary or content or "").strip()
+    base = (sanitize_public_text(summary) or sanitize_public_text(content) or "").strip()
     if not base:
         return ""
 
@@ -163,8 +164,8 @@ def _to_search_item(row: SearchIndex, query: str, score: float = 0.0) -> dict:
     return {
         "object_type": row.item_type,
         "object_id": object_id,
-        "title": row.title,
-        "summary": row.summary,
+        "title": sanitize_public_text(row.title),
+        "summary": sanitize_public_text(row.summary),
         "highlight": _make_snippet(row.content, row.summary, query),
         "score": round(float(score), 6),
         "url": _result_url(row.item_type, object_id),

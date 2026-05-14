@@ -330,7 +330,7 @@ async def _seed_folders(db, user, rng, Folder, *, count):
         folder = Folder(
             user_id=user.id,
             name=name,
-            description=f"{name} 相关的 PRD10 演示资料 [{SEED_TAG}]",
+            description=f"{name} 相关的 PRD10 基线资料 [{SEED_TAG}]",
             color=color,
             icon=icon,
             is_favorite=rng.random() < 0.4,
@@ -382,8 +382,11 @@ async def _seed_documents(
             user_id=user.id,
             folder_id=folder.id if folder else None,
             title=title,
-            summary=f"{title} 的精炼摘要——演示用。",
-            content=f"# {title}\n\n这是 PRD10 演示文档的正文。覆盖图、表与示例片段。",
+            summary=f"{title} 的精炼摘要。",
+            content=(
+                f"# {title}\n\n"
+                f"本文记录「{title}」相关的接口字段、验收状态、联调注意事项与可追溯依据。"
+            ),
             document_type=rng.choice(types),
             status=DocumentStatus.READY.value,
             tags=[SEED_TAG, "示例", folder.name if folder else "无目录"],
@@ -420,7 +423,7 @@ async def _seed_cards(db, user, folders, documents, rng, Card, *, count):
             user_id=user.id,
             workspace_id=None,
             title=title,
-            content=f"{title}\n\n{summary}\n\n（PRD10 演示数据）",
+            content=f"{title}\n\n{summary}\n\n（PRD10 基线资料）",
             summary=summary,
             content_type=rng.choice(["note", "article", "ai_output"]),
             tags=[SEED_TAG, "示例", folder.name if folder else "无目录"],

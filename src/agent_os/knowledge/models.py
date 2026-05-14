@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
+from agent_os.common.public_text import sanitize_public_text
 from agent_os.db.base import Base
 
 
@@ -165,8 +166,8 @@ class Card(Base):
         return {
             "id": str(self.id),
             "user_id": str(self.user_id),
-            "title": self.title,
-            "summary": self.summary,
+            "title": sanitize_public_text(self.title),
+            "summary": sanitize_public_text(self.summary),
             "cover_url": self.cover_url,
             "content_type": self.content_type,
             "source": source_payload,
@@ -190,8 +191,8 @@ class Card(Base):
             "inbox_item_id": (
                 str(self.inbox_item_id) if self.inbox_item_id else None
             ),
-            "title": self.title,
-            "summary": self.summary,
+            "title": sanitize_public_text(self.title),
+            "summary": sanitize_public_text(self.summary),
             "cover_url": self.cover_url,
             "content_type": self.content_type,
             "tags": list(self.tags or []),

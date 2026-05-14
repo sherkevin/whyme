@@ -135,10 +135,12 @@ class Skill(Base):
     def to_prd10_dict(self, *, is_installed: bool | None = None) -> dict:
         """Serialize to PRD10 §5.13 / §17 skill DTO."""
 
+        description = (self.description or "").replace("[seed]", "").strip()
+
         return {
             "id": str(self.id),
             "name": self.name,
-            "description": self.description or "",
+            "description": description,
             "category": self.category,
             "icon": self.icon,
             "status": self.status,

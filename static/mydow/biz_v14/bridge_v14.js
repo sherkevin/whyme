@@ -3201,18 +3201,78 @@
     );
   }
 
+  function resolveSkillRunContextV18(input) {
+    const card = input instanceof HTMLElement
+      ? input.closest(".skill-card[data-skill-id], .recommend-card[data-skill-id]")
+      : null;
+    const explicit = input && !(input instanceof HTMLElement) ? input : {};
+    const skillId = String(
+      explicit.id ||
+        explicit.skill_id ||
+        card?.dataset.skillId ||
+        V14.activeSkillId ||
+        "",
+    );
+    const cached = (V14.allSkills || []).find((it) => String(it.id || "") === skillId);
+    const title = String(
+      explicit.name ||
+        explicit.title ||
+        cached?.name ||
+        card?.querySelector("h3, strong")?.textContent?.trim() ||
+        "Skill",
+    );
+    const description = String(
+      explicit.description ||
+        cached?.description ||
+        card?.querySelector("p")?.textContent?.trim() ||
+        "选择输入材料，生成结构化结果。",
+    ).replace("[seed]", "").trim();
+    return { id: skillId, title, description };
+  }
+
+  function syncSkillRunModalContextV18(input) {
+    const context = resolveSkillRunContextV18(input);
+    if (context.id) V14.activeSkillId = context.id;
+    V14.pendingSkillRunContext = context;
+    const layer = document.querySelector('.surface-layer[data-modal="skillRun"]');
+    if (!layer) return context;
+    const heading = layer.querySelector(".modal-head h2");
+    const subtitle = layer.querySelector(".modal-head p");
+    const textarea = layer.querySelector(".modal-body textarea");
+    if (heading) heading.textContent = `运行：${context.title}`;
+    if (subtitle) subtitle.textContent = context.description;
+    if (textarea && (!textarea.value.trim() || /粘贴|相关材料|知识库选择|访谈记录/.test(textarea.value))) {
+      textarea.value = `粘贴${context.title}相关材料，或从知识库选择已有文档...`;
+    }
+    return context;
+  }
+
   function bindSkillRunModalContext() {
+    const stashFromTarget = (target) => {
+      const opener = target.closest?.('[data-open-modal="skillRun"]');
+      if (!opener) return null;
+      const card = opener.closest(".skill-card[data-skill-id], .recommend-card[data-skill-id]");
+      return syncSkillRunModalContextV18(card || V14.pendingSkillRunContext || {});
+    };
+
+    document.addEventListener(
+      "pointerdown",
+      (event) => {
+        stashFromTarget(event.target);
+      },
+      true,
+    );
+
     document.addEventListener(
       "click",
       (event) => {
-        const opener = event.target.closest('[data-open-modal="skillRun"]');
-        if (!opener) return;
-        const card = opener.closest(".skill-card[data-skill-id]") ||
-          document.querySelector(".skills-open .skill-card[data-skill-id], .skill-grid .skill-card[data-skill-id]");
-        if (card) V14.activeSkillId = card.dataset.skillId || "";
+        const context = stashFromTarget(event.target);
+        if (!context) return;
         queueMicrotask(() => {
+          syncSkillRunModalContextV18(context);
           hydrateSkillRunModalDocumentPickerV165().catch(() => {});
         });
+        window.setTimeout(() => syncSkillRunModalContextV18(context), 0);
       },
       true,
     );
@@ -3866,6 +3926,7 @@
       card.appendChild(reason);
       card.addEventListener("click", () => {
         V14.activeSkillId = rec.id;
+        syncSkillRunModalContextV18(rec);
         // Open the skillRun modal directly via the IIFE plumbing
         const opener = document.querySelector('[data-open-modal="skillRun"]');
         if (opener) opener.click();
@@ -3945,6 +4006,7 @@
         `;
         row.addEventListener("click", () => {
           V14.activeSkillId = it.id;
+          syncSkillRunModalContextV18(it);
           const sc = document.querySelector(`.skill-card[data-skill-id="${it.id}"]`);
           if (sc) {
             const tryButton = sc.querySelector('[data-open-modal="skillRun"], .pill-button');

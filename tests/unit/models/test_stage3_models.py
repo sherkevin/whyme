@@ -75,5 +75,21 @@ class TestSkillModel:
         print(f"✅ Created Skill: {skill.name} (v{skill.version})")
 
 
+    async def test_prd10_dict_hides_seed_marker(self):
+        """Seed bookkeeping markers must not leak into the Skills marketplace."""
+        skill = Skill(
+            name="Weekly Report",
+            description="Generate a weekly report [seed]",
+            category="report",
+            steps=[{"order": 1, "name": "weekly", "agent_action": "weekly_report"}],
+            version="1.0",
+        )
+
+        payload = skill.to_prd10_dict()
+
+        assert "[seed]" not in payload["description"]
+        assert payload["description"] == "Generate a weekly report"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s"])
