@@ -16,6 +16,7 @@ from agent_os.auth.security import (
     has_workspace_access,
     hash_api_key,
     hash_token,
+    password_needs_rehash,
     verify_password,
 )
 
@@ -30,6 +31,7 @@ __all__ = [
     # Password Utilities
     "verify_password",
     "get_password_hash",
+    "password_needs_rehash",
     # JWT Utilities
     "create_access_token",
     "create_refresh_token",

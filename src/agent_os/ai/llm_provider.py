@@ -6,12 +6,14 @@ small module. We choose between two backends:
 1. **Real LLM** via ``agent_os.llm.litellm_impl.LiteLLMProvider`` when
    ``AGENTOS_AI_LLM`` is on (or when the test harness injects a fake
    provider with ``set_test_provider``).
-2. **Deterministic placeholder** otherwise, so the existing PRD10 AI tests
-   that exercise the router without network access keep passing.
+2. **Visible failure** otherwise. Deterministic placeholder replies are
+   available only when ``AGENTOS_AI_OFFLINE_PLACEHOLDER`` is explicitly
+   enabled by tests/dev tools.
 
 The router only uses three calls:
 
 - ``is_llm_enabled()``
+- ``allow_offline_placeholder()``
 - ``await get_provider().complete(messages, ...)``
 - ``async for chunk in get_provider().stream_complete(messages, ...)``
 
@@ -72,6 +74,18 @@ def is_llm_enabled() -> bool:
     return flag in {"on", "1", "true", "enabled"}
 
 
+def allow_offline_placeholder() -> bool:
+    """Allow deterministic assistant output only for explicit offline tests.
+
+    Product and internal-beta runs must either call a real provider or surface
+    a visible failure. This opt-in keeps legacy offline tests available without
+    letting fake AI answers leak into real user flows.
+    """
+
+    raw = (os.environ.get("AGENTOS_AI_OFFLINE_PLACEHOLDER") or "").strip().lower()
+    return raw in {"on", "1", "true", "enabled", "yes"}
+
+
 def set_test_provider(provider: LLMProviderLike | None) -> None:
     """Override the provider for tests; pass ``None`` to clear."""
 
@@ -95,8 +109,9 @@ def _ai_cache_enabled() -> bool:
     test fixture in ``test_prd10_ai_llm.py`` uses a fake provider, where
     caching is desirable so the multiple-call assertions can opt in to
     "second call is hit". When ``AGENTOS_AI_LLM`` is unset and there's no
-    test provider, ``is_llm_enabled()`` returns False and the router
-    falls back to the static placeholder reply, so the cache is unused.
+    test provider, ``is_llm_enabled()`` returns False and the router surfaces
+    a visible failure unless the explicit offline placeholder switch is on, so
+    the cache is unused.
     """
 
     raw = (os.environ.get("AGENTOS_AI_CACHE") or "").strip().lower()
@@ -284,6 +299,7 @@ def reset_provider_for_test() -> None:
 
 __all__ = [
     "LLMProviderLike",
+    "allow_offline_placeholder",
     "is_llm_enabled",
     "set_test_provider",
     "get_provider",

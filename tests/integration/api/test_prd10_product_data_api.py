@@ -9,6 +9,7 @@ shape without relying on external Postgres/JWT setup.
 from __future__ import annotations
 
 import asyncio
+import os
 import uuid
 from contextlib import asynccontextmanager
 
@@ -61,6 +62,10 @@ async def _prd10_client():
 
     app.dependency_overrides[db_base.get_db] = override_get_db
     app.dependency_overrides[auth_dependencies.get_current_user] = override_get_current_user
+    old_ai_llm = os.environ.get("AGENTOS_AI_LLM")
+    old_ai_placeholder = os.environ.get("AGENTOS_AI_OFFLINE_PLACEHOLDER")
+    os.environ["AGENTOS_AI_LLM"] = "off"
+    os.environ["AGENTOS_AI_OFFLINE_PLACEHOLDER"] = "off"
 
     try:
         transport = httpx.ASGITransport(app=app)
@@ -71,6 +76,14 @@ async def _prd10_client():
             yield client, current_user, session_factory
     finally:
         app.dependency_overrides.clear()
+        if old_ai_llm is None:
+            os.environ.pop("AGENTOS_AI_LLM", None)
+        else:
+            os.environ["AGENTOS_AI_LLM"] = old_ai_llm
+        if old_ai_placeholder is None:
+            os.environ.pop("AGENTOS_AI_OFFLINE_PLACEHOLDER", None)
+        else:
+            os.environ["AGENTOS_AI_OFFLINE_PLACEHOLDER"] = old_ai_placeholder
         await engine.dispose()
 
 

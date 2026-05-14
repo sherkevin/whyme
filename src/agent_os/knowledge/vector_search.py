@@ -153,7 +153,7 @@ class VectorSearchService:
         db: AsyncSession,
         *,
         user_id: int,
-        query: str,  # Note: This is actually embedding, used as placeholder
+        query: str,  # Note: this argument carries the embedding vector here.
         limit: int,
         para_type_filter: str | None,
     ) -> list[SearchResult]:

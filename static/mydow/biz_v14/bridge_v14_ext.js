@@ -1430,7 +1430,12 @@
   // §18.1 — profile preferences: real controls + modern popovers.
   const PROFILE_PREF_OPTIONS = {
     default_ai_model: [
-      { value: "deepseek-v4-flash", label: "DeepSeek V4 Flash", desc: "统一用于 AI 对话、RAG、灵感和 Skills" },
+      { value: "mydow", label: "Mydow", desc: "Mydow 品牌模型，当前路由到 DeepSeek V4 Pro" },
+      { value: "deepseek-v4-pro", label: "DeepSeek V4 Pro", desc: "复杂 RAG、长文档和高质量输出" },
+      { value: "deepseek-v4-flash", label: "DeepSeek V4 Flash", desc: "快速问答、摘要和日常搜索" },
+      { value: "glm", label: "GLM（预留）", desc: "供应商未配置前不可调用" },
+      { value: "gemini", label: "Gemini（预留）", desc: "供应商未配置前不可调用" },
+      { value: "gpt", label: "GPT（预留）", desc: "供应商未配置前不可调用" },
     ],
     language: [
       { value: "zh-CN", label: "中文 简体", desc: "界面与 AI 输出优先中文" },
@@ -1449,14 +1454,13 @@
 
   function preferenceKeyForRow(row) {
     const text = rowText(row);
-    if (/默认\s*AI\s*模型|Mydow Auto|DeepSeek/i.test(text)) return "default_ai_model";
+    if (/默认\s*AI\s*模型|Mydow Auto|Mydow|DeepSeek|GLM|Gemini|GPT/i.test(text)) return "default_ai_model";
     if (/语言|language/i.test(text)) return "language";
     if (/默认输入|输入模式|智能识别/i.test(text)) return "default_input_mode";
     return "";
   }
 
   function labelForPreference(key, value) {
-    if (key === "default_ai_model") return "DeepSeek V4 Flash";
     const item = (PROFILE_PREF_OPTIONS[key] || []).find((opt) => opt.value === value);
     return item ? item.label : String(value || "");
   }
@@ -1577,7 +1581,7 @@
 
   function applyProfilePreferencesV18(prefs) {
     const safe = prefs || {};
-    safe.default_ai_model = "deepseek-v4-flash";
+    safe.default_ai_model = safe.default_ai_model || "mydow";
     applyThemePreferenceV18(safe.theme || "light");
     applyLanguagePreferenceV18(safe.language || safe.locale || "zh-CN");
     applyDefaultInputModePreferenceV18(safe.default_input_mode || "text");

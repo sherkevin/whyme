@@ -7,7 +7,7 @@
 """
 
 import logging
-import random
+import secrets
 from typing import Literal, Optional
 
 logger = logging.getLogger(__name__)
@@ -77,12 +77,12 @@ class VerificationService:
         self.redis = redis
 
     def generate_code(self) -> str:
-        """Generate a 6-digit random verification code.
+        """Generate a 6-digit cryptographically secure verification code.
 
         Returns:
             6-digit numeric code as string
         """
-        return "".join([str(random.randint(0, 9)) for _ in range(self.CODE_LENGTH)])
+        return f"{secrets.randbelow(10 ** self.CODE_LENGTH):0{self.CODE_LENGTH}d}"
 
     def check_rate_limit(self, email: str, ip: str) -> None:
         """Check if email/IP is rate limited.
@@ -229,9 +229,6 @@ class VerificationService:
 
             # Calculate remaining attempts
             remaining = self.MAX_ATTEMPTS - attempts
-
-            # Incorrect code - delete and fail
-            self.redis.delete(code_key)
 
             logger.info(
                 f"Invalid code for {email}, {remaining} attempts remaining"

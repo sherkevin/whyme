@@ -1,7 +1,8 @@
 """Test password hashing and verification."""
 
+import hashlib
 
-from agent_os.auth.security import get_password_hash, verify_password
+from agent_os.auth.security import BCRYPT_SHA256_PREFIX, get_password_hash, password_needs_rehash, verify_password
 
 
 class TestPasswordHashing:
@@ -14,12 +15,9 @@ class TestPasswordHashing:
 
         assert isinstance(hashed, str)
         assert len(hashed) > 0
-        # PRD10/V1 ``get_password_hash`` returns ``salt$hash`` where both
-        # halves are 64 hex chars (SHA-256 + 16-byte salt). See
-        # ``agent_os.auth.security.get_password_hash``.
-        assert "$" in hashed
-        salt, body = hashed.split("$", 1)
-        assert len(salt) == 32 and len(body) == 64
+        assert hashed.startswith(BCRYPT_SHA256_PREFIX)
+        assert password not in hashed
+        assert password_needs_rehash(hashed) is False
 
     def test_hash_same_password_different_hashes(self):
         """Test hashing same password twice gives different hashes (salt)."""
@@ -29,8 +27,8 @@ class TestPasswordHashing:
 
         # Hashes should be different due to salt.
         assert hash1 != hash2
-        # Both still match the salt$hash format.
-        assert hash1.count("$") >= 1 and hash2.count("$") >= 1
+        assert hash1.startswith(BCRYPT_SHA256_PREFIX)
+        assert hash2.startswith(BCRYPT_SHA256_PREFIX)
 
     def test_verify_correct_password(self):
         """Test verifying correct password returns True."""
@@ -62,6 +60,18 @@ class TestPasswordHashing:
 
         assert isinstance(hashed, str)
         assert verify_password(password, hashed) is True
+
+    def test_verify_legacy_sha256_password(self):
+        """Legacy salt$sha256 hashes still verify for transparent migration."""
+
+        password = "old_password_123"
+        salt = "a" * 32
+        body = hashlib.sha256(f"{salt}{password}".encode()).hexdigest()
+        legacy_hash = f"{salt}${body}"
+
+        assert verify_password(password, legacy_hash) is True
+        assert verify_password("wrong", legacy_hash) is False
+        assert password_needs_rehash(legacy_hash) is True
 
     def test_hash_long_password(self):
         """Test hashing very long passwords."""

@@ -46,8 +46,10 @@ import agent_os.skills.runs  # noqa: F401
 import agent_os.sources.models  # noqa: F401
 import agent_os.stage3.models  # noqa: F401
 import agent_os.tasks.models  # noqa: F401
-from agent_os.auth.models import User
-from agent_os.auth.security import get_password_hash
+from sqlalchemy import select
+
+from agent_os.auth.models import Session, User
+from agent_os.auth.security import BCRYPT_SHA256_PREFIX, get_password_hash
 from agent_os.db.base import Base, get_db
 from agent_os.server.app import app
 
@@ -155,6 +157,13 @@ async def test_register_success(client, session_factory):
         assert user is not None
         assert user.email == "newuser@example.com"
 
+        session_rows = (
+            await session.execute(select(Session).where(Session.user_id == user.id))
+        ).scalars().all()
+        assert len(session_rows) == 1
+        assert session_rows[0].refresh_token_hash
+        assert session_rows[0].is_active is True
+
 
 @pytest.mark.asyncio
 async def test_register_duplicate_username(client, test_user):
@@ -239,6 +248,31 @@ async def test_login_success(client, test_user):
 
 
 @pytest.mark.asyncio
+async def test_login_persists_bcrypt_session(client, session_factory, test_user):
+    """Password login creates a server-side refresh session without plaintext."""
+
+    response = await client.post(
+        "/api/v1/auth/login",
+        json={"username": "test_api_user", "password": "test_pass_123"},
+    )
+    assert response.status_code == 200, response.text
+    tokens = response.json()
+
+    async with session_factory() as session:
+        user = (
+            await session.execute(select(User).where(User.username == "test_api_user"))
+        ).scalar_one()
+        assert user.password_hash.startswith(BCRYPT_SHA256_PREFIX)
+
+        session_row = (
+            await session.execute(select(Session).where(Session.user_id == user.id))
+        ).scalar_one()
+        assert session_row.token_hash != tokens["access_token"]
+        assert session_row.refresh_token_hash != tokens["refresh_token"]
+        assert session_row.user_agent is not None
+
+
+@pytest.mark.asyncio
 async def test_login_with_email(client, test_user):
     """Test successful login with email."""
 
@@ -299,6 +333,35 @@ async def test_refresh_token_success(client, test_user):
     assert "access_token" in data
     assert "refresh_token" in data
     assert data["token_type"] == "bearer"
+
+
+@pytest.mark.asyncio
+async def test_refresh_token_is_single_use(client, test_user):
+    """Refresh tokens are remembered server-side and rotated on use."""
+
+    login_response = await client.post(
+        "/api/v1/auth/login",
+        json={"username": "test_api_user", "password": "test_pass_123"},
+    )
+    tokens = login_response.json()
+
+    first = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": tokens["refresh_token"]},
+    )
+    assert first.status_code == 200, first.text
+
+    replay = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": tokens["refresh_token"]},
+    )
+    assert replay.status_code == 401
+
+    second = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": first.json()["refresh_token"]},
+    )
+    assert second.status_code == 200, second.text
 
 
 @pytest.mark.asyncio

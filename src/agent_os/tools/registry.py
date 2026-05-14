@@ -167,9 +167,10 @@ class ToolRegistryImpl(ToolRegistry):
 
             except Exception as e:
                 print(f"[ToolRegistry] Failed to discover MCP tools from {name}: {e}")
-                # Fall back to placeholder registration
+                # Fall back to a minimal local registration so the caller
+                # can still see and invoke the configured MCP command.
 
-        # Fallback: Create a placeholder definition
+        # Fallback: create a minimal definition.
         self._mcp_tools[name] = MCPTool(
             name=name,
             command=command,
@@ -184,7 +185,7 @@ class ToolRegistryImpl(ToolRegistry):
                 },
             },
         )
-        print(f"[ToolRegistry] Registered MCP server {name} with placeholder tool")
+        print(f"[ToolRegistry] Registered MCP server {name} with minimal tool definition")
 
     async def get_definitions(self) -> list[dict[str, Any]]:
         """Return all tool definitions in OpenAI format."""

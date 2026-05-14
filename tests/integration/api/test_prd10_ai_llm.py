@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import uuid
 from collections.abc import AsyncIterator, Iterator
@@ -53,6 +54,8 @@ class FakeProvider:
         }
         self.complete_calls: list[list[dict[str, Any]]] = []
         self.stream_calls: list[list[dict[str, Any]]] = []
+        self.complete_kwargs: list[dict[str, Any]] = []
+        self.stream_kwargs: list[dict[str, Any]] = []
 
     async def complete(
         self,
@@ -61,6 +64,7 @@ class FakeProvider:
         **kwargs: Any,
     ) -> dict[str, Any]:
         self.complete_calls.append(list(messages))
+        self.complete_kwargs.append(dict(kwargs))
         return {
             "content": self.reply,
             "role": "assistant",
@@ -75,6 +79,7 @@ class FakeProvider:
         **kwargs: Any,
     ) -> AsyncIterator[dict[str, Any]]:
         self.stream_calls.append(list(messages))
+        self.stream_kwargs.append(dict(kwargs))
         for piece in self.chunks:
             yield {"content": piece}
 
@@ -234,12 +239,13 @@ async def test_post_message_uses_real_llm_when_enabled(client, fake_provider):
     data = sent.json()["data"]
     assistant = data["assistant_message"]
 
-    assert assistant["model"] == "litellm"
+    assert assistant["model"] == "mydow"
     assert assistant["content"] == fake_provider.reply
     assert assistant["status"] == "completed"
     assert assistant["input_tokens"] == fake_provider.usage["prompt_tokens"]
     assert assistant["output_tokens"] == fake_provider.usage["completion_tokens"]
     assert fake_provider.complete_calls, "expected the LLM to be called"
+    assert fake_provider.complete_kwargs[-1]["model"] == "deepseek-v4-pro"
 
     last_call = fake_provider.complete_calls[-1]
     assert any(m["role"] == "system" for m in last_call)
@@ -247,7 +253,47 @@ async def test_post_message_uses_real_llm_when_enabled(client, fake_provider):
 
 
 @pytest.mark.asyncio
-async def test_post_message_keeps_placeholder_when_llm_disabled(client):
+async def test_post_message_routes_explicit_deepseek_flash(client, fake_provider):
+    created = await client.post(
+        "/api/v1/ai/conversations",
+        json={"title": "model route", "mode": "general"},
+    )
+    assert created.status_code == 201
+    cid = created.json()["data"]["id"]
+
+    sent = await client.post(
+        f"/api/v1/ai/conversations/{cid}/messages",
+        json={"content": "hello", "model": "deepseek-v4-flash"},
+    )
+    assert sent.status_code == 201, sent.text
+    assistant = sent.json()["data"]["assistant_message"]
+
+    assert assistant["model"] == "deepseek-v4-flash"
+    assert fake_provider.complete_kwargs[-1]["model"] == "deepseek-v4-flash"
+
+
+@pytest.mark.asyncio
+async def test_post_message_rejects_reserved_model_without_fake_call(client, fake_provider):
+    created = await client.post(
+        "/api/v1/ai/conversations",
+        json={"title": "reserved model", "mode": "general"},
+    )
+    assert created.status_code == 201
+    cid = created.json()["data"]["id"]
+
+    sent = await client.post(
+        f"/api/v1/ai/conversations/{cid}/messages",
+        json={"content": "hello", "model": "glm"},
+    )
+    assert sent.status_code == 400
+    detail = sent.json()["detail"]
+    assert detail["code"] == "AI_MODEL_NOT_ENABLED"
+    assert detail["model"] == "glm"
+    assert fake_provider.complete_calls == []
+
+
+@pytest.mark.asyncio
+async def test_post_message_fails_visibly_when_llm_disabled(client):
     # Ensure neither the env switch nor a test provider is active.
     llm_provider.set_test_provider(None)
     with _env("AGENTOS_AI_LLM", None):
@@ -262,10 +308,38 @@ async def test_post_message_keeps_placeholder_when_llm_disabled(client):
             f"/api/v1/ai/conversations/{cid}/messages",
             json={"content": "默认路径"},
         )
+        assert sent.status_code == 201
+        data = sent.json()["data"]
+        assistant = data["assistant_message"]
+        assert assistant["model"] == "unavailable"
+        assert assistant["status"] == "failed"
+        assert assistant["error"]["code"] == "AI_PROVIDER_DISABLED"
+        assert "AGENTOS_AI_LLM=on" in assistant["content"]
+        assert data["job"]["status"] == "failed"
+
+
+@pytest.mark.asyncio
+async def test_post_message_offline_placeholder_requires_explicit_opt_in(client):
+    llm_provider.set_test_provider(None)
+    with _env("AGENTOS_AI_LLM", None), _env(
+        "AGENTOS_AI_OFFLINE_PLACEHOLDER", "on"
+    ):
+        created = await client.post(
+            "/api/v1/ai/conversations",
+            json={"title": "默认占位"},
+        )
+        assert created.status_code == 201
+        cid = created.json()["data"]["id"]
+
+        sent = await client.post(
+            f"/api/v1/ai/conversations/{cid}/messages",
+            json={"content": "默认路径"},
+        )
         data = sent.json()["data"]
         assistant = data["assistant_message"]
         assert assistant["model"] == "placeholder"
-        assert "占位回答" in assistant["content"]
+        assert assistant["status"] == "completed"
+        assert "离线占位回答" in assistant["content"]
 
 
 # ---------------------------------------------------------------------------
@@ -322,6 +396,10 @@ async def test_stream_endpoint_with_fake_llm(client, fake_provider):
     assert event_types[0] == "meta"
     assert event_types[-1] == "done"
     assert "token" in event_types
+    meta_payload = json.loads(events[0][1])
+    assert meta_payload["model"] == "mydow"
+    assert meta_payload["upstream_model"] == "deepseek-v4-pro"
+    assert fake_provider.stream_kwargs[-1]["model"] == "deepseek-v4-pro"
 
     token_text = "".join(
         # data is JSON like {"delta": "..."}; quick parse via in-text find.
@@ -332,7 +410,7 @@ async def test_stream_endpoint_with_fake_llm(client, fake_provider):
 
 
 @pytest.mark.asyncio
-async def test_stream_endpoint_falls_back_to_offline_chunks(client):
+async def test_stream_endpoint_fails_visibly_when_llm_disabled(client):
     llm_provider.set_test_provider(None)
     with _env("AGENTOS_AI_LLM", None):
         created = await client.post(
@@ -349,8 +427,35 @@ async def test_stream_endpoint_falls_back_to_offline_chunks(client):
         events = _parse_sse(resp.text)
         types = [e[0] for e in events]
         assert types[0] == "meta"
+        assert "error" in types
         assert types[-1] == "done"
-        assert types.count("token") >= 2  # multiple offline chunks
+        assert "token" not in types
+        done_payload = json.loads(events[-1][1])
+        assert done_payload["status"] == "failed"
+
+
+@pytest.mark.asyncio
+async def test_stream_endpoint_offline_chunks_require_explicit_opt_in(client):
+    llm_provider.set_test_provider(None)
+    with _env("AGENTOS_AI_LLM", None), _env(
+        "AGENTOS_AI_OFFLINE_PLACEHOLDER", "on"
+    ):
+        created = await client.post(
+            "/api/v1/ai/conversations",
+            json={"title": "SSE 占位"},
+        )
+        cid = created.json()["data"]["id"]
+
+        resp = await client.post(
+            f"/api/v1/ai/conversations/{cid}/messages/stream",
+            json={"content": "占位流式"},
+        )
+        assert resp.status_code == 200
+        events = _parse_sse(resp.text)
+        types = [e[0] for e in events]
+        assert types[0] == "meta"
+        assert types[-1] == "done"
+        assert types.count("token") >= 2
 
 
 # ---------------------------------------------------------------------------

@@ -33,7 +33,11 @@ from typing import Any
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_os.ai.llm_provider import get_provider, is_llm_enabled
+from agent_os.ai.llm_provider import (
+    allow_offline_placeholder,
+    get_provider,
+    is_llm_enabled,
+)
 from agent_os.auth.models import User
 from agent_os.jobs.models import Job, JobStatus, JobType
 from agent_os.kb.models import Document as KBDocument
@@ -525,6 +529,7 @@ async def run_react_agent(
     history: list[dict[str, Any]] | None = None,
     max_iterations: int = 5,
     prefetched_context: list[dict[str, Any]] | None = None,
+    model: str | None = None,
 ) -> AsyncIterator[dict[str, Any]]:
     """Run the ReAct loop and yield SSE-shaped events.
 
@@ -541,11 +546,19 @@ async def run_react_agent(
     history = list(history or [])
 
     if not is_llm_enabled():
+        if allow_offline_placeholder():
+            yield {
+                "event": "final_answer",
+                "data": {
+                    "answer": "（离线占位模式：AGENTOS_AI_LLM=off）启用真 LLM 后即可执行 ReAct 工具调用。",
+                    "citations": [],
+                },
+            }
+            return
         yield {
-            "event": "final_answer",
+            "event": "error",
             "data": {
-                "answer": "（占位模式：AGENTOS_AI_LLM=off）启用真 LLM 后即可执行 ReAct 工具调用。",
-                "citations": [],
+                "message": "真实 LLM 未启用，无法执行 ReAct 工具调用。请设置 AGENTOS_AI_LLM=on 并配置 DeepSeek API Key。"
             },
         }
         return
@@ -576,7 +589,11 @@ async def run_react_agent(
     while iteration < max_iterations:
         iteration += 1
         try:
-            result = await provider.complete(messages, tools=AVAILABLE_TOOLS)
+            result = await provider.complete(
+                messages,
+                tools=AVAILABLE_TOOLS,
+                model=model,
+            )
         except Exception as exc:  # noqa: BLE001 — defensive; keep the loop safe
             logger.exception("[react] LLM call failed")
             yield {
@@ -658,7 +675,7 @@ async def run_react_agent(
 
     # Hit max iterations — ask LLM for a wrap-up answer with no further tools.
     try:
-        wrap = await provider.complete(messages)
+        wrap = await provider.complete(messages, model=model)
         wrap_content = (wrap or {}).get("content") or ""
     except Exception:
         wrap_content = ""

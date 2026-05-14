@@ -185,7 +185,8 @@ class TestAiSaveToKbAndJobLookup:
         assert created.status_code == 201
         cid = created.json()["data"]["id"]
 
-        # 2) Send a user message; assistant reply is the placeholder.
+        # 2) Send a user message; assistant result is either real LLM output
+        # or a visible failed assistant message when LLM is disabled.
         sent = await client.post(
             f"/api/v1/ai/conversations/{cid}/messages",
             json={"content": "请帮我总结本周的进展"},

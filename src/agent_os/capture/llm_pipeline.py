@@ -2,7 +2,7 @@
 
 When a user types raw inspiration into the home capture box, V1 stored the
 text verbatim and stamped a 200-char prefix as the "summary". That made the
-home feed look mock-y: every card shared the same first sentence as both
+home feed look repetitive: every card shared the same first sentence as both
 title and summary, and there were no useful tags / folder routing.
 
 This module fixes that by calling the **real LLM** (DeepSeek v4 flash by default,
@@ -521,8 +521,8 @@ async def patch_card_with_enrichment(
 ) -> CaptureEnrichment | None:
     """§16.1 — Background re-enrichment that opens its own DB session.
 
-    Use case: the synchronous capture endpoint has already saved a placeholder
-    Card with the heuristic title/summary/tags so the user sees something
+    Use case: the synchronous capture endpoint has already saved a real raw
+    content Card with heuristic metadata so the user sees their captured data
     instantly. We then spawn this helper as a fire-and-forget asyncio task
     that calls the LLM, parses the result, and PATCHes the Card / Document
     rows in place. The user's feed will pick up the LLM-improved metadata
@@ -560,7 +560,7 @@ async def patch_card_with_enrichment(
                 return None
 
             if not enrichment.used_llm:
-                # No LLM data to write — leave the heuristic placeholder intact.
+                # No LLM data to write; leave the raw-content heuristic metadata intact.
                 log.info(
                     "[capture.llm.async] heuristic-only result for inbox=%s; "
                     "skipping PATCH",

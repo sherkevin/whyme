@@ -424,7 +424,7 @@ async def _card_ai_summary_meta(db: AsyncSession, card: Card) -> dict:
 
 
 async def _compute_facets(db: AsyncSession, user_id: uuid.UUID) -> dict:
-    """PRD10 §9.1 ``facets`` block: type counts (and a placeholder for tags)."""
+    """PRD10 §9.1 ``facets`` block: real type and tag counts."""
 
     type_rows = (
         await db.execute(

@@ -1,19 +1,19 @@
 """Security utilities - Password hashing, JWT, API Keys."""
 
 import hashlib
+import logging
+import os
 import secrets
+import base64
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
+import bcrypt
 import jwt
-from passlib.context import CryptContext
 
-# Password hashing context
-# Uses bcrypt algorithm (widely supported, good security)
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto"
-)
+logger = logging.getLogger(__name__)
+
+BCRYPT_SHA256_PREFIX = "$bcrypt-sha256$"
 
 
 # ============================================================================
@@ -21,23 +21,43 @@ pwd_context = CryptContext(
 # ============================================================================
 
 def get_password_hash(password: str) -> str:
-    """Hash a password using SHA-256 + salt.
+    """Hash a password using bcrypt over a SHA-256 prehash.
+
+    The SHA-256 prehash avoids bcrypt's 72-byte input limit while preserving
+    bcrypt as the slow password hash. The stored format is
+    ``$bcrypt-sha256$<bcrypt-hash>``.
 
     Args:
         password: Plain text password
 
     Returns:
-        Hashed password with salt (format: salt$hash)
+        Bcrypt password hash. The raw password is never persisted.
     """
-    # Generate random salt
-    salt = secrets.token_hex(16)
+    digest = _bcrypt_sha256_digest(password)
+    return BCRYPT_SHA256_PREFIX + bcrypt.hashpw(digest, bcrypt.gensalt()).decode("ascii")
 
-    # Hash password with salt
-    salted_password = f"{salt}{password}".encode()
-    password_hash = hashlib.sha256(salted_password).hexdigest()
 
-    # Return salt$hash format for verification
-    return f"{salt}${password_hash}"
+def _bcrypt_sha256_digest(password: str) -> bytes:
+    return base64.b64encode(hashlib.sha256(password.encode("utf-8")).digest())
+
+
+def _verify_legacy_sha256_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify legacy V1 ``salt$sha256`` hashes.
+
+    Older PRD10 builds incorrectly stored passwords as ``salt$sha256`` even
+    though the model contract said bcrypt. Keep a compatibility path so users
+    can log in once and have the hash upgraded transparently.
+    """
+
+    try:
+        salt, password_hash = hashed_password.split("$", 1)
+    except (ValueError, AttributeError):
+        return False
+    if len(salt) != 32 or len(password_hash) != 64:
+        return False
+    salted_password = f"{salt}{plain_password}".encode()
+    computed_hash = hashlib.sha256(salted_password).hexdigest()
+    return secrets.compare_digest(computed_hash, password_hash)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -50,29 +70,74 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         True if password matches, False otherwise
     """
-    try:
-        # Split salt and hash
-        salt, password_hash = hashed_password.split('$', 1)
-
-        # Hash the plain password with the same salt
-        salted_password = f"{salt}{plain_password}".encode()
-        computed_hash = hashlib.sha256(salted_password).hexdigest()
-
-        # Compare hashes
-        return computed_hash == password_hash
-    except (ValueError, AttributeError):
+    if not hashed_password:
         return False
+
+    if hashed_password.startswith(BCRYPT_SHA256_PREFIX):
+        stored = hashed_password[len(BCRYPT_SHA256_PREFIX):].encode("ascii")
+        try:
+            return bcrypt.checkpw(_bcrypt_sha256_digest(plain_password), stored)
+        except (ValueError, TypeError):
+            return False
+
+    if hashed_password.startswith(("$2a$", "$2b$", "$2y$")):
+        try:
+            return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("ascii"))
+        except (ValueError, TypeError):
+            return False
+
+    return _verify_legacy_sha256_password(plain_password, hashed_password)
+
+
+def password_needs_rehash(hashed_password: str) -> bool:
+    """Return whether a stored password should be upgraded on next login."""
+
+    return not (hashed_password or "").startswith(BCRYPT_SHA256_PREFIX)
 
 
 # ============================================================================
 # JWT Utilities
 # ============================================================================
 
-# JWT Configuration
-SECRET_KEY = secrets.token_urlsafe(64)  # Should be from env in production
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-REFRESH_TOKEN_EXPIRE_DAYS = 7
+def _get_env_int(*names: str, default: int) -> int:
+    for name in names:
+        raw = os.getenv(name)
+        if raw is None or raw == "":
+            continue
+        try:
+            return int(raw)
+        except ValueError:
+            logger.warning("Ignoring invalid integer env %s=%r", name, raw)
+    return default
+
+
+def _load_jwt_secret() -> str:
+    secret = (os.getenv("JWT_SECRET_KEY") or os.getenv("SECRET_KEY") or "").strip()
+    if secret:
+        return secret
+
+    generated = secrets.token_urlsafe(64)
+    logger.warning(
+        "JWT_SECRET_KEY/SECRET_KEY is not set; using an ephemeral development "
+        "secret. Existing sessions will be invalid after process restart."
+    )
+    return generated
+
+
+# JWT Configuration. Production/docker compose requires JWT_SECRET_KEY/SECRET_KEY;
+# the fallback only keeps local tests and throwaway dev servers bootable.
+SECRET_KEY = _load_jwt_secret()
+ALGORITHM = (os.getenv("JWT_ALGORITHM") or "HS256").strip() or "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = _get_env_int(
+    "JWT_EXPIRE_MINUTES",
+    "ACCESS_TOKEN_EXPIRE_MINUTES",
+    default=30,
+)
+REFRESH_TOKEN_EXPIRE_DAYS = _get_env_int(
+    "JWT_REFRESH_EXPIRE_DAYS",
+    "REFRESH_TOKEN_EXPIRE_DAYS",
+    default=7,
+)
 
 
 def create_access_token(
@@ -98,6 +163,7 @@ def create_access_token(
     to_encode.update({
         "exp": expire,
         "iat": datetime.utcnow(),
+        "jti": secrets.token_urlsafe(16),
         "type": "access"
     })
 
@@ -128,6 +194,7 @@ def create_refresh_token(
     to_encode.update({
         "exp": expire,
         "iat": datetime.utcnow(),
+        "jti": secrets.token_urlsafe(16),
         "type": "refresh"
     })
 

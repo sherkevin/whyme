@@ -205,8 +205,10 @@ app.add_middleware(RateLimitMiddleware)
 app.add_middleware(RequestIdMiddleware)
 
 # PRD10 §11.4 CORS — strict by default, configurable via env vars.
-# AGENTOS_CORS_ORIGINS: comma-separated allowed origins (e.g. "https://demo.mydow.app")
-# AGENTOS_CORS_ALLOW_ALL=1 explicitly opens "*" for local development. The default
+# AGENTOS_CORS_ORIGINS: comma-separated allowed origins
+# (e.g. "https://demo.mydow.app"). AGENTOS_CORS_ALLOW_ALL=1 explicitly opens
+# "*" for local development. The Docker compose stack maps CORS_ORIGINS into
+# AGENTOS_CORS_ORIGINS for operator-friendly .env files. The default
 # falls back to common dev origins so `npm run dev` style workflows work without
 # extra config but production deployments stay locked down.
 import os as _os
@@ -214,7 +216,8 @@ import os as _os
 from fastapi.middleware.cors import CORSMiddleware as _CORSMiddleware
 
 _cors_origins_raw = _os.getenv("AGENTOS_CORS_ORIGINS", "").strip()
-_cors_allow_all = _os.getenv("AGENTOS_CORS_ALLOW_ALL", "").strip().lower() in ("1", "on", "true", "yes")
+_cors_allow_all_raw = _os.getenv("AGENTOS_CORS_ALLOW_ALL", "").strip().lower()
+_cors_allow_all = _cors_allow_all_raw in ("1", "on", "true", "yes")
 if _cors_allow_all:
     _cors_origins: list[str] = ["*"]
 elif _cors_origins_raw:
@@ -1220,7 +1223,7 @@ async def get_mydow_biz_v14() -> HTMLResponse:
     Dark Reader + bridge_v14.js auto-injected before ``</body>``.
 
     The v1.4 prototype (``static/mydow/biz_v14/index.html``, 461 KB) ships
-    as a high-fidelity static page with ``simulateAction`` placeholders.
+    as a high-fidelity static page with original ``simulateAction`` listeners.
     We do **not** modify the original HTML — instead we inject a single
     Dark Reader and ``<script defer src="/mydow/biz_v14/bridge_v14.js">`` immediately before
     ``</body>`` so the bridge can run after the page's IIFE registers

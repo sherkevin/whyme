@@ -408,8 +408,9 @@ async def capture_link(
     §17.1 — Like ``/capture/text``, when ``auto_process=True`` and the LLM is
     enabled we feed the note + URL into the enrichment helper so the resulting
     Card has a real title / summary / tags + a fuzzy-matched KB folder. If
-    the LLM is off (or the call fails) the helper returns a deterministic
-    placeholder so the path never blocks.
+    the LLM is off (or the call fails) the helper returns metadata marked
+    ``used_llm=false`` so the UI can surface a real failure/retry path instead
+    of claiming an AI summary was generated.
     """
 
     source = Source(
@@ -1023,7 +1024,7 @@ def _document_type_for_mime(mime: str) -> str:
 
 
 def _simple_summary(title: str | None, content: str) -> str:
-    """V1 placeholder summarizer: pick title or first 80 chars of content."""
+    """Small raw-content excerpt used only until real LLM enrichment lands."""
 
     base = (title or "").strip() or content.strip()
     return base[:200]

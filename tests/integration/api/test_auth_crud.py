@@ -1,5 +1,7 @@
 """Test authentication CRUD operations."""
 
+import hashlib
+
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -25,6 +27,8 @@ import agent_os.sources.models  # noqa: F401
 import agent_os.stage3.models  # noqa: F401
 import agent_os.tasks.models  # noqa: F401
 from agent_os.auth import crud
+from agent_os.auth.models import User
+from agent_os.auth.security import BCRYPT_SHA256_PREFIX
 from agent_os.db.base import Base
 
 # Create async in-memory SQLite engine for testing
@@ -246,6 +250,34 @@ class TestAuthenticateUser:
         )
 
         assert user is None
+
+    @pytest.mark.asyncio
+    async def test_authenticate_upgrades_legacy_sha256_hash(self, db_session: AsyncSession):
+        """Legacy salt$sha256 passwords are upgraded to bcrypt on login."""
+
+        password = "legacy-pass-123"
+        salt = "b" * 32
+        body = hashlib.sha256(f"{salt}{password}".encode()).hexdigest()
+        legacy_hash = f"{salt}${body}"
+        user = User(
+            username="legacyuser",
+            email="legacy@example.com",
+            password_hash=legacy_hash,
+            settings={},
+            is_active=True,
+        )
+        db_session.add(user)
+        await db_session.commit()
+
+        authenticated = await crud.authenticate_user(
+            db=db_session,
+            username="legacyuser",
+            password=password,
+        )
+
+        assert authenticated is not None
+        assert authenticated.password_hash != legacy_hash
+        assert authenticated.password_hash.startswith(BCRYPT_SHA256_PREFIX)
 
 
 class TestUpdateUserSettings:

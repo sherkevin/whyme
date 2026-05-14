@@ -9,13 +9,12 @@ Implements the §11 endpoint group:
 * ``POST   /api/v1/ai/messages/{message_id}/save-to-kb`` — queue a job that asks the KB pipeline to persist the assistant message as a Document
 * ``POST   /api/v1/ai/messages/{message_id}/create-tasks`` — queue a job that asks the Tasks pipeline to persist tasks derived from the assistant message
 
-Why a synchronous assistant reply for the MVP:
+Why a synchronous assistant reply still exists:
 
-PRD10 §11.4 expects streaming via SSE (a P1 deliverable). To unblock end-to-end
-contract testing today (and Agent 2's "save assistant output as document/task"
-flows) we persist a deterministic placeholder reply with ``status="completed"``,
-``citations=[]``, and ``model="placeholder"``. The streaming code path can swap
-in a real LLM provider later without changing the persisted shape.
+PRD10 §11.4 primarily uses streaming via SSE, but a non-streaming endpoint is
+kept for API clients and tests. In product mode it either calls the real LLM
+or persists a visible ``failed`` assistant message; deterministic placeholder
+content is allowed only with the explicit offline-test opt-in.
 
 Save endpoints intentionally **only enqueue a Job** and do not yet write
 ``kb_documents`` / ``prd10_tasks`` rows directly. Agent 2 owns those tables;
@@ -43,7 +42,11 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_os.agent.react_agent import run_react_agent
-from agent_os.ai.llm_provider import get_provider, is_llm_enabled
+from agent_os.ai.llm_provider import (
+    allow_offline_placeholder,
+    get_provider,
+    is_llm_enabled,
+)
 from agent_os.ai.models import (
     AIConversation,
     AIConversationMode,
@@ -59,6 +62,12 @@ from agent_os.jobs.models import Job, JobStatus, JobType
 from agent_os.kb.models import Chunk as KBChunk
 from agent_os.kb.models import Document as KBDocument
 from agent_os.kb.models import Folder as KBFolder
+from agent_os.llm.model_registry import (
+    ModelCatalogItem,
+    default_model_item,
+    model_catalog_for_api,
+    resolve_chat_model,
+)
 from agent_os.search_engine.embeddings import (
     EMBEDDING_DIMENSION,
     cosine_similarity,
@@ -181,7 +190,7 @@ class MessageSend(BaseModel):
 
     v1.4 also threads two optional fields through:
     * ``model`` — audit-only display value. Product policy currently routes
-      every v1.4 AI call to the configured DeepSeek v4 flash provider.
+      upstream model; reserved providers fail visibly instead of making fake calls.
     * ``mode``  — ``"efficient"`` (default) or ``"all"``/``"agent"`` to
       activate the §15.49 ReAct agent loop with multi-step retrieval +
       progress events streamed as ``event: agent_step``.
@@ -247,9 +256,44 @@ class ConversationPatchRequest(BaseModel):
 _VALID_MODES: tuple[str, ...] = tuple(m.value for m in AIConversationMode)
 
 _PLACEHOLDER_REPLY = (
-    "（占位回答）已收到你的请求；当前后端处于 PRD10 MVP 阶段，"
-    "尚未接入真实 LLM。流式输出 (`/messages/{id}/stream`) 在 P1 交付。"
+    "（离线占位回答）已收到你的请求；当前处于显式离线测试模式，"
+    "未调用真实 LLM。"
 )
+
+
+def _llm_disabled_error() -> dict[str, str]:
+    return {
+        "code": "AI_PROVIDER_DISABLED",
+        "message": (
+            "真实 LLM 未启用，无法生成 AI 回答。请设置 AGENTOS_AI_LLM=on "
+            "并配置 DEEPSEEK_API_KEY 或 API_KEY 后重试。"
+        ),
+    }
+
+
+def _select_chat_model(
+    requested: str | None,
+    current_user: User,
+) -> ModelCatalogItem:
+    """Resolve the user-facing model id into an enabled runtime model."""
+
+    settings = current_user.settings or {}
+    raw = requested or settings.get("default_ai_model") or default_model_item().id
+    try:
+        return resolve_chat_model(str(raw))
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "AI_MODEL_NOT_ENABLED",
+                "message": str(exc),
+                "model": raw,
+            },
+        ) from exc
+
+
+def _assistant_failure_text(error_payload: dict[str, Any]) -> str:
+    return "AI 调用失败：" + str(error_payload.get("message") or "未知错误")
 
 
 def _parse_uuid(value: str, field: str) -> uuid.UUID:
@@ -448,6 +492,11 @@ def _format_llm_provider_error(exc: Exception | str) -> str:
 
     raw = str(exc or "").strip()
     lower = raw.lower()
+    if "team not allowed to access model" in lower and "deepseek-v4-" in lower:
+        return (
+            "DeepSeek V4 模型调用失败：当前 API Key 或团队没有访问所选 "
+            "DeepSeek V4 模型的权限，请更换具备该模型权限的 DeepSeek API Key。"
+        )
     if "team not allowed to access model" in lower and "deepseek-v4-flash" in lower:
         return (
             "DeepSeek v4 flash 调用失败：当前 API Key 或团队没有 "
@@ -678,6 +727,8 @@ def _build_chat_messages(
 
 async def _invoke_llm_complete(
     messages: list[dict[str, Any]],
+    *,
+    model: str | None = None,
 ) -> tuple[str, dict[str, Any] | None, str | None]:
     """Call the configured LLM provider.
 
@@ -688,7 +739,7 @@ async def _invoke_llm_complete(
 
     try:
         provider = get_provider()
-        result = await provider.complete(messages)
+        result = await provider.complete(messages, model=model)
         content = _sanitize_assistant_content(str((result or {}).get("content") or "").strip())
         if not content:
             if (result or {}).get("reasoning_only"):
@@ -1301,7 +1352,6 @@ async def get_conversation_detail(
 
     cid = _parse_uuid(conversation_id, "conversation_id")
     conv = await _load_owned_conversation(db, cid, current_user)
-
     msg_stmt = (
         select(AIMessage)
         .where(
@@ -1329,7 +1379,7 @@ async def get_conversation_detail(
 
 
 # ---------------------------------------------------------------------------
-# Send message (synchronous placeholder assistant reply for MVP)
+# Send message (synchronous LLM reply / visible failure)
 # ---------------------------------------------------------------------------
 
 
@@ -1348,6 +1398,7 @@ async def post_message(
 
     cid = _parse_uuid(conversation_id, "conversation_id")
     conv = await _load_owned_conversation(db, cid, current_user)
+    selected_model = _select_chat_model(payload.model, current_user)
 
     # Persist the user message.
     user_msg = AIMessage(
@@ -1382,21 +1433,26 @@ async def post_message(
             "user_message_id": str(user_msg.id),
             "context_scope": context_scope,
             "related_context": related_context,
+            "model": selected_model.id,
+            "upstream_model": selected_model.upstream_model,
         },
     )
     db.add(job)
     await db.flush()
 
-    # Try the real LLM when enabled, otherwise keep the deterministic
-    # placeholder. Persistence shape stays the same in both branches.
+    # Try the real LLM when enabled. Product paths must not persist fake
+    # assistant output as successful; offline placeholder output is reserved
+    # for explicit test/dev opt-in only.
     assistant_content = _PLACEHOLDER_REPLY
     assistant_model = "placeholder"
     input_tokens = 0
     output_tokens = len(_PLACEHOLDER_REPLY)
     latency_ms = 0
     error_payload: dict[str, Any] | None = None
+    llm_enabled = is_llm_enabled()
+    offline_placeholder = allow_offline_placeholder()
 
-    if is_llm_enabled():
+    if llm_enabled:
         history_stmt = (
             select(AIMessage)
             .where(AIMessage.conversation_id == conv.id)
@@ -1409,7 +1465,10 @@ async def post_message(
         )
 
         started = time.perf_counter()
-        content, usage, error = await _invoke_llm_complete(chat_messages)
+        content, usage, error = await _invoke_llm_complete(
+            chat_messages,
+            model=selected_model.upstream_model,
+        )
         elapsed_ms = int((time.perf_counter() - started) * 1000)
 
         if error:
@@ -1421,20 +1480,31 @@ async def post_message(
                 "AI 调用失败，请检查 LLM API 配置或稍后重试："
                 + str(error)
             )
-            assistant_model = "litellm"
+            assistant_model = selected_model.id
             output_tokens = 0
             latency_ms = elapsed_ms
             job.status = JobStatus.FAILED.value
             job.error = error_payload
         else:
             assistant_content = content
-            assistant_model = "litellm"
+            assistant_model = selected_model.id
             latency_ms = elapsed_ms
             if usage:
                 input_tokens = int(usage.get("prompt_tokens") or 0)
                 output_tokens = int(usage.get("completion_tokens") or 0)
             else:
                 output_tokens = len(assistant_content)
+    elif offline_placeholder:
+        # Explicit offline test/dev mode only. Never enable this in internal
+        # beta or production because it deliberately fabricates AI content.
+        pass
+    else:
+        error_payload = _llm_disabled_error()
+        assistant_content = _assistant_failure_text(error_payload)
+        assistant_model = "unavailable"
+        output_tokens = 0
+        job.status = JobStatus.FAILED.value
+        job.error = error_payload
 
     assistant_msg = AIMessage(
         conversation_id=conv.id,
@@ -1511,7 +1581,7 @@ async def post_message_stream(
 ) -> StreamingResponse:
     """PRD10 §11.4 streaming variant.
 
-    Persists the user message + placeholder assistant message immediately,
+    Persists the user message + assistant message shell immediately,
     then streams assistant tokens as Server-Sent Events. The final ``done``
     event carries the assistant message id so the frontend can correlate.
     """
@@ -1524,6 +1594,7 @@ async def post_message_stream(
     # compat. Anything matching the agent set activates the multi-step
     # ReAct path with progress events; otherwise we run the single-shot
     # RAG path.
+    selected_model = _select_chat_model(payload.model, current_user)
     request_mode = (payload.mode or "").strip().lower() or (conv.mode or "").lower()
     is_agent_mode = request_mode in {"omni", "all", "agent"}
 
@@ -1577,10 +1648,15 @@ async def post_message_stream(
             "user_message_id": str(user_msg.id),
             "stream": True,
             "context_scope": context_scope,
+            "model": selected_model.id,
+            "upstream_model": selected_model.upstream_model,
         },
     )
     db.add(job)
     await db.flush()
+
+    use_llm = is_llm_enabled()
+    offline_placeholder = allow_offline_placeholder()
 
     assistant_msg = AIMessage(
         conversation_id=conv.id,
@@ -1592,7 +1668,11 @@ async def post_message_stream(
         tool_calls=[],
         parent_message_id=user_msg.id,
         job_id=job.id,
-        model="litellm" if is_llm_enabled() else "placeholder",
+        model=(
+            selected_model.id
+            if use_llm
+            else ("placeholder" if offline_placeholder else "unavailable")
+        ),
     )
     db.add(assistant_msg)
     conv.message_count = int(conv.message_count or 0) + 2
@@ -1620,7 +1700,6 @@ async def post_message_stream(
 
     assistant_id = assistant_msg.id
     job_id = job.id
-    use_llm = is_llm_enabled()
 
     async def _generate() -> AsyncIterator[bytes]:
         from agent_os.db.base import get_sessionmaker
@@ -1638,6 +1717,8 @@ async def post_message_stream(
                 "heartbeat_seconds": _heartbeat_seconds(),
                 "mode": "agent" if is_agent_mode else "chat",
                 "agent_enabled": is_agent_mode,
+                "model": selected_model.id,
+                "upstream_model": selected_model.upstream_model,
             },
             prefix=_SSE_RETRY_HINT,
         )
@@ -1704,6 +1785,7 @@ async def post_message_stream(
                         user_message=payload.content,
                         history=history_for_react,
                         prefetched_context=related_context,
+                        model=selected_model.upstream_model,
                     ):
                         ev = react_evt["event"]
                         data = react_evt.get("data") or {}
@@ -1777,7 +1859,10 @@ async def post_message_stream(
 
             elif use_llm:
                 provider = get_provider()
-                upstream = provider.stream_complete(chat_messages)
+                upstream = provider.stream_complete(
+                    chat_messages,
+                    model=selected_model.upstream_model,
+                )
                 async for chunk in _wrap_with_heartbeat(
                     upstream, heartbeat_seconds
                 ):
@@ -1800,16 +1885,20 @@ async def post_message_stream(
                     accumulated.append(delta)
                     yield _sse_event("token", {"delta": delta})
             else:
-                # Deterministic offline stream so frontend SSE wiring stays
-                # testable without network access.
-                for piece in (
-                    "（占位流式回答）",
-                    "已收到你的请求；",
-                    "当前处于 PRD10 V1，",
-                    f"接入 LLM 后将替换此回答。原始问题: {payload.content[:80]}",
-                ):
-                    accumulated.append(piece)
-                    yield _sse_event("token", {"delta": piece})
+                if offline_placeholder:
+                    # Deterministic offline stream so frontend SSE wiring stays
+                    # testable without network access. Explicit opt-in only.
+                    for piece in (
+                        "（离线占位流式回答）",
+                        "已收到你的请求；",
+                        "当前处于显式离线测试模式，未调用真实 LLM。",
+                        f"原始问题：{payload.content[:80]}",
+                    ):
+                        accumulated.append(piece)
+                        yield _sse_event("token", {"delta": piece})
+                else:
+                    error_payload = _llm_disabled_error()
+                    yield _sse_event("error", error_payload)
         except Exception as exc:  # pragma: no cover - defensive
             error_payload = {
                 "code": "AI_PROVIDER_ERROR",
@@ -1825,8 +1914,11 @@ async def post_message_stream(
                     "AI 调用失败，请检查 LLM API 配置或稍后重试："
                     + str(error_payload.get("message") or "")
                 )
-            else:
+            elif offline_placeholder:
                 final_content = _PLACEHOLDER_REPLY
+            else:
+                error_payload = _llm_disabled_error()
+                final_content = _assistant_failure_text(error_payload)
         sanitized_final_content = _sanitize_assistant_content(final_content)
         if sanitized_final_content != final_content:
             final_content = sanitized_final_content
@@ -2037,6 +2129,7 @@ async def regenerate_message(
     conv = await _load_owned_conversation(
         db, target_msg.conversation_id, current_user
     )
+    selected_model = _select_chat_model(target_msg.model, current_user)
 
     # Locate the user prompt that produced this assistant message.
     pred_stmt = (
@@ -2082,6 +2175,8 @@ async def regenerate_message(
             "context_scope": context_scope,
             "related_context": related_context,
             "regenerate_of": str(target_msg.id),
+            "model": selected_model.id,
+            "upstream_model": selected_model.upstream_model,
         },
     )
     db.add(job)
@@ -2093,8 +2188,10 @@ async def regenerate_message(
     output_tokens = len(_PLACEHOLDER_REPLY)
     latency_ms = 0
     error_payload: dict[str, Any] | None = None
+    llm_enabled = is_llm_enabled()
+    offline_placeholder = allow_offline_placeholder()
 
-    if is_llm_enabled():
+    if llm_enabled:
         history_stmt = (
             select(AIMessage)
             .where(AIMessage.conversation_id == conv.id)
@@ -2106,9 +2203,12 @@ async def regenerate_message(
             conv, list(history), user_msg.content, related_context
         )
         started = time.perf_counter()
-        content, usage, error = await _invoke_llm_complete(chat_messages)
+        content, usage, error = await _invoke_llm_complete(
+            chat_messages,
+            model=selected_model.upstream_model,
+        )
         elapsed_ms = int((time.perf_counter() - started) * 1000)
-        assistant_model = "litellm"
+        assistant_model = selected_model.id
         latency_ms = elapsed_ms
         if error:
             error_payload = {
@@ -2129,6 +2229,16 @@ async def regenerate_message(
                 output_tokens = int(usage.get("completion_tokens") or 0)
             else:
                 output_tokens = len(assistant_content)
+    elif offline_placeholder:
+        # Explicit offline test/dev mode only.
+        pass
+    else:
+        error_payload = _llm_disabled_error()
+        assistant_content = _assistant_failure_text(error_payload)
+        assistant_model = "unavailable"
+        output_tokens = 0
+        job.status = JobStatus.FAILED.value
+        job.error = error_payload
 
     assistant_msg = AIMessage(
         conversation_id=conv.id,
@@ -2473,24 +2583,8 @@ async def delete_conversation(
 
 
 # ---------------------------------------------------------------------------
-# v1.4 §3.6 — GET /ai/models — model menu (DeepSeek v4 flash only)
+# v1.4 §3.6 — GET /ai/models — model menu and routing catalog
 # ---------------------------------------------------------------------------
-
-
-# Static catalog. The selector remains visible, but all production AI/RAG/
-# capture enrichment/Skills routing is pinned to DeepSeek v4 flash until
-# the business explicitly re-opens multi-model routing.
-_AI_MODEL_CATALOG: list[dict[str, Any]] = [
-    {
-        "id": "deepseek-v4-flash",
-        "label": "DeepSeek V4 Flash",
-        "vendor": "DeepSeek",
-        "tier": "fast",
-        "default": True,
-        "description": "统一用于 Mydow AI 对话、RAG、灵感采集与 Skills。",
-    },
-]
-
 
 @router.get("/models")
 async def list_ai_models(request: Request) -> dict:
@@ -2501,10 +2595,8 @@ async def list_ai_models(request: Request) -> dict:
 
     return success_response(
         {
-            "items": _AI_MODEL_CATALOG,
-            "default": next(
-                (m["id"] for m in _AI_MODEL_CATALOG if m.get("default")), "deepseek-v4-flash"
-            ),
+            "items": model_catalog_for_api(),
+            "default": default_model_item().id,
         },
         request=request,
     )

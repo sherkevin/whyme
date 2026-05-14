@@ -10,6 +10,8 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+from agent_os.llm.model_registry import resolve_runtime_model
+
 
 DEFAULT_PROVIDER = "deepseek"
 DEFAULT_BASE_URL = "https://api.deepseek.com"
@@ -172,10 +174,10 @@ def resolve_api_base(
 
 def resolve_model(purpose: str | None = None, explicit: str | None = None) -> str:
     if explicit and explicit.strip():
-        return explicit.strip()
+        return resolve_runtime_model(explicit.strip(), allow_disabled=False)
     purpose_key = (purpose or "").strip().lower()
     purpose_names = _PURPOSE_MODEL_ENV.get(purpose_key, ())
-    return (
+    raw = (
         _env_first(
             *purpose_names,
             "AGENTOS_AI_MODEL",
@@ -185,6 +187,7 @@ def resolve_model(purpose: str | None = None, explicit: str | None = None) -> st
         )
         or DEFAULT_MODEL
     )
+    return resolve_runtime_model(raw, allow_disabled=False)
 
 
 def resolve_fallback_model(explicit: str | None = None) -> str:

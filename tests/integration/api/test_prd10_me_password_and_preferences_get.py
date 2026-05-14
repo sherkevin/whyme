@@ -230,7 +230,7 @@ async def test_get_me_preferences_fresh_account_returns_full_default_shape(
     assert body["cite_knowledge_by_default"] is True
     assert body["ai_auto_suggest"] is True
     assert body["ai_streaming"] is True
-    assert body["default_ai_model"] == "auto"
+    assert body["default_ai_model"] == "mydow"
     assert body["daily_report_time"] == "21:30"
     assert body["notification_enabled"] is True
     assert body["auto_save"] is True

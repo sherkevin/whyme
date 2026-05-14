@@ -222,7 +222,7 @@ class TestConversationsCRUD:
 
 
 # ---------------------------------------------------------------------------
-# /messages  (synchronous placeholder reply for MVP)
+# /messages  (synchronous reply; no production placeholder)
 # ---------------------------------------------------------------------------
 
 
@@ -243,11 +243,14 @@ class TestPostMessage:
         assert data["user_message"]["role"] == "user"
         assert data["user_message"]["content"] == "你好"
         assert data["assistant_message"]["role"] == "assistant"
-        assert data["assistant_message"]["status"] == "completed"
+        assert data["assistant_message"]["status"] in {"completed", "failed"}
+        if data["assistant_message"]["status"] == "failed":
+            assert data["assistant_message"]["model"] == "unavailable"
+            assert data["assistant_message"]["error"]["code"] == "AI_PROVIDER_DISABLED"
         assert data["assistant_message"]["citations"] == []
         assert data["assistant_message"]["tool_calls"] == []
         assert data["job"]["job_type"] == "ai_chat"
-        assert data["job"]["status"] == "completed"
+        assert data["job"]["status"] == data["assistant_message"]["status"]
         assert data["conversation"]["message_count"] == 2
         assert data["conversation"]["last_message_preview"]
 
@@ -410,8 +413,7 @@ class TestCancelMessage:
         amid = sent["assistant_message"]["id"]
 
         # Force the assistant message back into a cancellable state so we
-        # can exercise the real transition (placeholder reply normally
-        # comes back as "completed").
+        # can exercise the real transition regardless of the current LLM mode.
         from agent_os.ai.models import AIMessage, AIMessageStatus
 
         result = await prd10_session.execute(
@@ -428,17 +430,17 @@ class TestCancelMessage:
         assert body["data"]["cancelled"] is True
         assert body["data"]["message"]["status"] == "canceled"
 
-    async def test_cancel_already_completed_is_idempotent(self, client):
+    async def test_cancel_failed_message_is_idempotent(self, client):
         sent = await self._create_conv_and_send(client)
         amid = sent["assistant_message"]["id"]
 
         resp = await client.post(f"/api/v1/ai/messages/{amid}/cancel")
         assert resp.status_code == 200
         body = resp.json()["data"]
-        # Placeholder reply is already "completed" — cancel must not
+        # Completed or failed replies are already terminal; cancel must not
         # rewrite history but must still return a clean envelope.
         assert body["cancelled"] is False
-        assert body["message"]["status"] == "completed"
+        assert body["message"]["status"] == sent["assistant_message"]["status"]
 
     async def test_cancel_404_for_unknown_message(self, client):
         resp = await client.post(

@@ -15,6 +15,12 @@ from agent_os.auth.dependencies import get_current_user
 from agent_os.auth.jwt_handler import create_access_token, create_refresh_token, verify_token
 from agent_os.auth.mailer import get_mailer
 from agent_os.auth.models import User
+from agent_os.auth.security import ACCESS_TOKEN_EXPIRE_MINUTES
+from agent_os.auth.session_store import (
+    consume_refresh_session,
+    create_session_record,
+    revoke_access_session,
+)
 from agent_os.auth.schema import (
     PRD10_NOTIFICATION_CHANNEL_KEYS,
     PRD10_SETTINGS_WHITELIST,
@@ -115,6 +121,37 @@ def _is_demo_mode_enabled() -> bool:
     return raw in {"1", "on", "true", "enabled", "yes"}
 
 
+def _extract_bearer_token(request: Request) -> str | None:
+    authorization = request.headers.get("authorization") or ""
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token.strip():
+        return None
+    return token.strip()
+
+
+async def _issue_token_pair(
+    *,
+    db: AsyncSession,
+    user: User,
+    request: Request | None,
+) -> Token:
+    access_token = create_access_token(user_id=user.id)
+    refresh_token = create_refresh_token(user_id=user.id)
+    await create_session_record(
+        db,
+        user_id=user.id,
+        access_token=access_token,
+        refresh_token=refresh_token,
+        request=request,
+    )
+    return Token(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer",
+        expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
+
+
 @demo_router.post(
     "/login",
     responses={
@@ -192,15 +229,7 @@ async def demo_login(request: Request, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(user)
 
-    access_token = create_access_token(user_id=user.id)
-    refresh_token = create_refresh_token(user_id=user.id)
-
-    token_payload = {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer",
-        "expires_in": 30 * 60,
-    }
+    token_payload = (await _issue_token_pair(db=db, user=user, request=request)).model_dump()
     return success_response(token_payload, request=request)
 
 
@@ -234,6 +263,7 @@ async def demo_status(request: Request):
 )
 async def register(
     user_data: UserRegister,
+    request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """Register a new user.
@@ -264,16 +294,7 @@ async def register(
         password=user_data.password
     )
 
-    # Generate tokens
-    access_token = create_access_token(user_id=user.id)
-    refresh_token = create_refresh_token(user_id=user.id)
-
-    return Token(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",
-        expires_in=30 * 60  # 30 minutes
-    )
+    return await _issue_token_pair(db=db, user=user, request=request)
 
 
 @router.post(
@@ -285,6 +306,7 @@ async def register(
 )
 async def login(
     user_data: UserLogin,
+    request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """Login with username/email and password using JSON body."""
@@ -302,16 +324,8 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Generate tokens
-    access_token = create_access_token(user_id=user.id)
-    refresh_token = create_refresh_token(user_id=user.id)
-
-    return Token(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",
-        expires_in=30 * 60
-    )
+    user.last_login_at = datetime.now(UTC)
+    return await _issue_token_pair(db=db, user=user, request=request)
 
 
 @router.post(
@@ -323,6 +337,7 @@ async def login(
 )
 async def refresh_token(
     token_request: RefreshTokenRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """Refresh access token using refresh token.
@@ -337,6 +352,16 @@ async def refresh_token(
             detail="Invalid refresh token"
         )
 
+    consumed = await consume_refresh_session(
+        db,
+        refresh_token=token_request.refresh_token,
+    )
+    if consumed is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token"
+        )
+
     # Check if user exists
     user = await crud.get_user_by_id(db, token_info.user_id)
     if not user:
@@ -345,16 +370,7 @@ async def refresh_token(
             detail="User not found"
         )
 
-    # Generate new tokens
-    access_token = create_access_token(user_id=user.id)
-    new_refresh_token = create_refresh_token(user_id=user.id)
-
-    return Token(
-        access_token=access_token,
-        refresh_token=new_refresh_token,
-        token_type="bearer",
-        expires_in=30 * 60
-    )
+    return await _issue_token_pair(db=db, user=user, request=request)
 
 
 @router.get(
@@ -696,7 +712,7 @@ def _project_prd10_preferences(settings: dict | None) -> Prd10PreferencesView:
         ),
         "ai_auto_suggest": bool(raw.get("ai_auto_suggest", True)),
         "ai_streaming": bool(raw.get("ai_streaming", True)),
-        "default_ai_model": raw.get("default_ai_model") or "auto",
+        "default_ai_model": raw.get("default_ai_model") or "mydow",
         "daily_report_time": raw.get("daily_report_time") or "21:30",
         "notification_enabled": bool(raw.get("notification_enabled", True)),
         "auto_save": bool(raw.get("auto_save", True)),
@@ -1177,6 +1193,7 @@ async def verify_code(
 )
 async def register_with_email(
     request_data: EmailRegisterRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """Register a new user using email verification code.
@@ -1236,6 +1253,12 @@ async def register_with_email(
             email=str(request_data.email),
             password=request_data.password
         )
+        user.is_verified = True
+        user.settings = {
+            **dict(user.settings or {}),
+            "email_verified": True,
+            "email_verified_at": _iso_now(),
+        }
 
         logger.info(
             "User registered successfully with email",
@@ -1246,16 +1269,7 @@ async def register_with_email(
             }
         )
 
-        # Generate tokens
-        access_token = create_access_token(user_id=user.id)
-        refresh_token = create_refresh_token(user_id=user.id)
-
-        return Token(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            token_type="bearer",
-            expires_in=30 * 60  # 30 minutes
-        )
+        return await _issue_token_pair(db=db, user=user, request=request)
 
     except ExpiredCodeError:
         logger.info(f"Expired code for {request_data.email}")
@@ -1270,6 +1284,9 @@ async def register_with_email(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(e)
         )
+
+    except HTTPException:
+        raise
 
     except Exception as e:
         logger.error(f"Error during email registration: {e}")
@@ -1290,6 +1307,7 @@ async def register_with_email(
 )
 async def login_with_email(
     request_data: EmailLoginRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """Login using email verification code.
@@ -1340,16 +1358,7 @@ async def login_with_email(
             }
         )
 
-        # Generate tokens
-        access_token = create_access_token(user_id=user.id)
-        refresh_token = create_refresh_token(user_id=user.id)
-
-        return Token(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            token_type="bearer",
-            expires_in=30 * 60
-        )
+        return await _issue_token_pair(db=db, user=user, request=request)
 
     except ExpiredCodeError:
         logger.info(f"Expired code for {request_data.email}")
@@ -1364,6 +1373,9 @@ async def login_with_email(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(e)
         )
+
+    except HTTPException:
+        raise
 
     except Exception as e:
         logger.error(f"Error during email login: {e}")
@@ -1384,7 +1396,7 @@ async def login_with_email(
 
 
 @router.post("/logout", status_code=status.HTTP_200_OK, tags=["Authentication"])
-async def auth_logout(request: Request):
+async def auth_logout(request: Request, db: AsyncSession = Depends(get_db)):
     """v1.4 §3.1 — confirm logout.
 
     Auth optional: we accept the call whether or not the caller passes a
@@ -1394,4 +1406,16 @@ async def auth_logout(request: Request):
     401 and the SPA / biz prototype shows the auth overlay or demo CTA.
     """
 
-    return {"success": True, "message": "logged out", "request_id": getattr(request.state, "request_id", None)}
+    revoked = False
+    token = _extract_bearer_token(request)
+    if token:
+        # Logout remains optional-auth for already-expired tabs, while a valid
+        # current access token revokes its server-side session record.
+        revoked = await revoke_access_session(db, access_token=token)
+
+    return {
+        "success": True,
+        "message": "logged out",
+        "revoked": revoked,
+        "request_id": getattr(request.state, "request_id", None),
+    }

@@ -86,7 +86,7 @@ class Prd10PreferencesView(BaseModel):
     cite_knowledge_by_default: bool = Field(default=True)
     ai_auto_suggest: bool = Field(default=True)
     ai_streaming: bool = Field(default=True)
-    default_ai_model: str = Field(default="auto")
+    default_ai_model: str = Field(default="mydow")
     daily_report_time: str = Field(default="21:30")
     notification_enabled: bool = Field(default=True)
     auto_save: bool = Field(default=True)

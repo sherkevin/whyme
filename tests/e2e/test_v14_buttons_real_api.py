@@ -60,7 +60,7 @@ def v14_server() -> str:
     env["DATABASE_URL"] = f"sqlite+aiosqlite:///{db_path.as_posix()}"
     env["AGENTOS_DEMO_MODE"] = "on"
     env["AGENTOS_PRD10_WORKER"] = "off"
-    env["AGENTOS_AI_LLM"] = "off"  # placeholder LLM is enough for button proof
+    env["AGENTOS_AI_LLM"] = "off"  # button proof must not depend on a live LLM
 
     subprocess.run(
         [

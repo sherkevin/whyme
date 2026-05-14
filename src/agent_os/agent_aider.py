@@ -206,8 +206,7 @@ class AiderAgent:
 
     def reset_conversation(self) -> None:
         """Reset conversation history."""
-        # For now, we'd need to recreate the aider integration
-        # This is a placeholder
+        # Recreate the aider integration lazily on the next request.
         self._aider_integration = None
 
 

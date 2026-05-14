@@ -38,7 +38,7 @@ services:
     container_name: mydow-app
     restart: unless-stopped
     ports:
-      - "${APP_PORT:-8000}:8000"
+      - "${APP_HOST_BIND:-127.0.0.1}:${APP_PORT:-8000}:8000"
     environment:
       # 数据库：在 Postgres 适配 legacy conversations.user_id INTEGER→UUID
       # 之前（§2.22 / §6.9 类似工作未完成），临时使用 SQLite 落库；持久化到
@@ -58,9 +58,10 @@ services:
       AGENTOS_PRD10_WORKER: ${AGENTOS_PRD10_WORKER:-on}
       AGENTOS_PRD10_WORKER_INTERVAL: ${AGENTOS_PRD10_WORKER_INTERVAL:-2}
       AGENTOS_PRD10_WORKER_BATCH_LIMIT: ${AGENTOS_PRD10_WORKER_BATCH_LIMIT:-25}
-      AGENTOS_DEMO_MODE: ${AGENTOS_DEMO_MODE:-on}
+      AGENTOS_DEMO_MODE: ${AGENTOS_DEMO_MODE:-off}
       # 默认 on：与业务「真实 LLM 落库」一致；CI / 离线 pytest 请显式设 off。
       AGENTOS_AI_LLM: ${AGENTOS_AI_LLM:-on}
+      AGENTOS_AI_OFFLINE_PLACEHOLDER: ${AGENTOS_AI_OFFLINE_PLACEHOLDER:-off}
       AGENTOS_AI_TEMPERATURE: ${AGENTOS_AI_TEMPERATURE:-0.3}
       AGENTOS_AI_MAX_TOKENS: ${AGENTOS_AI_MAX_TOKENS:-2000}
       # LLM provider — paratera OpenAI-compatible endpoint by default
@@ -87,6 +88,8 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       BASE_URL: ${BASE_URL:-http://localhost:8000}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8000,http://localhost}
+      AGENTOS_CORS_ORIGINS: ${AGENTOS_CORS_ORIGINS:-${CORS_ORIGINS:-http://localhost:8000,http://localhost}}
+      AGENTOS_CORS_ALLOW_ALL: ${AGENTOS_CORS_ALLOW_ALL:-${CORS_ALLOW_ALL:-false}}
       PRD10_UPLOADS_BASE: /app/data/uploads
       # 邮件验证码（可选）
       SMTP_HOST: ${SMTP_HOST:-}
@@ -137,7 +140,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agentos}
       POSTGRES_DB: ${POSTGRES_DB:-agentos_db}
     ports:
-      - "${POSTGRES_HOST_PORT:-5432}:5432"
+      - "${POSTGRES_HOST_BIND:-127.0.0.1}:${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -155,7 +158,7 @@ services:
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-redis123}"]
     ports:
-      - "${REDIS_HOST_PORT:-6379}:6379"
+      - "${REDIS_HOST_BIND:-127.0.0.1}:${REDIS_HOST_PORT:-6379}:6379"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -251,7 +254,7 @@ services:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@mydow.local}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
     ports:
-      - "5050:80"
+      - "${PGADMIN_HOST_BIND:-127.0.0.1}:${PGADMIN_HOST_PORT:-5050}:80"
     volumes:
       - pgadmin-data:/var/lib/pgadmin
     depends_on:

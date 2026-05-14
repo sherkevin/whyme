@@ -1353,34 +1353,42 @@ def test_biz_v14_ai_context_picker_has_draft_selection_and_cancel():
     assert not missing, f"v14 AI context picker selection/cancel tokens missing: {missing}"
 
 
-def test_biz_v14_uses_deepseek_v4_flash_only_for_ai_model_surface():
-    """Section 18.30: remove GLM/multi-model leakage and pin v14 to DeepSeek v4 flash."""
+def test_biz_v14_ai_model_surface_uses_real_registry_with_reserved_providers():
+    """Section 18.38: Mydow routes to DeepSeek Pro; future providers are visible but disabled."""
 
     bridge = (MYDOW_DIR / "biz_v14" / "bridge_v14.js").read_text(encoding="utf-8")
     ext = (MYDOW_DIR / "biz_v14" / "bridge_v14_ext.js").read_text(encoding="utf-8")
     router = (PROJECT_ROOT / "src" / "agent_os" / "ai" / "router.py").read_text(encoding="utf-8")
+    registry = (PROJECT_ROOT / "src" / "agent_os" / "llm" / "model_registry.py").read_text(encoding="utf-8")
+    haystack = bridge + "\n" + ext + "\n" + router + "\n" + registry
     tokens = [
+        'DEFAULT_AI_MODEL_V18 = "mydow"',
+        "FALLBACK_AI_MODELS_V18",
+        "body.model = normalizeAiModelIdV18",
+        "function bindAiModelSelectorV18",
+        "model_catalog_for_api",
+        "resolve_chat_model",
+        "AI_MODEL_NOT_ENABLED",
+        "def _format_llm_provider_error",
+        'id="mydow"',
+        'upstream_model="deepseek-v4-pro"',
+        'id="deepseek-v4-flash"',
+        'id="glm"',
+        'id="gemini"',
+        'id="gpt"',
+        '{ value: "mydow", label: "Mydow"',
+    ]
+    missing = [token for token in tokens if token not in haystack]
+    assert not missing, f"v14 model registry surface missing: {missing}"
+    forbidden = [
         "DEEPSEEK_V4_FLASH_MODEL_V18",
         "body.model = DEEPSEEK_V4_FLASH_MODEL_V18",
         "function bindDeepSeekModelEnforcementV18",
-        "def _format_llm_provider_error",
-        "DeepSeek v4 flash 调用失败",
-        '"id": "deepseek-v4-flash"',
-        '"default": True',
-        '{ value: "deepseek-v4-flash", label: "DeepSeek V4 Flash"',
-    ]
-    haystack = bridge + "\n" + ext + "\n" + router
-    missing = [token for token in tokens if token not in haystack]
-    assert not missing, f"v14 DeepSeek-only model surface missing: {missing}"
-    forbidden = [
         '"id": "opus-4.6"',
-        '"id": "gemini-2.5-flash"',
-        '"id": "gpt-5.2"',
         'value: "glm-4-flash"',
-        "GLM-4 Flash",
     ]
     leaked = [token for token in forbidden if token in haystack]
-    assert not leaked, f"v14 still leaks non-DeepSeek model choices: {leaked}"
+    assert not leaked, f"v14 still contains obsolete forced-model wiring: {leaked}"
 
 
 def test_biz_v14_item_detail_drawer_blocks_static_mock_content():

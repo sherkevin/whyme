@@ -11,6 +11,7 @@ from agent_os.llm.config import (
     OPENAI_BASE_URL,
     resolve_model,
 )
+from agent_os.llm.model_registry import resolve_chat_model
 
 
 class TestLiteLLMProvider:
@@ -164,6 +165,16 @@ class TestLiteLLMProvider:
 
         assert resolve_model("ai") == "deepseek-v4-flash"
         assert resolve_model("capture") == "deepseek-v4-pro"
+
+    def test_resolve_model_maps_mydow_shell_to_deepseek_pro(self) -> None:
+        assert resolve_model("ai", explicit="mydow") == "deepseek-v4-pro"
+        item = resolve_chat_model("mydow")
+        assert item.id == "mydow"
+        assert item.upstream_model == "deepseek-v4-pro"
+
+    def test_resolve_model_rejects_reserved_provider(self) -> None:
+        with pytest.raises(ValueError, match="GLM"):
+            resolve_model("ai", explicit="glm")
 
     def test_openai_provider_gets_openai_defaults(
         self, monkeypatch: pytest.MonkeyPatch

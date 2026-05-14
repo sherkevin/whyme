@@ -757,7 +757,7 @@ class TestAgentActionPromptCoverage:
         )
         sys_prompt, user_prompt = _build_skill_prompt(skill, {})
         assert sys_prompt.startswith(_AGENT_ACTION_PROMPTS["summarize"])
-        # Empty user input still produces a non-empty user_prompt placeholder
+        # Empty user input still produces a non-empty user_prompt scaffold
         # so the LLM has something to anchor on.
         assert user_prompt
         assert "未提供" in user_prompt or "示例" in user_prompt

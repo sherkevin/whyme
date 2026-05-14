@@ -229,9 +229,8 @@ async def rebuild_search_index(
 
     start_time = time.time()
 
-    # This would scan all cards, tasks, notes, etc. and rebuild index
-    # For now, return a placeholder response
-    # In production, this would be a background task
+    # Rebuild from the current indexed sources. A larger installation should
+    # move this into a background job, but the count returned here is real.
     total_indexed = await service.rebuild_index()
 
     duration = time.time() - start_time

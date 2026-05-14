@@ -10,6 +10,7 @@
 
   const API_BASE = "/api/v1";
   const TOKEN_KEY = "mydow_v14_token";
+  const REFRESH_TOKEN_KEY = "mydow_v14_refresh_token";
   const FLAG_KEY = "__MYDOW_V14_BRIDGE_BOOTED";
 
   if (window[FLAG_KEY]) return;
@@ -44,8 +45,8 @@
     gardenZoom: 1,
     /** Assistant message UUID from SSE ``event: meta`` (save-to-kb). */
     lastAssistantMessageId: "",
-    /** §18.30 selected AI model. Product policy: all v14 AI calls use DeepSeek v4 flash. */
-    aiModel: "deepseek-v4-flash",
+    /** §18.38 selected AI model. "mydow" routes to DeepSeek V4 Pro. */
+    aiModel: "mydow",
     /** §16.4 — current conversation's pinned context (mirrors backend conv.context_scope). */
     contextScope: { document_ids: [], folder_ids: [], sources: [], notes: [] },
     /** §16.4 — cached doc summaries for chip rendering ({id → {id,title,folder_id}}). */
@@ -156,9 +157,51 @@
   function getToken() {
     return window.localStorage.getItem(TOKEN_KEY) || "";
   }
-  function setToken(value) {
+  function getRefreshToken() {
+    return window.localStorage.getItem(REFRESH_TOKEN_KEY) || "";
+  }
+  function setToken(value, refreshValue) {
     if (value) window.localStorage.setItem(TOKEN_KEY, value);
-    else window.localStorage.removeItem(TOKEN_KEY);
+    else {
+      window.localStorage.removeItem(TOKEN_KEY);
+      window.localStorage.removeItem(REFRESH_TOKEN_KEY);
+      return;
+    }
+    if (arguments.length > 1) {
+      if (refreshValue) window.localStorage.setItem(REFRESH_TOKEN_KEY, refreshValue);
+      else window.localStorage.removeItem(REFRESH_TOKEN_KEY);
+    }
+  }
+
+  function storeTokenPayload(payload) {
+    const data = unwrapData(payload) || payload || {};
+    const access = data.access_token || "";
+    const refresh = data.refresh_token || "";
+    if (access) setToken(access, refresh);
+    return Boolean(access);
+  }
+
+  async function refreshStoredSession() {
+    const refresh = getRefreshToken();
+    if (!refresh) return false;
+    try {
+      const resp = await fetch(API_BASE + "/auth/refresh", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Client-Platform": "web",
+          "X-Client-Version": "1.4.0",
+        },
+        body: JSON.stringify({ refresh_token: refresh }),
+        cache: "no-store",
+      });
+      if (!resp.ok) throw new Error("refresh failed");
+      const payload = await resp.json();
+      return storeTokenPayload(payload);
+    } catch (e) {
+      setToken("", "");
+      return false;
+    }
   }
 
   function unwrapData(payload) {
@@ -187,7 +230,15 @@
         ? options.body
         : JSON.stringify(options.body);
     }
-    const resp = await fetch(API_BASE + path, init);
+    let resp = await fetch(API_BASE + path, init);
+    if (resp.status === 401 && !options._skipRefresh && path !== "/auth/refresh") {
+      const refreshed = await refreshStoredSession();
+      if (refreshed) {
+        const newToken = getToken();
+        if (newToken) init.headers.Authorization = "Bearer " + newToken;
+        resp = await fetch(API_BASE + path, init);
+      }
+    }
     let payload = null;
     try {
       payload = await resp.json();
@@ -359,9 +410,10 @@
           console.warn("[Mydow v1.4] /me failed", e);
           return true;
         }
-        setToken("");
+        window.localStorage.removeItem(TOKEN_KEY);
       }
     }
+    if (await refreshStoredSession()) return true;
     let status;
     try {
       status = await apiFetch("/demo/status");
@@ -384,8 +436,145 @@
       (login && login.data && login.data.access_token) ||
       null;
     if (!access) return false;
-    setToken(access);
+    storeTokenPayload(login);
     return true;
+  }
+
+  function showAuthGateV18() {
+    if (document.querySelector("[data-v18-auth-gate]")) return;
+    const layer = document.createElement("div");
+    layer.dataset.v18AuthGate = "true";
+    layer.innerHTML =
+      '<div class="v18-auth-card">' +
+      '<div class="v18-auth-brand"><span class="v18-auth-logo">+</span><div><strong>Mydow</strong><span>登录后开始你的个人知识工作台</span></div></div>' +
+      '<div class="v18-auth-tabs" role="tablist">' +
+      '<button type="button" class="active" data-auth-tab="login">登录</button>' +
+      '<button type="button" data-auth-tab="register">邮箱验证码注册</button>' +
+      "</div>" +
+      '<form class="v18-auth-form active" data-auth-panel="login">' +
+      '<label>账号或邮箱<input name="username" autocomplete="username" required placeholder="you@example.com" /></label>' +
+      '<label>密码<input name="password" type="password" autocomplete="current-password" required placeholder="请输入密码" /></label>' +
+      '<label class="v18-auth-check"><input name="remember" type="checkbox" checked /> 记住登录状态</label>' +
+      '<button type="submit">登录</button>' +
+      "</form>" +
+      '<form class="v18-auth-form" data-auth-panel="register">' +
+      '<label>邮箱<input name="email" type="email" autocomplete="email" required placeholder="you@example.com" /></label>' +
+      '<label>验证码<div class="v18-code-row"><input name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required placeholder="6 位验证码" /><button type="button" data-auth-send-code>发送验证码</button></div></label>' +
+      '<label>密码<input name="password" type="password" autocomplete="new-password" minlength="6" required placeholder="至少 6 位" /></label>' +
+      '<label class="v18-auth-check"><input name="remember" type="checkbox" checked /> 注册后记住登录状态</label>' +
+      '<button type="submit">注册并进入</button>' +
+      "</form>" +
+      '<p class="v18-auth-note">密码只会以 bcrypt 哈希保存；保持登录依赖 refresh token 会话轮换，不会保存明文密码。</p>' +
+      '<p class="v18-auth-error" role="alert" hidden></p>' +
+      "</div>";
+    const style = document.createElement("style");
+    style.textContent =
+      "[data-v18-auth-gate]{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:24px;background:linear-gradient(135deg,rgba(245,248,255,.94),rgba(232,238,251,.92));backdrop-filter:blur(18px);}" +
+      ".v18-auth-card{width:min(460px,100%);padding:28px;border-radius:28px;background:rgba(255,255,255,.86);border:1px solid rgba(137,153,188,.22);box-shadow:0 28px 90px rgba(31,45,80,.18);color:#17213a;}" +
+      ".v18-auth-brand{display:flex;gap:14px;align-items:center;margin-bottom:22px}.v18-auth-logo{width:48px;height:48px;border-radius:18px;display:grid;place-items:center;font-size:34px;font-weight:800;background:linear-gradient(135deg,#eef3ff,#fff);color:#5d78ff;box-shadow:0 16px 36px rgba(93,120,255,.22)}.v18-auth-brand strong{display:block;font-size:28px}.v18-auth-brand span{display:block;margin-top:4px;color:#718098;font-size:13px}" +
+      ".v18-auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:5px;border-radius:18px;background:#eef3fb;margin-bottom:18px}.v18-auth-tabs button{border:0;border-radius:14px;padding:10px 12px;background:transparent;color:#63718b;font-weight:800;cursor:pointer}.v18-auth-tabs button.active{background:#fff;color:#3156d4;box-shadow:0 10px 28px rgba(80,104,160,.16)}" +
+      ".v18-auth-form{display:none;gap:13px}.v18-auth-form.active{display:grid}.v18-auth-form label{display:grid;gap:7px;color:#344360;font-size:13px;font-weight:800}.v18-auth-form input{height:44px;border-radius:14px;border:1px solid #dbe3f1;background:#fff;padding:0 13px;color:#17213a;font:inherit;outline:none}.v18-auth-form input:focus{border-color:#7f96ff;box-shadow:0 0 0 4px rgba(127,150,255,.16)}.v18-code-row{display:grid;grid-template-columns:1fr 120px;gap:8px}.v18-auth-check{display:flex!important;align-items:center;gap:8px;font-weight:700!important;color:#718098!important}.v18-auth-check input{width:16px;height:16px}.v18-auth-form button[type=submit],.v18-code-row button{height:44px;border:0;border-radius:14px;background:#5d78ff;color:#fff;font-weight:900;cursor:pointer;box-shadow:0 14px 32px rgba(93,120,255,.24)}.v18-code-row button{background:#eef3ff;color:#3156d4;box-shadow:none}.v18-auth-note{margin:14px 0 0;color:#718098;font-size:12px;line-height:1.7}.v18-auth-error{margin:12px 0 0;color:#c2360c;font-size:13px;font-weight:800}" +
+      "html.dark [data-v18-auth-gate],body.theme-dark [data-v18-auth-gate]{background:radial-gradient(circle at 55% 20%,rgba(72,93,174,.2),transparent 32%),#0e1117}.theme-dark .v18-auth-card{background:rgba(22,27,34,.92);border-color:rgba(138,154,190,.18);color:#f2f5fb}.theme-dark .v18-auth-form input{background:#111720;border-color:#2d3748;color:#f2f5fb}.theme-dark .v18-auth-tabs{background:#111720}.theme-dark .v18-auth-tabs button.active{background:#202938;color:#a9b8ff}.theme-dark .v18-auth-brand span,.theme-dark .v18-auth-note,.theme-dark .v18-auth-check{color:#9aa8bd!important}";
+    layer.appendChild(style);
+    document.body.appendChild(layer);
+
+    const showError = (message) => {
+      const node = layer.querySelector(".v18-auth-error");
+      node.hidden = !message;
+      node.textContent = message || "";
+    };
+    layer.addEventListener("click", (event) => {
+      const tab = event.target.closest("[data-auth-tab]");
+      if (!tab) return;
+      const key = tab.dataset.authTab;
+      layer.querySelectorAll("[data-auth-tab]").forEach((btn) =>
+        btn.classList.toggle("active", btn === tab),
+      );
+      layer.querySelectorAll("[data-auth-panel]").forEach((panel) =>
+        panel.classList.toggle("active", panel.dataset.authPanel === key),
+      );
+      showError("");
+    });
+    const enterApp = async (payload, remember) => {
+      storeTokenPayload(payload);
+      if (!remember) window.localStorage.removeItem(REFRESH_TOKEN_KEY);
+      layer.remove();
+      await boot();
+    };
+    layer.querySelector('[data-auth-panel="login"]').addEventListener("submit", async (event) => {
+      event.preventDefault();
+      showError("");
+      const form = event.currentTarget;
+      const submit = form.querySelector('button[type="submit"]');
+      submit.disabled = true;
+      submit.textContent = "登录中...";
+      try {
+        const payload = await apiFetch("/auth/login", {
+          method: "POST",
+          body: {
+            username: form.username.value.trim(),
+            password: form.password.value,
+          },
+          _skipRefresh: true,
+        });
+        await enterApp(payload, form.remember.checked);
+      } catch (e) {
+        showError(e.message || "登录失败");
+      } finally {
+        submit.disabled = false;
+        submit.textContent = "登录";
+      }
+    });
+    layer.querySelector("[data-auth-send-code]").addEventListener("click", async (event) => {
+      const btn = event.currentTarget;
+      const form = layer.querySelector('[data-auth-panel="register"]');
+      const email = form.email.value.trim();
+      if (!email) {
+        showError("请先填写邮箱");
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = "发送中...";
+      try {
+        await apiFetch("/auth/send-code", {
+          method: "POST",
+          body: { email, code_type: "login" },
+          _skipRefresh: true,
+        });
+        showError("");
+        toast("验证码已发送，请查收邮箱", "success");
+      } catch (e) {
+        showError(e.message || "验证码发送失败，请确认 Redis 与 SMTP 已配置");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "发送验证码";
+      }
+    });
+    layer.querySelector('[data-auth-panel="register"]').addEventListener("submit", async (event) => {
+      event.preventDefault();
+      showError("");
+      const form = event.currentTarget;
+      const submit = form.querySelector('button[type="submit"]');
+      submit.disabled = true;
+      submit.textContent = "注册中...";
+      try {
+        const payload = await apiFetch("/auth/register/email", {
+          method: "POST",
+          body: {
+            email: form.email.value.trim(),
+            code: form.code.value.trim(),
+            password: form.password.value,
+          },
+          _skipRefresh: true,
+        });
+        await enterApp(payload, form.remember.checked);
+      } catch (e) {
+        showError(e.message || "注册失败");
+      } finally {
+        submit.disabled = false;
+        submit.textContent = "注册并进入";
+      }
+    });
   }
 
   // ─── profile ─────────────────────────────────────────────────────────────
@@ -3499,7 +3688,7 @@
   }
 
   /** §15.40 — render ALL skills returned by /skills (was previously bounded to
-   *  the 6 placeholder cards baked into the v1.4 HTML, hiding extras like
+   *  the 6 static prototype cards baked into the v1.4 HTML, hiding extras like
    *  "Markdown 美化", "OKR 拆解", "用户访谈大纲" etc).  We clone the first
    *  card to backfill any gap so the grid grows to match the API count.
    */
@@ -4846,51 +5035,218 @@
     content.appendChild(host);
   }
 
-  const DEEPSEEK_V4_FLASH_MODEL_V18 = "deepseek-v4-flash";
-  const DEEPSEEK_V4_FLASH_LABEL_V18 = "DeepSeek V4 Flash";
+  const DEFAULT_AI_MODEL_V18 = "mydow";
+  let aiModelCatalogV18 = null;
+  let aiModelCatalogPromiseV18 = null;
 
-  function enforceDeepSeekV4FlashModelV18() {
-    V14.aiModel = DEEPSEEK_V4_FLASH_MODEL_V18;
+  const FALLBACK_AI_MODELS_V18 = [
+    {
+      id: "mydow",
+      label: "Mydow",
+      vendor: "Mydow",
+      tier: "pro",
+      upstream_model: "deepseek-v4-pro",
+      enabled: true,
+      default: true,
+      badge: "Pro",
+      description: "Mydow 品牌模型，当前路由到 DeepSeek V4 Pro。",
+    },
+    {
+      id: "deepseek-v4-pro",
+      label: "DeepSeek V4 Pro",
+      vendor: "DeepSeek",
+      tier: "pro",
+      upstream_model: "deepseek-v4-pro",
+      enabled: true,
+      badge: "Pro",
+      description: "适合复杂 RAG、长文档和高质量输出。",
+    },
+    {
+      id: "deepseek-v4-flash",
+      label: "DeepSeek V4 Flash",
+      vendor: "DeepSeek",
+      tier: "fast",
+      upstream_model: "deepseek-v4-flash",
+      enabled: true,
+      badge: "Fast",
+      description: "适合快速问答、摘要和日常搜索。",
+    },
+    {
+      id: "glm",
+      label: "GLM",
+      vendor: "Zhipu",
+      tier: "reserved",
+      upstream_model: "glm-4.5",
+      enabled: false,
+      reserved: true,
+      badge: "预留",
+      disabled_reason: "GLM 供应商尚未配置，当前不会发起假调用。",
+      description: "预留 GLM 供应商入口。",
+    },
+    {
+      id: "gemini",
+      label: "Gemini",
+      vendor: "Google",
+      tier: "reserved",
+      upstream_model: "gemini-2.5-pro",
+      enabled: false,
+      reserved: true,
+      badge: "预留",
+      disabled_reason: "Gemini 供应商尚未配置，当前不会发起假调用。",
+      description: "预留 Gemini 供应商入口。",
+    },
+    {
+      id: "gpt",
+      label: "GPT",
+      vendor: "OpenAI",
+      tier: "reserved",
+      upstream_model: "gpt-5.2",
+      enabled: false,
+      reserved: true,
+      badge: "预留",
+      disabled_reason: "GPT 供应商尚未配置，当前不会发起假调用。",
+      description: "预留 GPT 供应商入口。",
+    },
+  ];
+
+  function normalizeAiModelIdV18(value) {
+    const raw = String(value || "").trim().toLowerCase();
+    if (!raw || raw === "auto" || raw === "mydow auto" || raw === "mydow-auto") return DEFAULT_AI_MODEL_V18;
+    if (raw === "deepseek v4 pro") return "deepseek-v4-pro";
+    if (raw === "deepseek v4 flash") return "deepseek-v4-flash";
+    if (/^glm/.test(raw)) return "glm";
+    if (/gemini/.test(raw)) return "gemini";
+    if (/gpt/.test(raw)) return "gpt";
+    if (/opus/.test(raw)) return DEFAULT_AI_MODEL_V18;
+    return raw;
+  }
+
+  async function loadAiModelCatalogV18() {
+    if (Array.isArray(aiModelCatalogV18) && aiModelCatalogV18.length) return aiModelCatalogV18;
+    if (!aiModelCatalogPromiseV18) {
+      aiModelCatalogPromiseV18 = apiFetch("/ai/models")
+        .then((resp) => {
+          const data = resp && resp.data ? resp.data : resp;
+          const items = Array.isArray(data?.items) ? data.items : FALLBACK_AI_MODELS_V18;
+          aiModelCatalogV18 = items.map((item) => ({
+            ...item,
+            id: normalizeAiModelIdV18(item.id || item.model || item.label),
+            label: item.label || item.id || item.model,
+            enabled: item.enabled !== false && item.available !== false,
+          }));
+          return aiModelCatalogV18;
+        })
+        .catch(() => {
+          aiModelCatalogV18 = FALLBACK_AI_MODELS_V18;
+          return aiModelCatalogV18;
+        })
+        .finally(() => {
+          aiModelCatalogPromiseV18 = null;
+        });
+    }
+    return aiModelCatalogPromiseV18;
+  }
+
+  function getAiModelItemV18(id) {
+    const key = normalizeAiModelIdV18(id);
+    return (aiModelCatalogV18 || FALLBACK_AI_MODELS_V18).find((item) => normalizeAiModelIdV18(item.id) === key) || null;
+  }
+
+  function setAiModelLabelV18(item) {
+    const model = item || getAiModelItemV18(V14.aiModel) || FALLBACK_AI_MODELS_V18[0];
     document.querySelectorAll('[data-inline-menu="aiModel"] [data-inline-label]').forEach((label) => {
-      label.textContent = DEEPSEEK_V4_FLASH_LABEL_V18;
-    });
-    try { window.localStorage.setItem("mydow_v14_ai_model", DEEPSEEK_V4_FLASH_MODEL_V18); } catch (_e) {}
-  }
-
-  function sanitizeAiModelMenuV18() {
-    const popovers = document.querySelectorAll(".inline-popover, .v37-bridge-popover");
-    popovers.forEach((popover) => {
-      const buttons = Array.from(popover.querySelectorAll("button[data-menu-value]"));
-      if (!buttons.length) return;
-      const modelLike = buttons.some((btn) => /Opus|Gemini|GPT|Mydow Auto|DeepSeek/i.test(btn.textContent || ""));
-      if (!modelLike) return;
-      buttons.forEach((btn, index) => {
-        if (index === 0) {
-          btn.dataset.menuValue = DEEPSEEK_V4_FLASH_MODEL_V18;
-          btn.textContent = DEEPSEEK_V4_FLASH_LABEL_V18;
-          btn.setAttribute("aria-pressed", "true");
-          btn.classList.add("active");
-          btn.title = "所有 AI 对话、RAG、灵感和 Skills 统一使用 DeepSeek v4 flash";
-        } else {
-          btn.remove();
-        }
-      });
+      label.textContent = model.label || "Mydow";
     });
   }
 
-  function bindDeepSeekModelEnforcementV18() {
-    enforceDeepSeekV4FlashModelV18();
+  function applyAiModelSelectionV18(id, opts = {}) {
+    const item = getAiModelItemV18(id) || FALLBACK_AI_MODELS_V18[0];
+    if (item.enabled === false && !opts.allowDisabled) {
+      toast(item.disabled_reason || "该模型供应商尚未配置", "warning");
+      return false;
+    }
+    V14.aiModel = normalizeAiModelIdV18(item.id);
+    setAiModelLabelV18(item);
+    try { window.localStorage.setItem("mydow_v14_ai_model", V14.aiModel); } catch (_e) {}
+    if (opts.persist !== false) {
+      apiFetch("/me/preferences", { method: "PATCH", body: { default_ai_model: V14.aiModel } }).catch(() => {});
+    }
+    return true;
+  }
+
+  function closeAiModelPopoverV18() {
+    document.querySelectorAll(".v18-ai-model-popover").forEach((node) => node.remove());
+    document.querySelectorAll('[data-inline-menu="aiModel"]').forEach((node) => node.setAttribute("aria-expanded", "false"));
+  }
+
+  async function openAiModelPopoverV18(trigger) {
+    const catalog = await loadAiModelCatalogV18();
+    const current = normalizeAiModelIdV18(V14.aiModel || localStorage.getItem("mydow_v14_ai_model") || DEFAULT_AI_MODEL_V18);
+    closeAiModelPopoverV18();
+    const popover = document.createElement("div");
+    popover.className = "inline-popover ai-model-popover v18-ai-model-popover";
+    popover.innerHTML = `
+      <div class="popover-hint">AI 模型</div>
+      ${catalog.map((item) => {
+        const active = normalizeAiModelIdV18(item.id) === current;
+        const disabled = item.enabled === false;
+        const badge = item.badge ? `<span class="model-beta">${escapeHtmlV14(item.badge)}</span>` : "";
+        const reason = disabled ? (item.disabled_reason || "供应商尚未配置") : (item.upstream_model ? `实际调用 ${item.upstream_model}` : "");
+        return `
+          <button type="button" class="${active ? "active" : ""} ${disabled ? "is-disabled" : ""}"
+            data-v18-ai-model-option="${escapeHtmlV14(item.id)}"
+            aria-disabled="${disabled ? "true" : "false"}"
+            aria-pressed="${active ? "true" : "false"}"
+            title="${escapeHtmlV14(reason)}">
+            <span class="model-option-copy">
+              <strong>${escapeHtmlV14(item.label)}${badge}</strong>
+              <small>${escapeHtmlV14(item.description || reason || "")}</small>
+            </span>
+            ${active ? '<svg class="icon" style="width:14px;height:14px"><use href="#icon-check-square" /></svg>' : ""}
+          </button>`;
+      }).join("")}
+    `;
+    document.body.appendChild(popover);
+    const rect = trigger.getBoundingClientRect();
+    const popoverRect = popover.getBoundingClientRect();
+    const left = Math.min(rect.left, window.innerWidth - popoverRect.width - 16);
+    popover.style.left = `${Math.max(16, left)}px`;
+    popover.style.top = `${rect.bottom + 8}px`;
+    trigger.setAttribute("aria-expanded", "true");
+  }
+
+  function bindAiModelSelectorV18() {
+    try { V14.aiModel = normalizeAiModelIdV18(localStorage.getItem("mydow_v14_ai_model") || V14.aiModel || DEFAULT_AI_MODEL_V18); } catch (_e) {
+      V14.aiModel = DEFAULT_AI_MODEL_V18;
+    }
+    loadAiModelCatalogV18().then(() => applyAiModelSelectionV18(V14.aiModel, { persist: false })).catch(() => setAiModelLabelV18());
     document.addEventListener(
       "click",
       (event) => {
-        if (!event.target.closest('[data-inline-menu="aiModel"], .inline-popover button[data-menu-value]')) return;
-        window.setTimeout(() => {
-          enforceDeepSeekV4FlashModelV18();
-          sanitizeAiModelMenuV18();
-        }, 0);
+        const trigger = event.target.closest('[data-inline-menu="aiModel"]');
+        if (!trigger) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        openAiModelPopoverV18(trigger);
       },
       true,
     );
+    document.addEventListener(
+      "click",
+      (event) => {
+        const option = event.target.closest("[data-v18-ai-model-option]");
+        if (!option) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const item = getAiModelItemV18(option.dataset.v18AiModelOption);
+        if (applyAiModelSelectionV18(item?.id || option.dataset.v18AiModelOption)) closeAiModelPopoverV18();
+      },
+      true,
+    );
+    document.addEventListener("click", (event) => {
+      if (event.target.closest(".v18-ai-model-popover, [data-inline-menu='aiModel']")) return;
+      closeAiModelPopoverV18();
+    });
   }
 
   async function streamV14AiReply(conversationId, content) {
@@ -4902,12 +5258,8 @@
     V14.streamAbort = new AbortController();
     const streamEl = appendAiAssistantPlaceholder();
     const streamPath = `/ai/conversations/${conversationId}/messages/stream`;
-    /** §18.30 — product policy: all AI/RAG calls use DeepSeek v4 flash.
-     * The original prototype menu still exists visually, but the bridge no
-     * longer forwards prototype model labels to the backend. */
-    enforceDeepSeekV4FlashModelV18();
     const body = { content, attachments: [] };
-    body.model = DEEPSEEK_V4_FLASH_MODEL_V18;
+    body.model = normalizeAiModelIdV18(V14.aiModel || DEFAULT_AI_MODEL_V18);
     const modeBtn = document.querySelector(".ai-mode-button.active[data-ai-mode]");
     if (modeBtn) body.mode = modeBtn.dataset.aiMode || "efficient";
     /** §16.4 — 显式传 context_scope（与 PATCH 会话一致）；避免会话对象未刷新时 RAG 漏上下文。 */
@@ -5025,7 +5377,7 @@
       if (streamEl) {
         const isAbort = e && (e.name === "AbortError" || String(e.message || e).includes("aborted"));
         streamEl.textContent = isAbort
-          ? "AI 请求超过 90 秒未返回，已停止等待。请检查 DeepSeek v4 flash 模型权限或稍后重试。"
+          ? "AI 请求超过 90 秒未返回，已停止等待。请检查当前模型 API 权限或稍后重试。"
           : "AI 请求失败：" + (e && e.message ? e.message : String(e));
       }
       toast("AI 生成失败，请检查模型权限或稍后重试", "error");
@@ -5711,7 +6063,7 @@
 
   // ═════════════════════════════════════════════════════════════════════════
   // §15.37 — Comprehensive v1.4 button wiring (rev2 — coexists with §15.38)
-  //   Wires the remaining 20+ data-toast / data-* placeholder buttons to real
+  //   Wires the remaining 20+ data-toast / data-* prototype buttons to real
   //   PRD10 endpoints. Capture-phase + stopImmediatePropagation everywhere so
   //   the prototype IIFE simulateAction never wins.
   // ═════════════════════════════════════════════════════════════════════════
@@ -5994,20 +6346,15 @@
           '[data-inline-menu="aiModel"][aria-expanded="true"]',
         );
         if (!trigger) return;
-        item.dataset.menuValue = DEEPSEEK_V4_FLASH_MODEL_V18;
-        V14.aiModel = DEEPSEEK_V4_FLASH_MODEL_V18;
-        try { window.localStorage.setItem("mydow_v14_ai_model", DEEPSEEK_V4_FLASH_MODEL_V18); } catch (_e) {}
-        window.setTimeout(() => {
-          enforceDeepSeekV4FlashModelV18();
-          sanitizeAiModelMenuV18();
-        }, 0);
+        const selected = normalizeAiModelIdV18(item.dataset.menuValue || item.dataset.v18AiModelOption || item.textContent);
+        applyAiModelSelectionV18(selected);
       },
       false,
     );
   }
 
   function _restoreAiModelV37() {
-    enforceDeepSeekV4FlashModelV18();
+    applyAiModelSelectionV18(V14.aiModel || DEFAULT_AI_MODEL_V18, { persist: false });
   }
 
   // §15.37.d — Card share link copy
@@ -9459,7 +9806,8 @@ a:focus-visible,
   async function boot() {
     const ok = await ensureSession();
     if (!ok) {
-      console.warn("[Mydow v1.4] session failed; prototype simulateAction only");
+      console.warn("[Mydow v1.4] session failed; showing auth gate");
+      showAuthGateV18();
       return;
     }
 
@@ -9505,7 +9853,7 @@ a:focus-visible,
     bindAiChatRenameV37();
     bindAiChatMoreV37();
     trackAiModelV37();
-    bindDeepSeekModelEnforcementV18();
+    bindAiModelSelectorV18();
     bindAiPersonalizeModernControlsV18();
     bindCardShareV37();
     bindFolderFavoriteV37();
@@ -9562,6 +9910,7 @@ a:focus-visible,
     toV14ContractEnvelope,
     toast,
     getToken,
+    getRefreshToken,
     setToken,
     ensureSession,
     refreshProfileChip,

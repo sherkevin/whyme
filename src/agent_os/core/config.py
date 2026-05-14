@@ -13,10 +13,18 @@ from pydantic import BaseModel
 
 from agent_os.llm.config import resolve_api_base, resolve_api_key
 
-# Load environment variables from .env first, then allow local developer
-# overrides from .env.local. The latter is gitignored and may contain secrets.
-load_dotenv()
-load_dotenv(".env.local", override=True)
+# Load project dotenv files as defaults only. Runtime/container environment
+# variables must win; otherwise a developer's local `.env.local` can silently
+# flip production-critical switches such as `AGENTOS_AI_LLM` or database URLs.
+#
+# If a local developer intentionally wants `.env.local` to override their
+# shell environment, they can set `AGENTOS_DOTENV_LOCAL_OVERRIDE=on` before
+# importing the app.
+load_dotenv(override=False)
+_dotenv_local_override = (
+    os.environ.get("AGENTOS_DOTENV_LOCAL_OVERRIDE") or ""
+).strip().lower() in {"1", "on", "true", "yes"}
+load_dotenv(".env.local", override=_dotenv_local_override)
 
 
 class AgentConfig(BaseModel):

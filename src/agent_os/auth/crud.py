@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_os.auth.models import User
-from agent_os.auth.security import get_password_hash, verify_password
+from agent_os.auth.security import get_password_hash, password_needs_rehash, verify_password
 
 
 async def get_user_by_id(db: AsyncSession, user_id: uuid.UUID) -> User | None:
@@ -119,6 +119,11 @@ async def authenticate_user(
     # Verify password
     if not verify_password(password, user.password_hash):
         return None
+
+    if password_needs_rehash(user.password_hash):
+        user.password_hash = get_password_hash(password)
+        await db.commit()
+        await db.refresh(user)
 
     return user
 
