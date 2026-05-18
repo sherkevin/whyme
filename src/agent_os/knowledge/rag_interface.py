@@ -5,7 +5,7 @@ system and the AI agent, allowing them to evolve independently.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -122,59 +122,3 @@ class RAGProvider(ABC):
             Statistics including total cards, cards by type, etc.
         """
         pass
-
-
-class MockRAGProvider(RAGProvider):
-    """Mock RAG provider for testing without database.
-
-    This allows the system to work even when the database layer is not ready.
-    """
-
-    async def search_knowledge(
-        self,
-        user_id: int,
-        query: str,
-        limit: int = 5,
-        para_type: str | None = None,
-        tags: list[str] | None = None
-    ) -> list[SearchResult]:
-        """Mock search - returns empty results."""
-        return []
-
-    async def add_knowledge(
-        self,
-        user_id: int,
-        title: str,
-        content: str,
-        para_type: str,
-        tags: list[str] = None,
-        metadata: dict[str, Any] = None
-    ) -> int:
-        """Mock add - returns fake ID."""
-        return -1
-
-    async def get_context_for_task(
-        self,
-        user_id: int,
-        task_id: int,
-        task_description: str
-    ) -> KnowledgeContext:
-        """Mock context - returns empty context."""
-        return KnowledgeContext(
-            query=task_description,
-            results=[],
-            formatted_context="# No knowledge available yet.\n",
-            total_cards=0,
-            user_id=user_id
-        )
-
-    async def get_user_knowledge_stats(
-        self,
-        user_id: int
-    ) -> dict[str, Any]:
-        """Mock stats - returns empty stats."""
-        return {
-            "total_cards": 0,
-            "by_type": {},
-            "recently_added": 0
-        }

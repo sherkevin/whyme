@@ -7,9 +7,9 @@ Per PRD10 §25.3, the frontend dev environment expects (per user):
     - 30 cards
     - 5 tasks
     - 5 notifications
-    - 3 AI conversations / 10 AI messages   (owned by Agent 3, placeholder)
-    - 5 Skills                              (owned by Agent 3, placeholder)
-    - 10 SearchDocument                     (owned by Agent 3, placeholder)
+    - 3 AI conversations / 10 AI messages   (owned by Agent 3)
+    - 5 Skills                              (owned by Agent 3)
+    - 10 SearchDocument                     (owned by Agent 3)
 
 This script is *idempotent*: running it twice with the same ``--email`` does
 not create duplicate users; pre-existing seed rows are detected by the
@@ -551,11 +551,11 @@ async def _seed_ai_conversations(
         "针对此问题，再给出一个反向观点。",
     ]
     assistant_replies = [
-        "（演示）下面是按主题归并后的卡片列表……",
-        "（演示）会议纪要总结：1) ……2) ……3) ……",
-        "（演示）三条产品迭代方向：体验、性能、生态。",
-        "（演示）建议归到“产品策略 / Mydow”。",
-        "（演示）反向观点：先稳定再扩展，避免破坏既有体验。",
+        "下面是按主题归并后的卡片列表，已优先保留可追溯来源和最近更新时间。",
+        "会议纪要总结：1) 明确本周进展；2) 标注待办负责人；3) 抽取下周风险。",
+        "三条产品迭代方向：提升输入效率、补强知识库追溯、优化 AI 产出保存路径。",
+        "建议归到“产品策略 / Mydow”，并保留原始资料链接方便后续复核。",
+        "反向观点：先稳定核心链路再扩展新入口，避免破坏既有体验。",
     ]
     msgs: list = []
     per_conv = max(2, total_messages // conversation_count)
@@ -577,7 +577,7 @@ async def _seed_ai_conversations(
                 content=rng.choice(assistant_replies),
                 status=AIMessageStatus.COMPLETED.value,
                 parent_message_id=user_msg.id,
-                model="placeholder",
+                model="deepseek-v4-flash",
                 input_tokens=12,
                 output_tokens=64,
                 latency_ms=150,

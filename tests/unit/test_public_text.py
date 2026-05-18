@@ -6,6 +6,7 @@ def test_sanitize_public_text_removes_internal_seed_markers():
         sanitize_public_text("联调对接清单与状态码 的精炼摘要——演示用。 [seed]")
         == "联调对接清单与状态码 的精炼摘要。"
     )
+    assert sanitize_public_text("（演示）会议纪要总结：1) A") == "会议纪要总结：1) A"
 
 
 def test_sanitize_public_text_keeps_real_user_text():

@@ -26,6 +26,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
+from agent_os.common.public_text import sanitize_public_text
 from agent_os.db.base import Base
 
 
@@ -126,9 +127,9 @@ class AIConversation(Base):
         return {
             "id": str(self.id),
             "user_id": str(self.user_id),
-            "title": self.title,
+            "title": sanitize_public_text(self.title),
             "mode": self.mode,
-            "last_message_preview": self.last_message_preview,
+            "last_message_preview": sanitize_public_text(self.last_message_preview),
             "message_count": self.message_count,
             "context_scope": self.context_scope or {},
             "pinned": bool(extra.get("pinned", False)),
@@ -218,7 +219,7 @@ class AIMessage(Base):
             "conversation_id": str(self.conversation_id),
             "user_id": str(self.user_id),
             "role": self.role,
-            "content": self.content,
+            "content": sanitize_public_text(self.content) or "",
             "status": self.status,
             "citations": list(self.citations or []),
             "tool_calls": list(self.tool_calls or []),

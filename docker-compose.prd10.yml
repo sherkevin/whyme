@@ -87,6 +87,7 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-production}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       BASE_URL: ${BASE_URL:-http://localhost:8000}
+      MYDOW_ROOT_REDIRECT: ${MYDOW_ROOT_REDIRECT:-off}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8000,http://localhost}
       AGENTOS_CORS_ORIGINS: ${AGENTOS_CORS_ORIGINS:-${CORS_ORIGINS:-http://localhost:8000,http://localhost}}
       AGENTOS_CORS_ALLOW_ALL: ${AGENTOS_CORS_ALLOW_ALL:-${CORS_ALLOW_ALL:-false}}

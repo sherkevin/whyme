@@ -171,6 +171,14 @@ class TestFrontendBundleReachable:
         if resp.status_code == 307:
             assert resp.headers["location"] in {"/mydow/biz_v14/", "/mydow/biz/"}
 
+    async def test_root_redirect_env_shortcuts_to_biz(self, client, monkeypatch):
+        """Local/production operators can make the bare domain open the app."""
+
+        monkeypatch.setenv("MYDOW_ROOT_REDIRECT", "on")
+        resp = await client.get("/", follow_redirects=False)
+        assert resp.status_code == 307
+        assert resp.headers["location"] in {"/mydow/biz_v14/", "/mydow/biz/"}
+
     async def test_mydow_default_entry_redirects_to_biz(self, client):
         """PRD10 §15.20 / §15.34 — ``/mydow/`` is rerouted to the business
         prototype, preferring the v1.4 bundle (the user-facing default

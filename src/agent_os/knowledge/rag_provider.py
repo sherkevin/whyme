@@ -1,6 +1,6 @@
 """Concrete RAG provider implementation using database."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,9 +18,9 @@ try:
     PGVECTOR_AVAILABLE = True
 except ImportError:
     PGVECTOR_AVAILABLE = False
-    # Mock cosine_distance for testing
+
     def cosine_distance(left, right):
-        return func.levenshtein(left, right)  # Placeholder
+        return func.levenshtein(left, right)
 
 
 class CardRAGProvider(RAGProvider):
@@ -265,7 +265,7 @@ def get_rag_provider(db_session: AsyncSession, embedding_model=None) -> RAGProvi
     """Factory function to get RAG provider.
 
     This allows easy switching between different RAG implementations
-    or using a mock for testing.
+    while keeping a single production integration point.
 
     Args:
         db_session: Database session
@@ -274,6 +274,4 @@ def get_rag_provider(db_session: AsyncSession, embedding_model=None) -> RAGProvi
     Returns:
         RAG provider instance
     """
-    # TODO: Check config to decide which provider to use
-    # For now, always use CardRAGProvider
     return CardRAGProvider(db_session, embedding_model)

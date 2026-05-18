@@ -1166,7 +1166,15 @@ async def get_index(go: str | None = None):
     has_v14 = v14_index is not None and v14_index.exists()
     has_v10 = biz_v10 is not None and biz_v10.exists()
 
-    if go == "demo":
+    root_redirect = (_os.getenv("MYDOW_ROOT_REDIRECT") or "").strip().lower() in {
+        "1",
+        "on",
+        "true",
+        "yes",
+        "enabled",
+    }
+
+    if go == "demo" or root_redirect:
         if has_v14:
             return RedirectResponse(url="/mydow/biz_v14/", status_code=307)
         if has_v10:

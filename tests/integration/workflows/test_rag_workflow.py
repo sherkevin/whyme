@@ -6,10 +6,52 @@ import pytest
 
 from agent_os.knowledge.rag_interface import (
     KnowledgeContext,
-    MockRAGProvider,
+    RAGProvider,
     SearchResult,
 )
 from agent_os.knowledge.rag_provider import CardRAGProvider, get_rag_provider
+
+
+class EmptyTestRAGProvider(RAGProvider):
+    """Test-only empty provider used to exercise the abstract contract."""
+
+    async def search_knowledge(
+        self,
+        user_id: int,
+        query: str,
+        limit: int = 5,
+        para_type: str | None = None,
+        tags: list[str] | None = None,
+    ) -> list[SearchResult]:
+        return []
+
+    async def add_knowledge(
+        self,
+        user_id: int,
+        title: str,
+        content: str,
+        para_type: str,
+        tags: list[str] | None = None,
+        metadata: dict[str, object] | None = None,
+    ) -> int:
+        return 1
+
+    async def get_context_for_task(
+        self,
+        user_id: int,
+        task_id: int,
+        task_description: str,
+    ) -> KnowledgeContext:
+        return KnowledgeContext(
+            query=task_description,
+            results=[],
+            formatted_context="# No knowledge available yet.\n",
+            total_cards=0,
+            user_id=user_id,
+        )
+
+    async def get_user_knowledge_stats(self, user_id: int) -> dict[str, object]:
+        return {"total_cards": 0, "by_type": {}, "recently_added": 0}
 
 
 class TestSearchResult:
@@ -50,13 +92,13 @@ class TestKnowledgeContext:
         assert context.user_id == 1
 
 
-class TestMockRAGProvider:
-    """Test MockRAGProvider implementation."""
+class TestEmptyTestRAGProvider:
+    """Test the RAG provider contract with a local empty implementation."""
 
     @pytest.mark.asyncio
-    async def test_mock_search_knowledge(self):
-        """Test mock search returns empty results."""
-        provider = MockRAGProvider()
+    async def test_empty_search_knowledge(self):
+        """Test empty search returns empty results."""
+        provider = EmptyTestRAGProvider()
 
         results = await provider.search_knowledge(
             user_id=1,
@@ -67,9 +109,9 @@ class TestMockRAGProvider:
         assert results == []
 
     @pytest.mark.asyncio
-    async def test_mock_add_knowledge(self):
-        """Test mock add returns fake ID."""
-        provider = MockRAGProvider()
+    async def test_empty_add_knowledge(self):
+        """Test empty add returns a deterministic test ID."""
+        provider = EmptyTestRAGProvider()
 
         card_id = await provider.add_knowledge(
             user_id=1,
@@ -78,12 +120,12 @@ class TestMockRAGProvider:
             para_type="concept"
         )
 
-        assert card_id == -1
+        assert card_id == 1
 
     @pytest.mark.asyncio
-    async def test_mock_get_context_for_task(self):
-        """Test mock get context returns empty context."""
-        provider = MockRAGProvider()
+    async def test_empty_get_context_for_task(self):
+        """Test empty get context returns empty context."""
+        provider = EmptyTestRAGProvider()
 
         context = await provider.get_context_for_task(
             user_id=1,
@@ -96,9 +138,9 @@ class TestMockRAGProvider:
         assert "No knowledge available" in context.formatted_context
 
     @pytest.mark.asyncio
-    async def test_mock_get_user_knowledge_stats(self):
-        """Test mock stats returns empty stats."""
-        provider = MockRAGProvider()
+    async def test_empty_get_user_knowledge_stats(self):
+        """Test empty stats returns empty stats."""
+        provider = EmptyTestRAGProvider()
 
         stats = await provider.get_user_knowledge_stats(user_id=1)
 
